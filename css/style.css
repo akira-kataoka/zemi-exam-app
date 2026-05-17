@@ -294,6 +294,16 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .qual-tag button:hover{background:var(--danger);color:#fff}
 .qual-chip{display:inline-block;padding:3px 10px;background:#dbeafe;color:var(--primary-d);border-radius:999px;font-size:12px;margin:2px}
 
+/* Profile submissions */
+.profile-submissions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ps-item{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.ps-done{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.ps-miss{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+
+/* In-cell submission time display */
+.cell-status{display:flex;flex-direction:column;line-height:1.2}
+.cell-time{font-size:10px;color:var(--muted);font-weight:normal;margin-top:1px}
+
 /* Missing badge + stat-sub + ac-sv filter */
 .miss-badge{display:inline-block;padding:2px 8px;background:#fee2e2;color:var(--danger);border-radius:999px;font-size:11px;font-weight:600}
 .stat-sub{font-size:13px;color:var(--danger);font-weight:normal}

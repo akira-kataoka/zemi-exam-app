@@ -40,6 +40,12 @@ const App = (() => {
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
+  function formatDateShort(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
   function fullName(c) {
     if (c.lastName || c.firstName) return [(c.lastName || ''), (c.firstName || '')].join(' ').trim();
     return c.name || '';
@@ -461,10 +467,10 @@ const App = (() => {
         </td>
         <td>${escapeHtml(c.gender || '—')}</td>
         <td>${escapeHtml((c.faculty || '') + ' ' + (c.department || ''))}</td>
-        <td>${Stats.hasResume(c) ? '✅' : missBadge}</td>
-        <td class="num">${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '%' : missBadge}</td>
-        <td class="num">${Stats.hasSurvey(c) ? sv.toFixed(2) : missBadge}</td>
-        <td class="num">${iv ? ivAvg.toFixed(1) + '/5' : missBadge}</td>
+        <td>${Stats.hasResume(c) ? `<div class="cell-status">✅<span class="cell-time">${formatDateShort(c.resumeSubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${Stats.hasAcademic(c) ? `<div class="cell-status"><strong>${ac.percent.toFixed(1)}%</strong><span class="cell-time">${formatDateShort(c.academicSubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${Stats.hasSurvey(c) ? `<div class="cell-status"><strong>${sv.toFixed(2)}</strong><span class="cell-time">${formatDateShort(c.surveySubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${iv ? `<div class="cell-status"><strong>${ivAvg.toFixed(1)}/5</strong><span class="cell-time">${formatDateShort(c.interview.heldAt)}</span></div>` : missBadge}</td>
         <td>${formatDate(lastUpdate)}</td>
         <td class="row-actions">
           <button class="btn" data-act="view">詳細</button>
@@ -754,7 +760,12 @@ const App = (() => {
             <div class="profile-meta">${escapeHtml(fullKana(c))}</div>
             <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${c.gender ? '🚻 ' + escapeHtml(c.gender) + ' ・ ' : ''}${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
             <div style="margin-top:10px"><label class="pass-toggle"><input type="checkbox" id="profile-pass" ${c.passed ? 'checked' : ''}> <span>🏆 この受験者を合格にする</span></label></div>
-            <div class="profile-meta">履歴書: ${c.resumeSubmittedAt ? formatDate(c.resumeSubmittedAt) : '未'} / 学力: ${c.academicSubmittedAt ? formatDate(c.academicSubmittedAt) : '未'} / アンケート: ${c.surveySubmittedAt ? formatDate(c.surveySubmittedAt) : '未'}</div>
+            <div class="profile-submissions">
+              <span class="ps-item ${c.resumeSubmittedAt ? 'ps-done' : 'ps-miss'}">📄 履歴書: ${c.resumeSubmittedAt ? formatDate(c.resumeSubmittedAt) : '未提出'}</span>
+              <span class="ps-item ${c.academicSubmittedAt ? 'ps-done' : 'ps-miss'}">📚 学力試験: ${c.academicSubmittedAt ? formatDate(c.academicSubmittedAt) : '未受験'}</span>
+              <span class="ps-item ${c.surveySubmittedAt ? 'ps-done' : 'ps-miss'}">📋 アンケート: ${c.surveySubmittedAt ? formatDate(c.surveySubmittedAt) : '未回答'}</span>
+              <span class="ps-item ${c.interview?.heldAt ? 'ps-done' : 'ps-miss'}">🎤 面接: ${c.interview?.heldAt ? formatDate(c.interview.heldAt) : '未実施'}</span>
+            </div>
           </div>
           <div>
             <div class="score-badges">
