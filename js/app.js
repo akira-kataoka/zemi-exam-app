@@ -2762,7 +2762,8 @@ const App = (() => {
       let added = 0, updated = 0;
       rows.slice(1).forEach(r => {
         const obj = {};
-        headers.forEach((h, i) => { obj[h] = (r[i] ?? '').trim(); });
+        // 空欄は既存データを上書きしない（CSVは部分更新として動作）
+        headers.forEach((h, i) => { const v = (r[i] ?? '').trim(); if (v !== '') obj[h] = v; });
         if (!obj.examineeId) return;
         if (obj.gpa) obj.gpa = Number(obj.gpa);
         if (obj.qualifications) obj.qualifications = obj.qualifications.split(/[、,]/).map(s => s.trim()).filter(Boolean);
