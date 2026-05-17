@@ -1264,12 +1264,19 @@ const App = (() => {
     const catAvgs = Stats.interviewCategoryAvgs(c, sess);
     const disagree = Stats.interviewDisagreement(c, sess);
 
+    const catHeader = `<div class="iv-rating-row iv-rating-head">
+      <span>評価項目</span>
+      <span class="iv-col-avg">平均</span>
+      ${recs.length > 1 ? '<span class="iv-col-range">範囲（最低〜最高）</span>' : ''}
+    </div>`;
     const catRows = ratings.map(r => {
-      const perRec = recs.map(rec => Number(rec.ratings?.[r.key]) || 0);
-      const minV = Math.min(...perRec.filter(v => v > 0));
-      const maxV = Math.max(...perRec.filter(v => v > 0));
-      const rng = recs.length > 1 && minV !== maxV ? `<span class="muted" style="font-size:11px">（${minV}〜${maxV}）</span>` : '';
-      return `<div class="iv-rating-row"><span>${escapeHtml(r.label)}</span><strong>${(catAvgs[r.key] || 0).toFixed(2)} / 5.00</strong>${rng}</div>`;
+      const perRec = recs.map(rec => Number(rec.ratings?.[r.key]) || 0).filter(v => v > 0);
+      const minV = perRec.length ? Math.min(...perRec) : 0;
+      const maxV = perRec.length ? Math.max(...perRec) : 0;
+      const rngDisplay = recs.length > 1
+        ? `<span class="iv-col-range">${perRec.length ? (minV === maxV ? `<span class="muted" style="font-size:11px">全員一致 ${minV}</span>` : `${minV} 〜 ${maxV}`) : '—'}</span>`
+        : '';
+      return `<div class="iv-rating-row"><span>${escapeHtml(r.label)}</span><span class="iv-col-avg"><strong>${(catAvgs[r.key] || 0).toFixed(2)}</strong> / 5.00</span>${rngDisplay}</div>`;
     }).join('');
 
     return `
@@ -1284,7 +1291,8 @@ const App = (() => {
             <canvas id="profile-radar-interview" height="240"></canvas>
           </div>
           <div>
-            <h4 style="margin-top:0">評価項目（${recs.length}人平均）</h4>
+            <h4 style="margin-top:0">評価項目別の集計${recs.length > 1 ? `（${recs.length}名分）` : ''}</h4>
+            ${catHeader}
             ${catRows}
           </div>
         </div>

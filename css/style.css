@@ -471,8 +471,9 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 .iv-record-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed var(--border)}
 .iv-rec-avg{font-size:12px;background:#ede9fe;padding:3px 10px;border-radius:999px;color:#5b21b6}
 .iv-rec-avg strong{color:#5b21b6}
-.iv-record-ratings{display:flex;flex-wrap:wrap;gap:10px;font-size:12px}
-.iv-rec-rating{padding:2px 6px;background:#f8fafc;border-radius:4px}
+.iv-record-ratings{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;font-family:inherit}
+.iv-rec-rating{padding:3px 8px;background:#f8fafc;border-radius:4px;font-family:inherit;font-variant-numeric:tabular-nums}
+.iv-rec-rating strong{font-weight:700;color:#8b5cf6}
 .iv-record-notes{margin-top:6px;padding:6px 10px;background:#fafafa;border-left:3px solid var(--primary);border-radius:4px;font-size:12px;color:var(--ink);line-height:1.5}
 .iv-record-mgr{display:flex;flex-direction:column;gap:4px}
 .iv-record-mgr-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f8fafc;border:1px solid var(--border);border-radius:6px}
@@ -483,9 +484,15 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 .iv-meta > div{display:flex;flex-direction:column;gap:2px}
 .iv-k{color:var(--muted);font-size:11px;font-weight:600}
 .iv-v{font-size:14px;color:var(--ink)}
-.iv-rating-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.iv-rating-row{display:grid;grid-template-columns:1fr auto auto;gap:14px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px;align-items:center;font-family:inherit}
 .iv-rating-row:last-child{border-bottom:none}
-.iv-rating-row strong{color:#8b5cf6}
+.iv-rating-row.iv-rating-head{font-size:11px;color:var(--muted);font-weight:700;border-bottom:1.5px solid var(--border);padding:4px 0;text-transform:none}
+.iv-rating-row.iv-rating-head span{color:var(--muted)}
+.iv-rating-row .iv-col-avg{min-width:96px;text-align:right;font-variant-numeric:tabular-nums;font-family:inherit}
+.iv-rating-row .iv-col-range{min-width:120px;text-align:right;font-variant-numeric:tabular-nums;font-family:inherit;color:var(--ink)}
+.iv-rating-row strong{color:#8b5cf6;font-weight:700}
+/* Ensure all interview displays use same font family */
+.iv-summary,.iv-meta,.iv-record-card,.iv-rating-row,.iv-rec-rating,.iv-rec-avg{font-family:inherit}
 .iv-rating-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:580px){.iv-rating-grid{grid-template-columns:1fr}}
 .iv-rating-edit{background:#f8fafc;padding:8px 10px;border-radius:6px}
