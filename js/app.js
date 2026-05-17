@@ -69,12 +69,6 @@ const App = (() => {
     if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
     return age;
   }
-  function formatDateShort(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
   function formatRelative(iso) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -331,6 +325,12 @@ const App = (() => {
     if (name === 'rank')    renderRanking();
     if (name === 'cluster') {
       const list = Storage.loadForSession().filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c));
+      // Auto-adjust k input max based on available data
+      const kInput = $('#k-value');
+      if (kInput) {
+        kInput.max = Math.max(2, Math.min(8, list.length));
+        if (Number(kInput.value) > Number(kInput.max)) kInput.value = kInput.max;
+      }
       if (list.length >= Math.max(2, Number($('#k-value')?.value) || 4)) runCluster();
       else {
         // Show empty/notice
@@ -1006,7 +1006,15 @@ const App = (() => {
     const radar = Stats.radarData(c, sess);
 
     body.innerHTML = `
-      <div class="profile-card">
+      <nav class="profile-nav">
+        <a href="#sec-summary" class="profile-nav-link">📋 概要</a>
+        <a href="#sec-radar" class="profile-nav-link">📊 レーダー</a>
+        <a href="#sec-resume" class="profile-nav-link">📄 履歴書</a>
+        <a href="#sec-academic" class="profile-nav-link">📚 学力</a>
+        <a href="#sec-survey" class="profile-nav-link">📋 アンケート</a>
+        <a href="#sec-interview" class="profile-nav-link">🎤 面接</a>
+      </nav>
+      <div class="profile-card" id="sec-summary">
         <div class="profile-head">
           ${c.photo ? `<img class="avatar-lg" src="${c.photo}" alt="顔写真">` : '<div class="avatar-lg avatar-blank">👤</div>'}
           <div style="flex:1;min-width:200px">
@@ -1032,12 +1040,12 @@ const App = (() => {
         </div>
       </div>
 
-      <div class="grid-2">
+      <div class="grid-2" id="sec-radar">
         <div class="profile-card"><h3>学力試験レーダー（カテゴリ別正答率%）</h3><canvas id="profile-radar-academic" height="280"></canvas></div>
         <div class="profile-card"><h3>アンケート傾向</h3><canvas id="profile-radar-survey" height="280"></canvas></div>
       </div>
 
-      <div class="profile-card">
+      <div class="profile-card" id="sec-resume">
         <h3>📄 履歴書情報</h3>
         <div class="form-grid">
           <div><dt>生年月日</dt><dd>${escapeHtml(c.birthdate || '')}${calcAge(c.birthdate) != null ? ` <span class="muted">(${calcAge(c.birthdate)}歳)</span>` : ''}</dd></div>
@@ -1054,18 +1062,18 @@ const App = (() => {
         ${(sess.resumeExtraFields || []).map(f => `<h4>${escapeHtml(f.label)}</h4><p>${escapeHtml(c.extra?.[f.id] || '')}</p>`).join('')}
       </div>
 
-      <div class="profile-card">
+      <div class="profile-card" id="sec-academic">
         <h3>📚 学力試験 回答内訳</h3>
         ${Stats.hasAcademic(c) ? renderAcademicReview(c, sess) : '<p class="muted">未受験</p>'}
       </div>
 
-      <div class="profile-card">
+      <div class="profile-card" id="sec-survey">
         <h3>📋 アンケート 自由記述</h3>
         <h4>力を入れた活動</h4><p>${escapeHtml(c.freeAchievement || '')}</p>
         <h4>挑戦したいこと</h4><p>${escapeHtml(c.freeAspiration || '')}</p>
       </div>
 
-      <div class="profile-card" id="interview-card">
+      <div class="profile-card" id="sec-interview">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
           <h3 style="margin:0">🎤 面接記録</h3>
           <button class="btn primary" id="edit-interview">${c.interview?.heldAt ? '✏ 編集' : '＋ 面接記録を入力'}</button>
@@ -1075,6 +1083,20 @@ const App = (() => {
     `;
 
     document.getElementById('edit-interview').addEventListener('click', () => openInterviewEditor(c.id));
+    // Profile section scroll-spy (highlight active TOC link)
+    const sections = ['sec-summary', 'sec-radar', 'sec-resume', 'sec-academic', 'sec-survey', 'sec-interview']
+      .map(id => document.getElementById(id)).filter(Boolean);
+    const links = document.querySelectorAll('.profile-nav-link');
+    function updateActiveLink() {
+      let activeId = sections[0]?.id;
+      const offset = 200;
+      sections.forEach(sec => { if (sec.getBoundingClientRect().top < offset) activeId = sec.id; });
+      links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + activeId));
+    }
+    updateActiveLink();
+    window.removeEventListener('scroll', window._profileScrollSpy);
+    window._profileScrollSpy = updateActiveLink;
+    window.addEventListener('scroll', window._profileScrollSpy);
     // Interview radar
     const iv = c.interview;
     if (iv?.heldAt) {
