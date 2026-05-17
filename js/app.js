@@ -658,7 +658,16 @@ const App = (() => {
           <button class="btn btn-icon danger" data-act="del" title="削除">🗑</button>
         </td>
       </tr>`;
-    }).join('') || `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`;
+    }).join('') || (list.length === 0
+      ? `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`
+      : `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px">🔍 検索条件に一致する受験者がいません（全${list.length}名中）。<br><button type="button" class="btn" id="empty-clear-filters" style="margin-top:8px">フィルタをクリア</button></td></tr>`);
+    tbody.querySelector('#empty-clear-filters')?.addEventListener('click', () => {
+      $('#search-cand').value = '';
+      _listFilters = {};
+      document.querySelectorAll('#cand-table thead .filter-row [data-filter]').forEach(el => { el.value = ''; });
+      saveUiState({ listFilters: {}, search: '' });
+      renderCandidateList();
+    });
     tbody.querySelectorAll('.pass-check').forEach(cb => {
       cb.addEventListener('click', e => e.stopPropagation());
       cb.addEventListener('change', e => {
