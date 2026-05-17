@@ -2635,34 +2635,6 @@ const App = (() => {
     return true;
   }
 
-  // ===== Settings (data tab) =====
-  function exportJson() {
-    const sess = getSession();
-    const list = Storage.loadForSession();
-    const payload = { session: sess, candidates: list, exportedAt: new Date().toISOString() };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `zemi-${sess.name}-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-  function importJson(file) {
-    const r = new FileReader();
-    r.onload = () => {
-      try {
-        const obj = JSON.parse(r.result);
-        const arr = Array.isArray(obj) ? obj : (obj.candidates || []);
-        if (!arr.length) throw new Error('候補データがありません');
-        if (!confirm(`${arr.length}件のデータをこの試験回に取り込みます。よろしいですか？`)) return;
-        arr.forEach(c => { delete c.id; Storage.upsert(c); });
-        toast('JSONを取り込みました', 'success');
-        renderOverview();
-      } catch (e) { alert('JSON読み込みに失敗しました: ' + e.message); }
-    };
-    r.readAsText(file);
-  }
-
   // ===== CSV import/export for paper-based responses =====
   function toCsv(rows) {
     const esc = v => {
