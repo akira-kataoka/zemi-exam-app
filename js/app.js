@@ -347,7 +347,11 @@ const App = (() => {
     }
     if (name === 'list')    renderCandidateList();
   }
-  function openHelpModal() { document.getElementById('help-modal').style.display = 'flex'; }
+  function openHelpModal() {
+    document.getElementById('help-modal').style.display = 'flex';
+    document.getElementById('help-btn').classList.remove('first-visit-pulse');
+    saveUiState({ helpSeen: true });
+  }
   function closeHelpModal() { document.getElementById('help-modal').style.display = 'none'; }
 
   // ===== Overview =====
@@ -717,7 +721,13 @@ const App = (() => {
       return;
     }
     if (emptyEl) emptyEl.style.display = 'none';
-    if (resultEl) resultEl.style.display = '';
+    if (resultEl) {
+      resultEl.style.display = '';
+      // brief loading flash
+      const oldOpacity = resultEl.style.opacity;
+      resultEl.style.opacity = '.4';
+      setTimeout(() => { resultEl.style.opacity = oldOpacity || '1'; }, 100);
+    }
     const vectors = list.map(c => Stats.featureVector(c, sess));
     const { assignments, centroids } = Cluster.kmeans(vectors, k);
     const { points } = Cluster.pca2(vectors);
@@ -2557,6 +2567,16 @@ const App = (() => {
     if (handleUrlMode()) return;
 
     renderSessionBar();
+    // First-visit hint: highlight ❓ help button
+    if (!_uiState.helpSeen) {
+      setTimeout(() => {
+        const btn = document.getElementById('help-btn');
+        if (btn) {
+          btn.classList.add('first-visit-pulse');
+          toast('💡 初めての方は「❓ 使い方」をご覧ください', 'info', 6000);
+        }
+      }, 1500);
+    }
     // Restore saved UI state (portal is candidate-only now, fall back to overview)
     const savedView = (_uiState.view === 'portal' ? 'overview' : _uiState.view) || 'overview';
     const savedSubview = _uiState.subview || 'list';
@@ -2630,9 +2650,13 @@ const App = (() => {
     $$('.resume-subtab').forEach(t => t.addEventListener('click', () => showResumeview(t.dataset.resumeview)));
 
     // Overview controls
+    let searchDebounce;
     $('#search-cand').addEventListener('input', () => {
-      saveUiState({ search: $('#search-cand').value });
-      renderCandidateList();
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => {
+        saveUiState({ search: $('#search-cand').value });
+        renderCandidateList();
+      }, 150);
     });
     // Column header sort
     document.querySelectorAll('#cand-table thead .sort-row th[data-sort]').forEach(th => {
