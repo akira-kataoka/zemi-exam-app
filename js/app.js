@@ -1025,7 +1025,7 @@ const App = (() => {
       updateProfileTriggerLabel('');
       const list = Storage.loadForSession();
       $('#profile-body').innerHTML = list.length === 0
-        ? '<div class="card" style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px">👤</div><p>受験者がまだ登録されていません。</p><p style="font-size:12px">管理 → データから「デモデータを投入」または、受験申込URLを配布してください。</p></div>'
+        ? '<div class="card" style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px">👤</div><p>受験者がまだ登録されていません。</p><p style="font-size:12px">設定 → データから「デモデータを投入」または、受験申込URLを配布してください。</p></div>'
         : `<div class="card" style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px">🔍</div><p>上部の「-- 受験者を選択 --」ボタンから ${list.length}名 の中から受験者を選んでください。</p></div>`;
     }
   }
@@ -1494,7 +1494,7 @@ const App = (() => {
     } else {
       // 管理者モード: 検索は許可しない（プライバシー）
       if (idRow) idRow.style.display = 'none';
-      if (introP) introP.innerHTML = '⚠ <strong>受験ポータルは個別配布URLからのみアクセス可能</strong>です。<br>各受験者にメッセージを送るには <strong>管理 → 履歴書 → 📨 配布メッセージ</strong> セクションをご利用ください。受験者専用URLの「プレビュー」ボタンからも本人のポータルを開いて動作確認できます。';
+      if (introP) introP.innerHTML = '⚠ <strong>受験ポータルは個別配布URLからのみアクセス可能</strong>です。<br>各受験者にメッセージを送るには <strong>設定 → 履歴書 → 📨 配布メッセージ</strong> セクションをご利用ください。受験者専用URLの「プレビュー」ボタンからも本人のポータルを開いて動作確認できます。';
       portalCards.innerHTML = '';
       $('#portal-status').textContent = '';
       // すべてのフォームも閉じる
@@ -2567,7 +2567,7 @@ const App = (() => {
         navigator.clipboard.writeText(url).then(() => toast('URLをコピーしました', 'success'));
       });
     } else {
-      section.innerHTML = `<p class="hint" style="margin:0">🔗 受験者ごとのアクセスURL・パスワード・配布用メッセージは <strong>管理 → 履歴書</strong> タブの「📨 配布メッセージ」セクションで生成・コピーできます。</p>`;
+      section.innerHTML = `<p class="hint" style="margin:0">🔗 受験者ごとのアクセスURL・パスワード・配布用メッセージは <strong>設定 → 履歴書</strong> タブの「📨 配布メッセージ」セクションで生成・コピーできます。</p>`;
       container.insertBefore(section, container.firstChild);
     }
   }
