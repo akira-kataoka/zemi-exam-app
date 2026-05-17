@@ -427,26 +427,40 @@
   <!-- ===== Data ===== -->
   <section class="admin-content" id="view-data" data-admin="data">
     <div class="card">
-      <h3>💾 データ管理</h3>
-      <p>すべての受験者データはブラウザのlocalStorageに保存されます。バックアップにはJSONエクスポートをご利用ください。</p>
-      <div class="form-actions" style="justify-content:flex-start;gap:10px">
-        <button class="btn primary" id="seed-demo">デモデータを投入</button>
-        <button class="btn" id="export-json">JSONエクスポート</button>
-        <label class="btn">JSONインポート<input type="file" id="import-json" accept="application/json" hidden></label>
-        <button class="btn danger" id="clear-all">この試験回の全データ削除</button>
+      <h3>📥 紙媒体回答のCSV取り込み</h3>
+      <p class="hint">紙で回答してもらった履歴書・学力試験・アンケートを CSV ファイルとして取り込めます。まずテンプレートをダウンロードし、Excel等で入力してからアップロードしてください。</p>
+      <div class="import-grid">
+        <div class="import-card">
+          <h4>📄 履歴書</h4>
+          <p class="muted" style="font-size:11px">受験番号・氏名・連絡先・志望動機などをCSVで一括登録</p>
+          <button class="btn" id="dl-template-resume">📥 テンプレートをDL</button>
+          <label class="btn primary">📤 CSVアップロード<input type="file" id="up-csv-resume" accept=".csv,text/csv" hidden></label>
+        </div>
+        <div class="import-card">
+          <h4>📚 学力試験</h4>
+          <p class="muted" style="font-size:11px">受験番号と各問題の選択番号(1〜)を入力</p>
+          <button class="btn" id="dl-template-academic">📥 テンプレートをDL</button>
+          <label class="btn primary">📤 CSVアップロード<input type="file" id="up-csv-academic" accept=".csv,text/csv" hidden></label>
+        </div>
+        <div class="import-card">
+          <h4>📋 アンケート</h4>
+          <p class="muted" style="font-size:11px">受験番号と各項目の5段階評価を入力</p>
+          <button class="btn" id="dl-template-survey">📥 テンプレートをDL</button>
+          <label class="btn primary">📤 CSVアップロード<input type="file" id="up-csv-survey" accept=".csv,text/csv" hidden></label>
+        </div>
       </div>
     </div>
+
     <div class="card">
-      <h3>採点ポリシー</h3>
-      <p>総合点 = <strong>学力試験の正答率(%)</strong>。アンケートは個人の傾向把握とクラスター分析のみに使用され、点数化されません。</p>
-      <input type="hidden" id="weight-academic" value="100">
-      <input type="hidden" id="weight-survey" value="0">
+      <h3>💾 データ管理</h3>
+      <div class="form-actions" style="justify-content:flex-start;gap:10px">
+        <button class="btn primary" id="seed-demo">🚀 デモデータを投入</button>
+        <button class="btn danger" id="clear-all">🗑 この試験回の全データ削除</button>
+      </div>
     </div>
-    <div class="card">
-      <h3>このアプリについて</h3>
-      <p><strong>ゼミ選抜アナライザー</strong> v2.0</p>
-      <p>履歴書／学力試験／アンケートを試験回ごとに個別解放できる管理機能、選択式問題による自動採点、レーダー／クラスター分析を含むシングルページWebアプリ。</p>
-    </div>
+
+    <input type="hidden" id="weight-academic" value="100">
+    <input type="hidden" id="weight-survey" value="0">
   </section>
 </main>
 

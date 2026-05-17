@@ -1815,6 +1815,192 @@ const App = (() => {
     r.readAsText(file);
   }
 
+  // ===== CSV import/export for paper-based responses =====
+  function toCsv(rows) {
+    const esc = v => {
+      const s = String(v ?? '');
+      if (/[,"\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    };
+    return rows.map(r => r.map(esc).join(',')).join('\r\n');
+  }
+  function downloadCsv(filename, rows) {
+    const csv = '﻿' + toCsv(rows);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function parseCsv(text) {
+    const rows = [];
+    let cur = [], val = '', inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQ) {
+        if (c === '"' && text[i + 1] === '"') { val += '"'; i++; }
+        else if (c === '"') inQ = false;
+        else val += c;
+      } else {
+        if (c === '"') inQ = true;
+        else if (c === ',') { cur.push(val); val = ''; }
+        else if (c === '\n') { cur.push(val); rows.push(cur); cur = []; val = ''; }
+        else if (c === '\r') { /* skip */ }
+        else val += c;
+      }
+    }
+    if (val || cur.length) { cur.push(val); rows.push(cur); }
+    return rows.filter(r => r.length && r.some(v => v.trim() !== ''));
+  }
+  function csvToObjects(text) {
+    const rows = parseCsv(text.replace(/^﻿/, ''));
+    if (rows.length < 2) return [];
+    const headers = rows[0].map(h => h.trim());
+    return rows.slice(1).map(r => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = (r[i] ?? '').trim(); });
+      return obj;
+    });
+  }
+
+  // --- Template generators ---
+  function downloadResumeTemplate() {
+    const headers = [
+      'examineeId', 'lastName', 'firstName', 'lastKana', 'firstKana',
+      'gender', 'birthdate', 'email', 'phone',
+      'faculty', 'department', 'grade',
+      'gpa', 'qualifications', 'motivation', 'selfPr', 'researchTopic'
+    ];
+    const sample = [
+      'Z2026001', '佐藤', '太郎', 'サトウ', 'タロウ',
+      '男性', '2003-05-15', 'sato@example.com', '090-1234-5678',
+      '商学部', '商学科', '2年',
+      '3.45', 'TOEIC 800、簿記2級',
+      '統計とマーケティングを学びたいため志望します。',
+      '学園祭実行委員でリーダーシップを発揮しました。',
+      '消費者行動の購買データ分析'
+    ];
+    downloadCsv(`履歴書テンプレート_${todayStr()}.csv`, [headers, sample]);
+  }
+
+  function downloadAcademicTemplate() {
+    const sess = ensureTests(getSession());
+    const qs = sess.academicTest.questions;
+    // Two header rows: machine ID, then human-readable label
+    const idRow = ['examineeId', ...qs.map(q => q.id)];
+    const labelRow = ['# 受験番号', ...qs.map((q, i) => `# 問${i + 1}[${q.category || ''}](正解=${q.correctIndex + 1}):${q.text.slice(0, 30)}...|選択肢: ${q.choices.map((c, j) => `${j + 1}.${c}`).join(' / ')}`)];
+    const sample = ['Z2026001', ...qs.map(q => String(q.correctIndex + 1))];
+    downloadCsv(`学力試験テンプレート_${todayStr()}.csv`, [labelRow, idRow, sample]);
+  }
+
+  function downloadSurveyTemplate() {
+    const sess = ensureTests(getSession());
+    const qs = sess.surveyTest.questions;
+    const idRow = ['examineeId', ...qs.map(q => q.id), 'freeAchievement', 'freeAspiration'];
+    const labelRow = ['# 受験番号', ...qs.map((q, i) => `# 項目${i + 1}: ${q.text} (1-5)`), '# 力を入れた活動', '# 挑戦したいこと'];
+    const sample = ['Z2026001', ...qs.map(() => '4'), '学園祭実行委員', '実データを使った研究'];
+    downloadCsv(`アンケートテンプレート_${todayStr()}.csv`, [labelRow, idRow, sample]);
+  }
+
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+  // --- Import handlers ---
+  function importResumeCsv(file) {
+    readFileAsText(file).then(text => {
+      const rows = parseCsv(text.replace(/^﻿/, ''));
+      // Skip leading comment rows starting with '#'
+      while (rows.length && rows[0][0] && rows[0][0].startsWith('#')) rows.shift();
+      if (rows.length < 2) { alert('データ行が見つかりません。'); return; }
+      const headers = rows[0].map(h => h.trim());
+      let added = 0, updated = 0;
+      rows.slice(1).forEach(r => {
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = (r[i] ?? '').trim(); });
+        if (!obj.examineeId) return;
+        if (obj.gpa) obj.gpa = Number(obj.gpa);
+        if (obj.qualifications) obj.qualifications = obj.qualifications.split(/[、,]/).map(s => s.trim()).filter(Boolean);
+        obj.resumeSubmittedAt = new Date().toISOString();
+        const existed = Storage.findByExamineeId(Storage.getCurrentSessionId(), obj.examineeId);
+        Storage.upsert(obj);
+        if (existed) updated++; else added++;
+      });
+      alert(`履歴書を取り込みました（新規 ${added}名 / 更新 ${updated}名）`);
+      renderOverview();
+    });
+  }
+
+  function importAcademicCsv(file) {
+    readFileAsText(file).then(text => {
+      const sess = ensureTests(getSession());
+      const rows = parseCsv(text.replace(/^﻿/, ''));
+      while (rows.length && rows[0][0] && rows[0][0].startsWith('#')) rows.shift();
+      if (rows.length < 2) { alert('データ行が見つかりません。'); return; }
+      const headers = rows[0].map(h => h.trim());
+      const qIds = headers.slice(1);
+      let imported = 0, skipped = 0;
+      rows.slice(1).forEach(r => {
+        const examineeId = (r[0] || '').trim();
+        if (!examineeId) return;
+        const answers = {};
+        qIds.forEach((qid, i) => {
+          const v = (r[i + 1] || '').trim();
+          if (!v) return;
+          const idx = Number(v) - 1; // user enters 1-based
+          if (idx >= 0) answers[qid] = idx;
+        });
+        if (Object.keys(answers).length === 0) { skipped++; return; }
+        const result = Stats.scoreAcademic({ academicAnswers: answers }, sess.academicTest);
+        Storage.upsert({ examineeId, academicAnswers: answers, academicScore: result, academicSubmittedAt: new Date().toISOString() });
+        imported++;
+      });
+      alert(`学力試験を取り込みました（${imported}名）` + (skipped ? ` / 空行スキップ ${skipped}名` : ''));
+      renderOverview();
+    });
+  }
+
+  function importSurveyCsv(file) {
+    readFileAsText(file).then(text => {
+      const sess = ensureTests(getSession());
+      const rows = parseCsv(text.replace(/^﻿/, ''));
+      while (rows.length && rows[0][0] && rows[0][0].startsWith('#')) rows.shift();
+      if (rows.length < 2) { alert('データ行が見つかりません。'); return; }
+      const headers = rows[0].map(h => h.trim());
+      const qIds = sess.surveyTest.questions.map(q => q.id);
+      let imported = 0;
+      rows.slice(1).forEach(r => {
+        const examineeId = (r[0] || '').trim();
+        if (!examineeId) return;
+        const answers = {};
+        qIds.forEach(qid => {
+          const idx = headers.indexOf(qid);
+          if (idx >= 0) {
+            const v = Number(r[idx]);
+            if (!isNaN(v)) answers[qid] = v;
+          }
+        });
+        const freeIdx1 = headers.indexOf('freeAchievement');
+        const freeIdx2 = headers.indexOf('freeAspiration');
+        const payload = { examineeId, surveyAnswers: answers, surveySubmittedAt: new Date().toISOString() };
+        if (freeIdx1 >= 0) payload.freeAchievement = r[freeIdx1] || '';
+        if (freeIdx2 >= 0) payload.freeAspiration = r[freeIdx2] || '';
+        Storage.upsert(payload);
+        imported++;
+      });
+      alert(`アンケートを取り込みました（${imported}名）`);
+      renderOverview();
+    });
+  }
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsText(file, 'UTF-8');
+    });
+  }
+
   // ===== Demo =====
   function seedDemo() {
     const name = `デモデータ ${new Date().toISOString().slice(0, 10)}`;
@@ -2121,10 +2307,13 @@ const App = (() => {
       inp.addEventListener('change', () => onScheduleChange(phase));
     });
 
-    // Data tab
-    $('#export-json').addEventListener('click', exportJson);
-    $('#import-json').addEventListener('change', e => { if (e.target.files[0]) importJson(e.target.files[0]); });
-    // weight editor removed — survey is no longer scored
+    // Data tab - CSV templates / imports / data ops
+    document.getElementById('dl-template-resume').addEventListener('click', downloadResumeTemplate);
+    document.getElementById('dl-template-academic').addEventListener('click', downloadAcademicTemplate);
+    document.getElementById('dl-template-survey').addEventListener('click', downloadSurveyTemplate);
+    document.getElementById('up-csv-resume').addEventListener('change', e => { if (e.target.files[0]) { importResumeCsv(e.target.files[0]); e.target.value = ''; } });
+    document.getElementById('up-csv-academic').addEventListener('change', e => { if (e.target.files[0]) { importAcademicCsv(e.target.files[0]); e.target.value = ''; } });
+    document.getElementById('up-csv-survey').addEventListener('change', e => { if (e.target.files[0]) { importSurveyCsv(e.target.files[0]); e.target.value = ''; } });
     $('#seed-demo').addEventListener('click', seedDemo);
     $('#clear-all').addEventListener('click', () => {
       if (!confirm('この試験回の全受験者データを削除しますか？（試験回自体は残ります）')) return;

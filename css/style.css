@@ -308,6 +308,12 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .miss-badge{display:inline-block;padding:2px 8px;background:#fee2e2;color:var(--danger);border-radius:999px;font-size:11px;font-weight:600}
 .stat-sub{font-size:13px;color:var(--danger);font-weight:normal}
 
+/* CSV import card */
+.import-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:8px}
+.import-card{background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.import-card h4{margin:0;font-size:14px;color:var(--primary-d)}
+.import-card .btn{width:100%;justify-content:center}
+
 /* Interview schedule timeline */
 .iv-timeline-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)}
 .iv-chip{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600}
