@@ -717,20 +717,20 @@
 </footer>
 
 <!-- ===== Login Modal (Supabase 認証時のみ表示) ===== -->
-<div id="login-modal" class="modal-overlay" style="display:none">
+<div id="login-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="login-title">
   <div class="modal-window" style="max-width:420px">
     <div class="modal-head">
-      <h3 style="margin:0">🔐 管理者ログイン</h3>
-      <button class="btn modal-close" id="login-close" title="閉じる">✕</button>
+      <h3 style="margin:0" id="login-title">🔐 管理者ログイン</h3>
+      <button class="btn modal-close" id="login-close" title="閉じる" aria-label="ログインダイアログを閉じる">✕</button>
     </div>
     <div class="modal-body" style="display:block">
       <p class="muted" style="margin-top:0;font-size:12px">Supabase に登録された管理者アカウントでログインしてください。</p>
       <form id="login-form" autocomplete="on">
         <div class="form-grid" style="grid-template-columns:1fr">
-          <label>メールアドレス<input type="email" name="email" id="login-email" required autocomplete="email"></label>
-          <label>パスワード<input type="password" name="password" id="login-password" required autocomplete="current-password"></label>
+          <label>メールアドレス<input type="email" name="email" id="login-email" required autocomplete="email" aria-describedby="login-error"></label>
+          <label>パスワード<input type="password" name="password" id="login-password" required autocomplete="current-password" aria-describedby="login-error"></label>
         </div>
-        <div id="login-error" class="muted" style="color:var(--danger);font-size:12px;display:none;margin:8px 0"></div>
+        <div id="login-error" class="muted" style="color:var(--danger);font-size:12px;display:none;margin:8px 0" role="alert" aria-live="polite"></div>
         <div class="form-actions" style="justify-content:flex-end;gap:8px;margin-top:12px">
           <button type="button" class="btn" id="login-cancel">キャンセル</button>
           <button type="submit" class="btn primary" id="login-submit">ログイン</button>
