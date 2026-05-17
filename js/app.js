@@ -2719,20 +2719,15 @@ const App = (() => {
 
   // --- Template generators ---
   function downloadResumeTemplate() {
+    // 必須・よく使う列のみ。任意項目は除外（必要なら個別画面で追加可能）
     const headers = [
       'examineeId', 'lastName', 'firstName', 'lastKana', 'firstKana',
-      'gender', 'birthdate', 'email', 'phone',
-      'faculty', 'department', 'grade',
-      'gpa', 'qualifications', 'club', 'motivation', 'selfPr', 'researchTopic'
+      'gender', 'email', 'phone', 'faculty', 'department', 'grade'
     ];
     const sample = [
       'Z2026001', '佐藤', '太郎', 'サトウ', 'タロウ',
-      '男性', '2003-05-15', 'sato@example.com', '090-1234-5678',
-      '商学部', '商学科', '2年',
-      '3.45', 'TOEIC 800、簿記2級', '軽音楽部',
-      '統計とマーケティングを学びたいため志望します。',
-      '学園祭実行委員でリーダーシップを発揮しました。',
-      '消費者行動の購買データ分析'
+      '男性', 'sato@example.com', '090-1234-5678',
+      '商学部', '商学科', '2年'
     ];
     downloadCsv(`履歴書テンプレート_${todayStr()}.csv`, [headers, sample]);
   }
@@ -2740,20 +2735,18 @@ const App = (() => {
   function downloadAcademicTemplate() {
     const sess = ensureTests(getSession());
     const qs = sess.academicTest.questions;
-    // Two header rows: machine ID, then human-readable label
+    // ヘッダー行のみ（コメント行は廃止 — Excelで混乱の元になるため）
     const idRow = ['examineeId', ...qs.map(q => q.id)];
-    const labelRow = ['# 受験番号', ...qs.map((q, i) => `# 問${i + 1}[${q.category || ''}](正解=${q.correctIndex + 1}):${q.text.slice(0, 30)}...|選択肢: ${q.choices.map((c, j) => `${j + 1}.${c}`).join(' / ')}`)];
     const sample = ['Z2026001', ...qs.map(q => String(q.correctIndex + 1))];
-    downloadCsv(`学力試験テンプレート_${todayStr()}.csv`, [labelRow, idRow, sample]);
+    downloadCsv(`学力試験テンプレート_${todayStr()}.csv`, [idRow, sample]);
   }
 
   function downloadSurveyTemplate() {
     const sess = ensureTests(getSession());
     const qs = sess.surveyTest.questions;
     const idRow = ['examineeId', ...qs.map(q => q.id), 'freeAchievement', 'freeAspiration'];
-    const labelRow = ['# 受験番号', ...qs.map((q, i) => `# 項目${i + 1}: ${q.text} (1-5)`), '# 力を入れた活動', '# 挑戦したいこと'];
     const sample = ['Z2026001', ...qs.map(() => '4'), '学園祭実行委員', '実データを使った研究'];
-    downloadCsv(`アンケートテンプレート_${todayStr()}.csv`, [labelRow, idRow, sample]);
+    downloadCsv(`アンケートテンプレート_${todayStr()}.csv`, [idRow, sample]);
   }
 
   function todayStr() { return new Date().toISOString().slice(0, 10); }
