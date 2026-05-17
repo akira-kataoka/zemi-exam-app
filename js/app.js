@@ -17,6 +17,23 @@ const App = (() => {
     try { localStorage.setItem(UI_KEY, JSON.stringify(_uiState)); } catch (e) {}
   }
 
+  // ===== Auto-save status indicator =====
+  function showAutoSaveStatus(state) {
+    let el = document.getElementById('autosave-indicator');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'autosave-indicator';
+      el.className = 'autosave-indicator';
+      document.body.appendChild(el);
+    }
+    if (state === 'saving') { el.textContent = '💾 保存中...'; el.className = 'autosave-indicator saving'; }
+    else if (state === 'saved') {
+      el.textContent = '✓ 保存しました';
+      el.className = 'autosave-indicator saved';
+      setTimeout(() => { el.className = 'autosave-indicator hidden'; }, 1500);
+    }
+  }
+
   // ===== Toast notification =====
   function toast(message, type = 'info', durationMs = 3000) {
     let container = document.getElementById('toast-container');
@@ -1637,6 +1654,16 @@ const App = (() => {
     const wrap = $('#academic-q-list');
     if (!wrap) return;
     $('#academic-q-count').textContent = `現在 ${sess.academicTest.questions.length} 問 / 合計 ${sess.academicTest.questions.reduce((s, q) => s + (q.points || 0), 0)} 点`;
+    if (sess.academicTest.questions.length === 0) {
+      wrap.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📚</div>
+          <p>問題がまだありません</p>
+          <p class="muted">「＋ 問題を追加」または「デフォルト問題に戻す」から始めてください</p>
+        </div>`;
+      wireAcademicEditor();
+      return;
+    }
     wrap.innerHTML = sess.academicTest.questions.map((q, idx) => `
       <div class="q-edit-card" data-idx="${idx}">
         <div class="q-edit-head">
@@ -1708,15 +1735,21 @@ const App = (() => {
     const wrap = $('#survey-q-list');
     if (!wrap) return;
     $('#survey-q-count').textContent = `現在 ${sess.surveyTest.questions.length} 項目`;
-    wrap.innerHTML = sess.surveyTest.questions.map((q, idx) => `
-      <div class="q-edit-card" data-idx="${idx}">
-        <div class="q-edit-head">
-          <span class="q-edit-num">項目${idx + 1}</span>
-          <button class="btn danger" data-act="del-survey">削除</button>
+    wrap.innerHTML = sess.surveyTest.questions.length === 0
+      ? `<div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <p>アンケート項目がまだありません</p>
+          <p class="muted">「＋ 項目を追加」または「デフォルト項目に戻す」から始めてください</p>
+        </div>`
+      : sess.surveyTest.questions.map((q, idx) => `
+        <div class="q-edit-card" data-idx="${idx}">
+          <div class="q-edit-head">
+            <span class="q-edit-num">項目${idx + 1}</span>
+            <button class="btn danger" data-act="del-survey">削除</button>
+          </div>
+          <textarea data-field="text" rows="2" placeholder="質問文">${escapeHtml(q.text)}</textarea>
         </div>
-        <textarea data-field="text" rows="2" placeholder="質問文">${escapeHtml(q.text)}</textarea>
-      </div>
-    `).join('') || '<p class="muted">項目がありません。</p>';
+      `).join('');
     wrap.querySelectorAll('.q-edit-card').forEach(card => {
       const idx = Number(card.dataset.idx);
       const q = sess.surveyTest.questions[idx];
@@ -2666,15 +2699,34 @@ const App = (() => {
       document.querySelectorAll('.help-tab').forEach(x => x.classList.toggle('active', x === t));
       document.querySelectorAll('.help-section').forEach(s => s.classList.toggle('active', s.id === 'helpsec-' + t.dataset.helptab));
     }));
-    // ESC to close any open modal
+    // Global keyboard shortcuts
     document.addEventListener('keydown', e => {
-      if (e.key !== 'Escape') return;
-      document.querySelectorAll('.modal-overlay').forEach(m => {
-        if (m.style.display !== 'none' && getComputedStyle(m).display !== 'none') {
-          if (m.id === 'help-modal') closeHelpModal();
-          else m.remove();
+      const active = document.activeElement;
+      const inEditable = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable);
+      // ESC: close modals
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+          if (m.style.display !== 'none' && getComputedStyle(m).display !== 'none') {
+            if (m.id === 'help-modal') closeHelpModal();
+            else m.remove();
+          }
+        });
+        return;
+      }
+      if (inEditable) return;
+      // / : focus search
+      if (e.key === '/') {
+        const search = document.getElementById('search-cand');
+        if (search && document.querySelector('#view-overview.active') && document.querySelector('#sub-list.active')) {
+          e.preventDefault();
+          search.focus();
         }
-      });
+      }
+      // ? : open help
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        openHelpModal();
+      }
     });
     $$('.subtab:not(.adminsubtab)').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
     $$('.adminsubtab').forEach(t => t.addEventListener('click', () => showAdminview(t.dataset.adminview)));
@@ -2789,13 +2841,20 @@ const App = (() => {
       if (!confirm('現在の項目を破棄してデフォルトに戻しますか？')) return;
       const sess = getSession(); sess.surveyTest = { questions: Stats.DEFAULT_SURVEY_QUESTIONS.map(q => ({ ...q })) }; saveSession(sess); renderSurveyMgr();
     });
-    // Message template
+    // Message template (auto-save with debounce + visual feedback)
     const msgTextarea = document.getElementById('msg-template');
     if (msgTextarea) {
-      msgTextarea.addEventListener('change', () => {
-        const sess = getSession();
-        sess.messageTemplate = msgTextarea.value;
-        saveSession(sess);
+      let msgSaveTimer;
+      msgTextarea.addEventListener('input', () => {
+        clearTimeout(msgSaveTimer);
+        // Show saving indicator
+        showAutoSaveStatus('saving');
+        msgSaveTimer = setTimeout(() => {
+          const sess = getSession();
+          sess.messageTemplate = msgTextarea.value;
+          saveSession(sess);
+          showAutoSaveStatus('saved');
+        }, 500);
       });
     }
     const msgReset = document.getElementById('msg-template-reset');
