@@ -34,10 +34,10 @@
     <button class="btn danger icon-btn" id="session-delete" title="この試験回を削除">🗑</button>
     <select id="session-select" class="session-switch-hidden" hidden></select>
     <span class="phase-status">受付:
-      <span class="phase-pill" data-phase="application">申込: <span data-phase-state="application">-</span></span>
-      <span class="phase-pill" data-phase="resume">履歴書: <span data-phase-state="resume">-</span></span>
-      <span class="phase-pill" data-phase="academic">学力: <span data-phase-state="academic">-</span></span>
-      <span class="phase-pill" data-phase="survey">アンケート: <span data-phase-state="survey">-</span></span>
+      <span class="phase-pill" data-phase="application">①申込: <span data-phase-state="application">-</span></span>
+      <span class="phase-pill" data-phase="resume">②履歴書: <span data-phase-state="resume">-</span></span>
+      <span class="phase-pill" data-phase="survey">②アンケート: <span data-phase-state="survey">-</span></span>
+      <span class="phase-pill" data-phase="academic">③学力: <span data-phase-state="academic">-</span></span>
     </span>
     <span class="session-meta" id="session-meta"></span>
   </div>
@@ -62,11 +62,11 @@
     <div class="stats-group">
       <div class="stats-group-title">📥 提出状況（クリックで詳細）</div>
       <div class="cards">
-        <div class="card stat clickable" data-quick-filter="application"><span class="k">📝 受験申込 済/全</span><span class="v" id="stat-application">-</span></div>
-        <div class="card stat clickable" data-quick-filter="resume"><span class="k">📄 履歴書 済/全</span><span class="v" id="stat-resume">-</span></div>
-        <div class="card stat clickable" data-quick-filter="academic"><span class="k">📚 学力試験 済/全</span><span class="v" id="stat-academic">-</span></div>
-        <div class="card stat clickable" data-quick-filter="survey"><span class="k">📋 アンケート 済/全</span><span class="v" id="stat-survey">-</span></div>
-        <div class="card stat clickable" data-quick-filter="interview"><span class="k">🎤 面接 済/全</span><span class="v" id="stat-interview">-</span></div>
+        <div class="card stat clickable" data-quick-filter="application"><span class="k">①📝 受験申込 済/全</span><span class="v" id="stat-application">-</span></div>
+        <div class="card stat clickable" data-quick-filter="resume"><span class="k">②📄 履歴書 済/全</span><span class="v" id="stat-resume">-</span></div>
+        <div class="card stat clickable" data-quick-filter="survey"><span class="k">②📋 アンケート 済/全</span><span class="v" id="stat-survey">-</span></div>
+        <div class="card stat clickable" data-quick-filter="academic"><span class="k">③📚 学力試験 済/全</span><span class="v" id="stat-academic">-</span></div>
+        <div class="card stat clickable" data-quick-filter="interview"><span class="k">④🎤 面接 済/全</span><span class="v" id="stat-interview">-</span></div>
       </div>
     </div>
     <div class="stats-group">
@@ -100,10 +100,11 @@
               <th data-sort="name">氏名 / フリガナ</th>
               <th data-sort="gender">性別</th>
               <th data-sort="faculty">学部・学科</th>
-              <th data-sort="resume">履歴書</th>
-              <th data-sort="academic">学力</th>
-              <th data-sort="survey">アンケート</th>
-              <th data-sort="interview">面接</th>
+              <th data-sort="application">①申込</th>
+              <th data-sort="resume">②履歴書</th>
+              <th data-sort="survey">②アンケート</th>
+              <th data-sort="academic">③学力</th>
+              <th data-sort="interview">④面接</th>
               <th data-sort="updated">最終更新</th>
               <th>操作</th>
             </tr>
@@ -113,17 +114,17 @@
               <th><input type="text" data-filter="name" placeholder="検索"></th>
               <th><select data-filter="gender"><option value="">全て</option><option>男性</option><option>女性</option><option>その他</option></select></th>
               <th><input type="text" data-filter="faculty" placeholder="検索"></th>
-              <th><select data-filter="resume"><option value="">全て</option><option value="1">✅提出済</option><option value="0">❌未回答</option></select></th>
+              <th><select data-filter="applicationStatus"><option value="">全て</option><option value="1">✅申込済</option><option value="0">❌未</option></select></th>
+              <th><select data-filter="resume"><option value="">全て</option><option value="1">✅提出済</option><option value="0">❌未</option></select></th>
               <th>
-                <select data-filter="academicStatus" class="ac-sv-sel"><option value="">全て</option><option value="1">✅受験済</option><option value="0">❌未受験</option></select>
-                <input type="text" data-filter="academic" placeholder="例: ≥70">
-              </th>
-              <th>
-                <select data-filter="surveyStatus" class="ac-sv-sel"><option value="">全て</option><option value="1">✅回答済</option><option value="0">❌未回答</option></select>
+                <select data-filter="surveyStatus" class="ac-sv-sel"><option value="">全て</option><option value="1">✅回答済</option><option value="0">❌未</option></select>
                 <input type="text" data-filter="survey" placeholder="例: ≥3.5">
               </th>
-              <th><select data-filter="interviewStatus"><option value="">全て</option><option value="1">✅実施済</option><option value="0">❌未実施</option></select></th>
-              <th><input type="text" data-filter="total" placeholder="例: ≥60"></th>
+              <th>
+                <select data-filter="academicStatus" class="ac-sv-sel"><option value="">全て</option><option value="1">✅受験済</option><option value="0">❌未</option></select>
+                <input type="text" data-filter="academic" placeholder="例: ≥70">
+              </th>
+              <th><select data-filter="interviewStatus"><option value="">全て</option><option value="1">✅実施済</option><option value="0">❌未</option></select></th>
               <th></th>
               <th></th>
             </tr>
@@ -450,32 +451,32 @@
           <div>フェーズ</div><div>手動</div><div>開始日時</div><div>終了日時</div><div>状態</div>
         </div>
         <div class="schedule-row" data-phase="application">
-          <div class="phase-name">📝 受験申込</div>
+          <div class="phase-name">①📝 受験申込</div>
           <div><label class="switch"><input type="checkbox" data-phase-toggle="application"><span class="slider"></span></label></div>
           <div><input type="datetime-local" data-phase-start="application"></div>
           <div><input type="datetime-local" data-phase-end="application"></div>
           <div class="phase-status-cell" data-phase-status="application">-</div>
         </div>
         <div class="schedule-row" data-phase="resume">
-          <div class="phase-name">📄 履歴書</div>
+          <div class="phase-name">②📄 履歴書</div>
           <div><label class="switch"><input type="checkbox" data-phase-toggle="resume"><span class="slider"></span></label></div>
           <div><input type="datetime-local" data-phase-start="resume"></div>
           <div><input type="datetime-local" data-phase-end="resume"></div>
           <div class="phase-status-cell" data-phase-status="resume">-</div>
         </div>
-        <div class="schedule-row" data-phase="academic">
-          <div class="phase-name">📚 学力試験</div>
-          <div><label class="switch"><input type="checkbox" data-phase-toggle="academic"><span class="slider"></span></label></div>
-          <div><input type="datetime-local" data-phase-start="academic"></div>
-          <div><input type="datetime-local" data-phase-end="academic"></div>
-          <div class="phase-status-cell" data-phase-status="academic">-</div>
-        </div>
         <div class="schedule-row" data-phase="survey">
-          <div class="phase-name">📋 アンケート</div>
+          <div class="phase-name">②📋 アンケート</div>
           <div><label class="switch"><input type="checkbox" data-phase-toggle="survey"><span class="slider"></span></label></div>
           <div><input type="datetime-local" data-phase-start="survey"></div>
           <div><input type="datetime-local" data-phase-end="survey"></div>
           <div class="phase-status-cell" data-phase-status="survey">-</div>
+        </div>
+        <div class="schedule-row" data-phase="academic">
+          <div class="phase-name">③📚 学力試験</div>
+          <div><label class="switch"><input type="checkbox" data-phase-toggle="academic"><span class="slider"></span></label></div>
+          <div><input type="datetime-local" data-phase-start="academic"></div>
+          <div><input type="datetime-local" data-phase-end="academic"></div>
+          <div class="phase-status-cell" data-phase-status="academic">-</div>
         </div>
       </div>
     </div>

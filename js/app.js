@@ -465,6 +465,7 @@ const App = (() => {
           case 'gender':     return (c.gender || '') === val;
           case 'faculty':    return ((c.faculty || '') + ' ' + (c.department || '')).toLowerCase().includes(v);
           case 'resume':     return val === '1' ? Stats.hasResume(c) : !Stats.hasResume(c);
+          case 'applicationStatus': return val === '1' ? Stats.hasApplication(c) : !Stats.hasApplication(c);
           case 'academicStatus':  return val === '1' ? Stats.hasAcademic(c) : !Stats.hasAcademic(c);
           case 'surveyStatus':    return val === '1' ? Stats.hasSurvey(c) : !Stats.hasSurvey(c);
           case 'interviewStatus': return val === '1' ? Stats.hasInterview(c) : !Stats.hasInterview(c);
@@ -484,6 +485,7 @@ const App = (() => {
         case 'name':       return fullName(a.c).localeCompare(fullName(b.c), 'ja') * dir;
         case 'gender':     return (a.c.gender || '').localeCompare(b.c.gender || '', 'ja') * dir;
         case 'faculty':    return ((a.c.faculty || '') + (a.c.department || '')).localeCompare((b.c.faculty || '') + (b.c.department || ''), 'ja') * dir;
+        case 'application': return (new Date(a.c.applicationSubmittedAt || 0) - new Date(b.c.applicationSubmittedAt || 0)) * dir;
         case 'resume':     return ((Stats.hasResume(a.c) ? 1 : 0) - (Stats.hasResume(b.c) ? 1 : 0)) * dir;
         case 'academic':   return (a.ac.percent - b.ac.percent) * dir;
         case 'survey':     return (a.sv - b.sv) * dir;
@@ -522,9 +524,10 @@ const App = (() => {
         </td>
         <td>${escapeHtml(c.gender || '—')}</td>
         <td>${escapeHtml((c.faculty || '') + ' ' + (c.department || ''))}</td>
+        <td>${Stats.hasApplication(c) ? `<div class="cell-status">✅<span class="cell-time">${formatDateShort(c.applicationSubmittedAt)}</span></div>` : missBadge}</td>
         <td>${Stats.hasResume(c) ? `<div class="cell-status">✅<span class="cell-time">${formatDateShort(c.resumeSubmittedAt)}</span></div>` : missBadge}</td>
-        <td class="num">${Stats.hasAcademic(c) ? `<div class="cell-status"><strong>${ac.percent.toFixed(1)}%</strong><span class="cell-time">${formatDateShort(c.academicSubmittedAt)}</span></div>` : missBadge}</td>
         <td class="num">${Stats.hasSurvey(c) ? `<div class="cell-status"><strong>${sv.toFixed(2)}</strong><span class="cell-time">${formatDateShort(c.surveySubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${Stats.hasAcademic(c) ? `<div class="cell-status"><strong>${ac.percent.toFixed(1)}%</strong><span class="cell-time">${formatDateShort(c.academicSubmittedAt)}</span></div>` : missBadge}</td>
         <td class="num">${iv ? `<div class="cell-status"><strong>${ivAvg.toFixed(1)}/5</strong><span class="cell-time">${formatDateShort(c.interview.heldAt)}</span></div>` : missBadge}</td>
         <td>${formatDate(lastUpdate)}</td>
         <td class="row-actions">
@@ -532,7 +535,7 @@ const App = (() => {
           <button class="btn btn-icon danger" data-act="del" title="削除">🗑</button>
         </td>
       </tr>`;
-    }).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`;
+    }).join('') || `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`;
     tbody.querySelectorAll('.pass-check').forEach(cb => {
       cb.addEventListener('click', e => e.stopPropagation());
       cb.addEventListener('change', e => {
@@ -883,10 +886,11 @@ const App = (() => {
             <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${c.gender ? '🚻 ' + escapeHtml(c.gender) + ' ・ ' : ''}${calcAge(c.birthdate) != null ? `🎂 ${calcAge(c.birthdate)}歳 ・ ` : ''}${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
             <div style="margin-top:10px"><label class="pass-toggle"><input type="checkbox" id="profile-pass" ${c.passed ? 'checked' : ''}> <span>🏆 この受験者を合格にする</span></label></div>
             <div class="profile-submissions">
-              <span class="ps-item ${c.resumeSubmittedAt ? 'ps-done' : 'ps-miss'}">📄 履歴書: ${c.resumeSubmittedAt ? formatDate(c.resumeSubmittedAt) : '未提出'}</span>
-              <span class="ps-item ${c.academicSubmittedAt ? 'ps-done' : 'ps-miss'}">📚 学力試験: ${c.academicSubmittedAt ? formatDate(c.academicSubmittedAt) : '未受験'}</span>
-              <span class="ps-item ${c.surveySubmittedAt ? 'ps-done' : 'ps-miss'}">📋 アンケート: ${c.surveySubmittedAt ? formatDate(c.surveySubmittedAt) : '未回答'}</span>
-              <span class="ps-item ${c.interview?.heldAt ? 'ps-done' : 'ps-miss'}">🎤 面接: ${c.interview?.heldAt ? formatDate(c.interview.heldAt) : '未実施'}</span>
+              <span class="ps-item ${c.applicationSubmittedAt ? 'ps-done' : 'ps-miss'}">①📝 申込: ${c.applicationSubmittedAt ? formatDate(c.applicationSubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.resumeSubmittedAt ? 'ps-done' : 'ps-miss'}">②📄 履歴書: ${c.resumeSubmittedAt ? formatDate(c.resumeSubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.surveySubmittedAt ? 'ps-done' : 'ps-miss'}">②📋 アンケート: ${c.surveySubmittedAt ? formatDate(c.surveySubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.academicSubmittedAt ? 'ps-done' : 'ps-miss'}">③📚 学力: ${c.academicSubmittedAt ? formatDate(c.academicSubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.interview?.heldAt ? 'ps-done' : 'ps-miss'}">④🎤 面接: ${c.interview?.heldAt ? formatDate(c.interview.heldAt) : '未'}</span>
             </div>
           </div>
           <div>
