@@ -121,6 +121,7 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
 .toolbar input[type="search"],.toolbar select,.toolbar input[type="number"]{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:13px}
 .toolbar input[type="search"]{min-width:240px}
+.toolbar input:focus,.toolbar select:focus,.session-popover input:focus,.profile-picker-popover input:focus,.q-edit-card input:focus,.q-edit-card textarea:focus,.q-edit-card select:focus,.schedule-row input:focus{outline:2px solid var(--primary);outline-offset:-1px;border-color:var(--primary)}
 .toolbar label{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 
 /* Table */
