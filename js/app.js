@@ -125,7 +125,11 @@ const App = (() => {
     // Initialize default tests if missing (idempotent)
     let changed = false;
     if (!sess.academicTest || !Array.isArray(sess.academicTest.questions)) {
-      sess.academicTest = { questions: DEFAULT_ACADEMIC_QUESTIONS.map(q => ({ ...q })) };
+      sess.academicTest = { questions: DEFAULT_ACADEMIC_QUESTIONS.map(q => ({ ...q })), graceMinutes: 5 };
+      changed = true;
+    }
+    if (sess.academicTest && sess.academicTest.graceMinutes === undefined) {
+      sess.academicTest.graceMinutes = 5;
       changed = true;
     }
     if (!sess.surveyTest || !Array.isArray(sess.surveyTest.questions)) {
@@ -319,7 +323,7 @@ const App = (() => {
     if (name === 'profile') refreshProfileSelect();
     if (name === 'portal')   renderPortal();
     if (name === 'admin') {
-      const sub = _uiState.adminview || 'academic';
+      const sub = _uiState.adminview || 'resume';
       showAdminview(sub);
     }
   }
@@ -756,10 +760,11 @@ const App = (() => {
   function runCluster() {
     const sess = getSession();
     const k = Math.max(2, Math.min(8, Number($('#k-value').value) || 4));
-    // 完全なデータ(学力かつアンケート両方提出)のみを対象とする (欠損が0として混入するのを防ぐ)
+    // 学力試験 OR アンケートのどちらかでもあればクラスタリング対象に
+    // (両方ある人は両特徴量を使用、片方しかない人は欠損のないものだけで距離計算)
     const allList = Storage.loadForSession();
-    const list = allList.filter(c => Stats.hasAcademic(c) && Stats.hasSurvey(c));
-    const incompleteCount = allList.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).length - list.length;
+    const list = allList.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c));
+    const incompleteCount = 0; // 全員受け入れるので除外なし
     const emptyEl = document.getElementById('cluster-empty');
     const resultEl = document.getElementById('cluster-result');
     if (list.length < k) {
@@ -1593,6 +1598,8 @@ const App = (() => {
       if (!cand) { alert('まず履歴書を提出してください。'); return; }
       $('#portal-academic').style.display = 'block';
       $('#form-academic').elements.examineeId.value = cand.examineeId;
+      // タイマー表示
+      startAcademicCountdown(sess);
       const wrap = $('#academic-questions');
       wrap.innerHTML = sess.academicTest.questions.map((q, i) => `
         <div class="exam-q">
@@ -1839,6 +1846,52 @@ const App = (() => {
     renderOverview();
   }
 
+  let _acTimerInterval = null;
+  function startAcademicCountdown(sess) {
+    if (_acTimerInterval) clearInterval(_acTimerInterval);
+    let banner = document.getElementById('academic-timer-banner');
+    const formEl = document.getElementById('form-academic');
+    const sec = document.getElementById('portal-academic');
+    if (!banner && sec) {
+      banner = document.createElement('div');
+      banner.id = 'academic-timer-banner';
+      banner.className = 'ac-timer';
+      sec.insertBefore(banner, sec.firstChild.nextSibling);
+    }
+    const endsAtIso = sess.phaseSchedule?.academic?.endsAt;
+    if (!endsAtIso) {
+      if (banner) banner.style.display = 'none';
+      return;
+    }
+    const endTs = new Date(endsAtIso).getTime();
+    const graceMin = sess.academicTest?.graceMinutes ?? 5;
+    const graceEnd = endTs + graceMin * 60000;
+    function update() {
+      const now = Date.now();
+      const remain = endTs - now;
+      if (remain > 0) {
+        const m = Math.floor(remain / 60000);
+        const s = Math.floor((remain % 60000) / 1000);
+        banner.className = 'ac-timer ' + (m < 5 ? 'warn' : 'ok');
+        banner.innerHTML = `⏱ 試験残り時間 <strong>${m}分${String(s).padStart(2, '0')}秒</strong> ・ 終了 ${formatDateShort(endsAtIso)}`;
+      } else if (now < graceEnd) {
+        const r = graceEnd - now;
+        const m = Math.floor(r / 60000);
+        const s = Math.floor((r % 60000) / 1000);
+        banner.className = 'ac-timer grace';
+        banner.innerHTML = `⛔ 試験時間終了。提出のみ受付中 <strong>残り ${m}:${String(s).padStart(2, '0')}</strong>（猶予${graceMin}分）`;
+      } else {
+        banner.className = 'ac-timer expired';
+        banner.innerHTML = `🔒 提出期限を過ぎました（${formatDateShort(new Date(graceEnd).toISOString())}）`;
+        if (formEl) Array.from(formEl.querySelectorAll('input,button')).forEach(el => el.disabled = true);
+        clearInterval(_acTimerInterval);
+        _acTimerInterval = null;
+      }
+    }
+    update();
+    _acTimerInterval = setInterval(update, 1000);
+  }
+
   function submitAcademic(e) {
     e.preventDefault();
     const sess = ensureTests(getSession());
@@ -1885,6 +1938,22 @@ const App = (() => {
   function renderAcademicMgr() {
     const sess = ensureTests(getSession());
     renderPhaseShare('academic', 'view-mgr-academic');
+    // Load grace minutes + deadline info
+    const graceInput = document.getElementById('academic-grace-min');
+    if (graceInput) graceInput.value = sess.academicTest?.graceMinutes ?? 5;
+    const infoEl = document.getElementById('academic-deadline-info');
+    if (infoEl) {
+      const endsAt = sess.phaseSchedule?.academic?.endsAt;
+      if (endsAt) {
+        const grace = sess.academicTest?.graceMinutes ?? 5;
+        const graceEnd = new Date(new Date(endsAt).getTime() + grace * 60000);
+        infoEl.innerHTML = `📅 現在の試験終了時刻: <strong>${formatDate(endsAt)}</strong> ・ 提出受付終了: <strong>${formatDate(graceEnd.toISOString())}</strong>（+${grace}分）`;
+      } else {
+        infoEl.innerHTML = '⚠ 受付制御に「学力試験 終了日時」が未設定です。<a href="#" data-jump-to-receipt>受付制御へ移動</a>';
+        const lnk = infoEl.querySelector('[data-jump-to-receipt]');
+        if (lnk) lnk.addEventListener('click', e => { e.preventDefault(); showAdminview('resume'); showResumeview('control'); });
+      }
+    }
     const wrap = $('#academic-q-list');
     if (!wrap) return;
     $('#academic-q-count').textContent = `現在 ${sess.academicTest.questions.length} 問 / 合計 ${sess.academicTest.questions.reduce((s, q) => s + (q.points || 0), 0)} 点`;
@@ -3101,6 +3170,15 @@ const App = (() => {
     }));
 
     // Question editors
+    // Save grace minutes
+    document.getElementById('save-grace-min')?.addEventListener('click', () => {
+      const sess = ensureTests(getSession());
+      const v = Number(document.getElementById('academic-grace-min').value);
+      sess.academicTest.graceMinutes = isNaN(v) || v < 0 ? 5 : Math.min(60, v);
+      saveSession(sess);
+      renderAcademicMgr();
+      toast(`猶予時間 ${sess.academicTest.graceMinutes}分 を保存`, 'success', 1500);
+    });
     $('#add-academic-q').addEventListener('click', () => {
       const sess = getSession();
       sess.academicTest.questions.push({ id: 'q_' + Date.now().toString(36), category: '', text: '新しい問題', choices: ['選択肢1', '選択肢2', '選択肢3', '選択肢4'], correctIndex: 0, points: 10 });

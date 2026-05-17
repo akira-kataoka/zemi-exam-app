@@ -75,7 +75,7 @@ const Storage = (() => {
     s.phaseSchedule[phase] = { startsAt: startsAt || null, endsAt: endsAt || null };
     saveSessions(list);
   }
-  // Effective open: manual ON AND (no start or now >= start) AND (no end or now < end)
+  // Effective open: manual ON AND (no start or now >= start) AND (no end or now < end + grace)
   function isPhaseOpen(session, phase, now) {
     if (!session || !session.phases) return false;
     if (!session.phases[phase]) return false;
@@ -83,8 +83,19 @@ const Storage = (() => {
     if (!sch) return true;
     const t = (now || new Date()).getTime();
     if (sch.startsAt && t < new Date(sch.startsAt).getTime()) return false;
-    if (sch.endsAt && t >= new Date(sch.endsAt).getTime()) return false;
+    if (sch.endsAt) {
+      const graceMin = phase === 'academic' ? (session.academicTest?.graceMinutes ?? 0) : 0;
+      if (t >= new Date(sch.endsAt).getTime() + graceMin * 60000) return false;
+    }
     return true;
+  }
+  // 学力試験で「正規の終了時刻を過ぎたが猶予期間内」かどうか
+  function isPhaseInGrace(session, phase, now) {
+    if (phase !== 'academic') return false;
+    const sch = session?.phaseSchedule?.[phase];
+    if (!sch?.endsAt) return false;
+    const t = (now || new Date()).getTime();
+    return t >= new Date(sch.endsAt).getTime();
   }
   function phaseStatusText(session, phase) {
     if (!session?.phases?.[phase]) return '🔒 手動停止中';
@@ -189,7 +200,7 @@ const Storage = (() => {
   return {
     load, save, loadForSession, findByExamineeId, upsert, remove, clearAll, regenerateCandidatePassword, generatePassword,
     loadCfg, saveCfg,
-    loadSessions, addSession, renameSession, setPhase, setPhaseSchedule, isPhaseOpen, phaseStatusText, removeSession, regeneratePin, generatePin,
+    loadSessions, addSession, renameSession, setPhase, setPhaseSchedule, isPhaseOpen, isPhaseInGrace, phaseStatusText, removeSession, regeneratePin, generatePin,
     getCurrentSessionId, setCurrentSessionId, getCurrentSession,
     DEFAULT_SESSION_ID
   };
