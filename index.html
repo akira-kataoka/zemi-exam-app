@@ -132,16 +132,10 @@
     <section class="subview" id="sub-rank">
       <div class="toolbar">
         <label>上位<select id="rank-n"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>名表示</label>
-        <label>並び順
-          <select id="rank-metric">
-            <option value="total">総合点</option>
-            <option value="academic">学力試験</option>
-            <option value="survey">アンケート平均</option>
-          </select>
-        </label>
+        <span class="muted" style="font-size:12px">※ アンケートは点数化されません。順位は学力試験スコアのみで決定します。</span>
       </div>
       <table class="data-table" id="rank-table">
-        <thead><tr><th>順位</th><th>受験番号</th><th>氏名</th><th>学力(%)</th><th>アンケート</th><th>総合</th></tr></thead>
+        <thead><tr><th>順位</th><th>受験番号</th><th>氏名</th><th>学部・学科</th><th>合格</th><th>学力スコア</th></tr></thead>
         <tbody></tbody>
       </table>
     </section>

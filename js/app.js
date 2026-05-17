@@ -523,30 +523,37 @@ const App = (() => {
   function renderRanking() {
     const sess = getSession();
     const n = Number($('#rank-n').value);
-    const metric = $('#rank-metric').value;
-    const list = Storage.loadForSession().map(c => {
-      const ac = Stats.scoreAcademic(c, sess.academicTest);
-      const sv = Stats.surveyAvg(c, sess.surveyTest);
-      const total = Stats.totalScore(c, sess, cfg);
-      return { c, ac, sv, total };
-    });
-    let key;
-    if (metric === 'academic') key = x => x.ac.percent;
-    else if (metric === 'survey') key = x => x.sv;
-    else key = x => x.total;
-    list.sort((a, b) => key(b) - key(a));
+    const list = Storage.loadForSession()
+      .filter(c => Stats.hasAcademic(c))
+      .map(c => ({ c, ac: Stats.scoreAcademic(c, sess.academicTest) }));
+    list.sort((a, b) => b.ac.percent - a.ac.percent);
     const top = list.slice(0, n);
     const tbody = $('#rank-table tbody');
     tbody.innerHTML = top.map((x, i) => `
-      <tr>
-        <td>${i + 1}</td>
+      <tr data-id="${x.c.id}" class="${x.c.passed ? 'row-passed' : ''}">
+        <td><strong>${i + 1}</strong></td>
         <td>${escapeHtml(x.c.examineeId || '')}</td>
-        <td>${escapeHtml(fullName(x.c))}</td>
-        <td class="num">${Stats.hasAcademic(x.c) ? x.ac.percent.toFixed(1) + '%' : '—'}</td>
-        <td class="num">${Stats.hasSurvey(x.c) ? x.sv.toFixed(2) : '—'}</td>
-        <td class="num"><strong>${x.total.toFixed(1)}</strong></td>
+        <td>
+          <div class="name-cell">
+            ${x.c.photo ? `<img class="avatar-sm" src="${x.c.photo}" alt="">` : '<div class="avatar-sm avatar-blank">👤</div>'}
+            <div>
+              <div class="name-main">${escapeHtml(fullName(x.c))}</div>
+              ${fullKana(x.c) ? `<div class="name-kana">${escapeHtml(fullKana(x.c))}</div>` : ''}
+            </div>
+          </div>
+        </td>
+        <td>${escapeHtml((x.c.faculty || '') + ' ' + (x.c.department || ''))}</td>
+        <td>${x.c.passed ? '✅' : ''}</td>
+        <td class="num"><strong>${x.ac.percent.toFixed(1)}%</strong> <span class="muted" style="font-size:11px">(${x.ac.total}/${x.ac.max}点)</span></td>
       </tr>
-    `).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">データがありません。</td></tr>`;
+    `).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">学力試験を受験した受験者がいません。</td></tr>`;
+    tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.addEventListener('click', () => {
+        $('#profile-select').value = tr.dataset.id;
+        showView('profile');
+        renderProfile(tr.dataset.id);
+      });
+    });
   }
 
   // ===== Cluster =====
@@ -1569,7 +1576,6 @@ const App = (() => {
       renderCandidateList();
     });
     $('#rank-n').addEventListener('change', renderRanking);
-    $('#rank-metric').addEventListener('change', renderRanking);
     $('#run-cluster').addEventListener('click', runCluster);
 
     // Profile
