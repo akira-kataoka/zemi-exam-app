@@ -62,6 +62,9 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .subtab.active{background:#dbeafe;color:var(--primary)}
 .subview{display:none}
 .subview.active{display:block}
+.adminview{display:none}
+.adminview.active{display:block}
+.adminsubtab{font-size:13px}
 
 /* Card */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px;box-shadow:var(--shadow)}
@@ -292,6 +295,22 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 /* Missing badge + stat-sub + ac-sv filter */
 .miss-badge{display:inline-block;padding:2px 8px;background:#fee2e2;color:var(--danger);border-radius:999px;font-size:11px;font-weight:600}
 .stat-sub{font-size:13px;color:var(--danger);font-weight:normal}
+
+/* Interview section */
+.iv-summary{background:#fafafa;border-radius:8px;padding:14px;margin-top:10px}
+.iv-meta{display:flex;flex-wrap:wrap;gap:18px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.iv-meta > div{display:flex;flex-direction:column;gap:2px}
+.iv-k{color:var(--muted);font-size:11px;font-weight:600}
+.iv-v{font-size:14px;color:var(--ink)}
+.iv-rating-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.iv-rating-row:last-child{border-bottom:none}
+.iv-rating-row strong{color:#8b5cf6}
+.iv-rating-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:580px){.iv-rating-grid{grid-template-columns:1fr}}
+.iv-rating-edit{background:#f8fafc;padding:8px 10px;border-radius:6px}
+.iv-rating-edit > label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.iv-scale{display:flex;gap:8px}
+.iv-scale label{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer}
 
 /* Submission modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;animation:fade .15s ease}

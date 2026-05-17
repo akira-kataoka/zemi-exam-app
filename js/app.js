@@ -5,7 +5,7 @@ const App = (() => {
 
   let cfg = Storage.loadCfg();
   const charts = {};
-  const PHASE_LABEL = { resume: '履歴書', academic: '学力試験', survey: 'アンケート' };
+  const PHASE_LABEL = { resume: '履歴書', academic: '学力試験', survey: 'アンケート', interview: '面接' };
 
   // ===== UI state persistence (active tab / subview / profile / filters / sort) =====
   const UI_KEY = 'zemiSA.uiState.v1';
@@ -200,10 +200,25 @@ const App = (() => {
     if (name === 'overview') renderOverview();
     if (name === 'profile') refreshProfileSelect();
     if (name === 'portal')   renderPortal();
-    if (name === 'mgr-academic') renderAcademicMgr();
-    if (name === 'mgr-survey')   renderSurveyMgr();
-    if (name === 'mgr-resume')   renderResumeMgr();
-    if (name === 'data') loadCfgUi();
+    if (name === 'admin') {
+      const sub = _uiState.adminview || 'academic';
+      showAdminview(sub);
+    }
+  }
+  function showAdminview(name) {
+    $$('.adminsubtab').forEach(t => t.classList.toggle('active', t.dataset.adminview === name));
+    $$('.adminview').forEach(v => v.classList.toggle('active', v.id === 'adminview-' + name));
+    saveUiState({ adminview: name });
+    if (name === 'academic') renderAcademicMgr();
+    if (name === 'survey')   renderSurveyMgr();
+    if (name === 'resume')   renderResumeMgr();
+    if (name === 'data')     loadCfgUi();
+  }
+  function attachAdminContent() {
+    document.querySelectorAll('.admin-content').forEach(el => {
+      const target = document.getElementById('adminview-' + el.dataset.admin);
+      if (target && !target.contains(el)) target.appendChild(el);
+    });
   }
   function showSubview(name) {
     $$('.subtab').forEach(t => t.classList.toggle('active', t.dataset.subview === name));
@@ -223,10 +238,12 @@ const App = (() => {
     const nR = list.filter(c => Stats.hasResume(c)).length;
     const nA = list.filter(c => Stats.hasAcademic(c)).length;
     const nS = list.filter(c => Stats.hasSurvey(c)).length;
+    const nI = list.filter(c => Stats.hasInterview(c)).length;
     $('#stat-count').textContent = N;
-    $('#stat-resume').textContent   = `${nR} / ${N}`;
-    $('#stat-academic').textContent = `${nA} / ${N}`;
-    $('#stat-survey').textContent   = `${nS} / ${N}`;
+    $('#stat-resume').textContent    = `${nR} / ${N}`;
+    $('#stat-academic').textContent  = `${nA} / ${N}`;
+    $('#stat-survey').textContent    = `${nS} / ${N}`;
+    $('#stat-interview').textContent = `${nI} / ${N}`;
     const totals = list.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).map(c => Stats.totalScore(c, sess, cfg));
     $('#stat-avg').textContent = totals.length ? (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1) : '-';
     $('#stat-max').textContent = totals.length ? Math.max(...totals).toFixed(1) : '-';
@@ -241,8 +258,10 @@ const App = (() => {
   function openSubmissionModal(phase) {
     const list = Storage.loadForSession();
     const phaseLabel = PHASE_LABEL[phase] || phase;
-    const hasFn   = { resume: Stats.hasResume, academic: Stats.hasAcademic, survey: Stats.hasSurvey }[phase];
-    const tsField = { resume: 'resumeSubmittedAt', academic: 'academicSubmittedAt', survey: 'surveySubmittedAt' }[phase];
+    const hasFn   = { resume: Stats.hasResume, academic: Stats.hasAcademic, survey: Stats.hasSurvey, interview: Stats.hasInterview }[phase];
+    const tsField = { resume: 'resumeSubmittedAt', academic: 'academicSubmittedAt', survey: 'surveySubmittedAt', interview: '_interviewHeldAt' }[phase];
+    // Map interview timestamp for sort purposes
+    if (phase === 'interview') list.forEach(c => { c._interviewHeldAt = c.interview?.heldAt; });
     const submitted   = list.filter(c => hasFn(c));
     const unsubmitted = list.filter(c => !hasFn(c));
 
@@ -385,11 +404,11 @@ const App = (() => {
           case 'gender':     return (c.gender || '') === val;
           case 'faculty':    return ((c.faculty || '') + ' ' + (c.department || '')).toLowerCase().includes(v);
           case 'resume':     return val === '1' ? Stats.hasResume(c) : !Stats.hasResume(c);
-          case 'academicStatus': return val === '1' ? Stats.hasAcademic(c) : !Stats.hasAcademic(c);
-          case 'surveyStatus':   return val === '1' ? Stats.hasSurvey(c) : !Stats.hasSurvey(c);
+          case 'academicStatus':  return val === '1' ? Stats.hasAcademic(c) : !Stats.hasAcademic(c);
+          case 'surveyStatus':    return val === '1' ? Stats.hasSurvey(c) : !Stats.hasSurvey(c);
+          case 'interviewStatus': return val === '1' ? Stats.hasInterview(c) : !Stats.hasInterview(c);
           case 'academic':   { const f = parseNumericFilter(val); return f ? (Stats.hasAcademic(c) && f(ac.percent)) : true; }
           case 'survey':     { const f = parseNumericFilter(val); return f ? (Stats.hasSurvey(c) && f(sv)) : true; }
-          case 'total':      { const f = parseNumericFilter(val); return f ? f(total) : true; }
           default: return true;
         }
       });
@@ -407,7 +426,7 @@ const App = (() => {
         case 'resume':     return ((Stats.hasResume(a.c) ? 1 : 0) - (Stats.hasResume(b.c) ? 1 : 0)) * dir;
         case 'academic':   return (a.ac.percent - b.ac.percent) * dir;
         case 'survey':     return (a.sv - b.sv) * dir;
-        case 'total':      return (a.total - b.total) * dir;
+        case 'interview':  return (Stats.interviewAvg(a.c) - Stats.interviewAvg(b.c)) * dir;
         case 'updated':    return (new Date(a.lastUpdate || 0) - new Date(b.lastUpdate || 0)) * dir;
         default: return 0;
       }
@@ -424,7 +443,10 @@ const App = (() => {
     // (use 'filtered' below as enriched substitute)
     const _enriched = filtered;
     const missBadge = '<span class="miss-badge">未</span>';
-    tbody.innerHTML = _enriched.map(({ c, ac, sv, total, lastUpdate }) => `
+    tbody.innerHTML = _enriched.map(({ c, ac, sv, lastUpdate }) => {
+      const iv = Stats.hasInterview(c);
+      const ivAvg = iv ? Stats.interviewAvg(c) : 0;
+      return `
       <tr data-id="${c.id}" class="${c.passed ? 'row-passed' : ''}">
         <td><input type="checkbox" class="pass-check" data-id="${c.id}" ${c.passed ? 'checked' : ''} title="合格チェック"></td>
         <td>${escapeHtml(c.examineeId || '')}</td>
@@ -442,14 +464,14 @@ const App = (() => {
         <td>${Stats.hasResume(c) ? '✅' : missBadge}</td>
         <td class="num">${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '%' : missBadge}</td>
         <td class="num">${Stats.hasSurvey(c) ? sv.toFixed(2) : missBadge}</td>
-        <td class="num"><strong>${(Stats.hasAcademic(c) || Stats.hasSurvey(c)) ? total.toFixed(1) : '—'}</strong></td>
+        <td class="num">${iv ? ivAvg.toFixed(1) + '/5' : missBadge}</td>
         <td>${formatDate(lastUpdate)}</td>
         <td class="row-actions">
           <button class="btn" data-act="view">詳細</button>
           <button class="btn danger" data-act="del">削除</button>
         </td>
-      </tr>
-    `).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`;
+      </tr>`;
+    }).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`;
     tbody.querySelectorAll('.pass-check').forEach(cb => {
       cb.addEventListener('click', e => e.stopPropagation());
       cb.addEventListener('change', e => {
@@ -775,8 +797,30 @@ const App = (() => {
         <h4>力を入れた活動</h4><p>${escapeHtml(c.freeAchievement || '')}</p>
         <h4>挑戦したいこと</h4><p>${escapeHtml(c.freeAspiration || '')}</p>
       </div>
+
+      <div class="profile-card" id="interview-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <h3 style="margin:0">🎤 面接記録</h3>
+          <button class="btn primary" id="edit-interview">${c.interview?.heldAt ? '✏ 編集' : '＋ 面接記録を入力'}</button>
+        </div>
+        ${renderInterviewView(c)}
+      </div>
     `;
 
+    document.getElementById('edit-interview').addEventListener('click', () => openInterviewEditor(c.id));
+    // Interview radar
+    const iv = c.interview;
+    if (iv?.heldAt) {
+      const ivCtx = document.getElementById('profile-radar-interview');
+      if (ivCtx) new Chart(ivCtx, {
+        type: 'radar',
+        data: {
+          labels: Stats.INTERVIEW_RATINGS.map(r => r.label),
+          datasets: [{ label: '面接評価', data: Stats.INTERVIEW_RATINGS.map(r => Number(iv.ratings?.[r.key]) || 0), backgroundColor: 'rgba(139,92,246,.2)', borderColor: '#8b5cf6', pointBackgroundColor: '#8b5cf6' }]
+        },
+        options: { responsive: true, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
+      });
+    }
     document.getElementById('profile-pass').addEventListener('change', e => {
       const list = Storage.load();
       const rec = list.find(x => x.id === c.id);
@@ -795,6 +839,113 @@ const App = (() => {
         datasets: [{ label: 'アンケート', data: Stats.surveyVector(c, sess), backgroundColor: 'rgba(245,158,11,.2)', borderColor: '#f59e0b', pointBackgroundColor: '#f59e0b' }]
       },
       options: { responsive: true, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
+    });
+  }
+
+  function renderInterviewView(c) {
+    const iv = c.interview;
+    if (!iv?.heldAt) return '<p class="muted" style="padding:10px">面接記録はまだありません。「＋ 面接記録を入力」から登録できます。</p>';
+    const avg = Stats.interviewAvg(c);
+    return `
+      <div class="iv-summary">
+        <div class="iv-meta">
+          <div><span class="iv-k">面接日時</span><span class="iv-v">${escapeHtml(formatDate(iv.heldAt))}</span></div>
+          <div><span class="iv-k">面接官</span><span class="iv-v">${escapeHtml(iv.interviewer || '—')}</span></div>
+          <div><span class="iv-k">総合評価</span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5</strong></span></div>
+        </div>
+        <div class="grid-2" style="margin-top:10px">
+          <div>
+            <canvas id="profile-radar-interview" height="240"></canvas>
+          </div>
+          <div>
+            <h4 style="margin-top:0">評価項目</h4>
+            ${Stats.INTERVIEW_RATINGS.map(r => `<div class="iv-rating-row"><span>${escapeHtml(r.label)}</span><strong>${Number(iv.ratings?.[r.key]) || 0} / 5</strong></div>`).join('')}
+          </div>
+        </div>
+        ${iv.notes ? `<div style="margin-top:10px"><h4>所見・メモ</h4><p>${escapeHtml(iv.notes)}</p></div>` : ''}
+      </div>
+    `;
+  }
+
+  function openInterviewEditor(candId) {
+    const c = Storage.load().find(x => x.id === candId);
+    if (!c) return;
+    const iv = c.interview || {};
+    const heldAtVal = iv.heldAt ? toLocalInputValue(iv.heldAt) : toLocalInputValue(new Date().toISOString());
+    const existing = document.getElementById('interview-modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'interview-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-window" style="max-width:680px">
+        <div class="modal-head">
+          <h3 style="margin:0">🎤 面接記録 — ${escapeHtml(fullName(c))}</h3>
+          <button class="btn modal-close">✕</button>
+        </div>
+        <div class="modal-body" style="display:block">
+          <div class="form-grid">
+            <label>面接日時<input type="datetime-local" id="iv-heldAt" value="${heldAtVal}"></label>
+            <label>面接官<input type="text" id="iv-interviewer" value="${escapeHtml(iv.interviewer || '')}" placeholder="例: 山田 / 複数の場合カンマ区切り"></label>
+          </div>
+          <h4 style="margin-top:14px">評価（1〜5）</h4>
+          <div class="iv-rating-grid">
+            ${Stats.INTERVIEW_RATINGS.map(r => `
+              <div class="iv-rating-edit">
+                <label>${escapeHtml(r.label)}</label>
+                <div class="iv-scale">
+                  ${[1,2,3,4,5].map(v => `<label><input type="radio" name="iv-${r.key}" value="${v}" ${Number(iv.ratings?.[r.key]) === v ? 'checked' : ''}>${v}</label>`).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <h4 style="margin-top:14px">所見・メモ</h4>
+          <textarea id="iv-notes" rows="5" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">${escapeHtml(iv.notes || '')}</textarea>
+          <div class="form-actions" style="margin-top:14px">
+            ${iv.heldAt ? '<button class="btn danger" id="iv-delete">面接記録を削除</button>' : '<span></span>'}
+            <div>
+              <button class="btn" id="iv-cancel">キャンセル</button>
+              <button class="btn primary" id="iv-save">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const close = () => modal.remove();
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    modal.querySelector('.modal-close').addEventListener('click', close);
+    modal.querySelector('#iv-cancel').addEventListener('click', close);
+    modal.querySelector('#iv-save').addEventListener('click', () => {
+      const ratings = {};
+      Stats.INTERVIEW_RATINGS.forEach(r => {
+        const sel = modal.querySelector(`input[name="iv-${r.key}"]:checked`);
+        ratings[r.key] = sel ? Number(sel.value) : 0;
+      });
+      const heldAt = localInputToIso(modal.querySelector('#iv-heldAt').value) || new Date().toISOString();
+      const updated = Storage.load();
+      const rec = updated.find(x => x.id === candId);
+      rec.interview = {
+        heldAt,
+        interviewer: modal.querySelector('#iv-interviewer').value.trim(),
+        ratings,
+        notes: modal.querySelector('#iv-notes').value.trim()
+      };
+      Storage.save(updated);
+      close();
+      renderProfile(candId);
+      renderOverview();
+    });
+    const delBtn = modal.querySelector('#iv-delete');
+    if (delBtn) delBtn.addEventListener('click', () => {
+      if (!confirm('面接記録を削除しますか？')) return;
+      const updated = Storage.load();
+      const rec = updated.find(x => x.id === candId);
+      delete rec.interview;
+      Storage.save(updated);
+      close();
+      renderProfile(candId);
+      renderOverview();
     });
   }
 
@@ -1482,6 +1633,17 @@ const App = (() => {
       cand.freeAchievement = '学園祭実行委員として広報を担当しました。';
       cand.freeAspiration = '実データを用いたゼミ研究プロジェクトに挑戦したい。';
       cand.surveySubmittedAt = new Date().toISOString();
+      // Interview record for ~60% of candidates
+      if (i % 5 !== 0) {
+        const base = Math.round(p.sv * 0.8 + 1);
+        const r = () => Math.max(1, Math.min(5, base + Math.round((Math.random() - 0.5) * 2)));
+        cand.interview = {
+          heldAt: new Date(Date.now() - (20 - i) * 86400000).toISOString(),
+          interviewer: ['田中先生', '佐藤先生', '山本先生'][i % 3],
+          ratings: { communication: r(), motivation: r(), logic: r(), knowledge: r(), fit: r() },
+          notes: i % 4 === 0 ? '志望動機が明確で、研究テーマへの関心が高い。論理的に説明できる。' : '受け答えは丁寧。今後の伸びしろに期待。'
+        };
+      }
 
       Storage.upsert(cand);
     });
@@ -1493,6 +1655,7 @@ const App = (() => {
   // ===== Init =====
   function init() {
     ensureTests(getSession());
+    attachAdminContent();
 
     // URL候補者モード判定
     if (handleUrlMode()) return;
@@ -1545,7 +1708,8 @@ const App = (() => {
 
     // Tabs
     $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
-    $$('.subtab').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
+    $$('.subtab:not(.adminsubtab)').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
+    $$('.adminsubtab').forEach(t => t.addEventListener('click', () => showAdminview(t.dataset.adminview)));
 
     // Overview controls
     $('#search-cand').addEventListener('input', () => {

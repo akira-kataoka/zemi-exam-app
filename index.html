@@ -44,10 +44,7 @@
     <button class="tab active" data-view="overview">📊 全体確認</button>
     <button class="tab" data-view="profile">👤 個人確認</button>
     <button class="tab" data-view="portal">📝 受験ポータル</button>
-    <button class="tab" data-view="mgr-academic">📚 試験管理</button>
-    <button class="tab" data-view="mgr-survey">📋 アンケート管理</button>
-    <button class="tab" data-view="mgr-resume">📄 履歴書設定</button>
-    <button class="tab" data-view="data">💾 データ</button>
+    <button class="tab" data-view="admin">⚙ 管理</button>
   </nav>
 </header>
 
@@ -60,8 +57,9 @@
       <div class="card stat clickable" data-quick-filter="resume"><span class="k">📄 履歴書 提出/未</span><span class="v" id="stat-resume">-</span></div>
       <div class="card stat clickable" data-quick-filter="academic"><span class="k">📚 学力試験 済/未</span><span class="v" id="stat-academic">-</span></div>
       <div class="card stat clickable" data-quick-filter="survey"><span class="k">📋 アンケート 済/未</span><span class="v" id="stat-survey">-</span></div>
-      <div class="card stat"><span class="k">平均総合点</span><span class="v" id="stat-avg">-</span></div>
-      <div class="card stat"><span class="k">最高得点</span><span class="v" id="stat-max">-</span></div>
+      <div class="card stat clickable" data-quick-filter="interview"><span class="k">🎤 面接 実施/未</span><span class="v" id="stat-interview">-</span></div>
+      <div class="card stat"><span class="k">学力平均</span><span class="v" id="stat-avg">-</span></div>
+      <div class="card stat"><span class="k">学力最高</span><span class="v" id="stat-max">-</span></div>
       <div class="card stat"><span class="k">✅ 合格者</span><span class="v" id="stat-passed">-</span></div>
     </div>
 
@@ -90,7 +88,7 @@
               <th data-sort="resume">履歴書</th>
               <th data-sort="academic">学力</th>
               <th data-sort="survey">アンケート</th>
-              <th data-sort="total">総合</th>
+              <th data-sort="interview">面接</th>
               <th data-sort="updated">最終更新</th>
               <th>操作</th>
             </tr>
@@ -109,6 +107,7 @@
                 <select data-filter="surveyStatus" class="ac-sv-sel"><option value="">全て</option><option value="1">✅回答済</option><option value="0">❌未回答</option></select>
                 <input type="text" data-filter="survey" placeholder="例: ≥3.5">
               </th>
+              <th><select data-filter="interviewStatus"><option value="">全て</option><option value="1">✅実施済</option><option value="0">❌未実施</option></select></th>
               <th><input type="text" data-filter="total" placeholder="例: ≥60"></th>
               <th></th>
               <th></th>
@@ -284,8 +283,23 @@
     </section>
   </section>
 
-  <!-- ===== Academic test management ===== -->
-  <section class="view" id="view-mgr-academic">
+  <!-- ===== Admin (all management combined) ===== -->
+  <section class="view" id="view-admin">
+    <div class="subtabs admintabs">
+      <button class="subtab adminsubtab active" data-adminview="academic">📚 学力試験</button>
+      <button class="subtab adminsubtab" data-adminview="survey">📋 アンケート</button>
+      <button class="subtab adminsubtab" data-adminview="resume">📄 履歴書・受付</button>
+      <button class="subtab adminsubtab" data-adminview="data">💾 データ</button>
+    </div>
+
+    <div class="adminview active" id="adminview-academic"></div>
+    <div class="adminview" id="adminview-survey"></div>
+    <div class="adminview" id="adminview-resume"></div>
+    <div class="adminview" id="adminview-data"></div>
+  </section>
+
+  <!-- ===== Academic test management (content) ===== -->
+  <section class="admin-content" id="view-mgr-academic" data-admin="academic">
     <div class="card">
       <h3>📚 学力試験 問題管理（試験回ごと）</h3>
       <p class="hint">この試験回で出題する選択式問題を作成・編集できます。各問題はカテゴリ・配点・選択肢・正解を設定可能で、受験者の回答は自動採点されます。</p>
@@ -299,7 +313,7 @@
   </section>
 
   <!-- ===== Survey management ===== -->
-  <section class="view" id="view-mgr-survey">
+  <section class="admin-content" id="view-mgr-survey" data-admin="survey">
     <div class="card">
       <h3>📋 アンケート 問題管理（試験回ごと）</h3>
       <p class="hint">受験者に問う5段階評価の項目を作成・編集できます。</p>
@@ -313,7 +327,7 @@
   </section>
 
   <!-- ===== Resume settings ===== -->
-  <section class="view" id="view-mgr-resume">
+  <section class="admin-content" id="view-mgr-resume" data-admin="resume">
     <div class="card">
       <h3>🏫 学部・学科の選択肢</h3>
       <p class="hint">受験者が履歴書で選択できる学部と、その配下の学科を設定します。</p>
@@ -367,7 +381,7 @@
   </section>
 
   <!-- ===== Data ===== -->
-  <section class="view" id="view-data">
+  <section class="admin-content" id="view-data" data-admin="data">
     <div class="card">
       <h3>💾 データ管理</h3>
       <p>すべての受験者データはブラウザのlocalStorageに保存されます。バックアップにはJSONエクスポートをご利用ください。</p>

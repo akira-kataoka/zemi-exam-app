@@ -132,11 +132,24 @@ const Stats = (() => {
   function hasResume(c) { return !!(c && (c.lastName || c.firstName || c.name)); }
   function hasAcademic(c) { return !!(c && c.academicSubmittedAt); }
   function hasSurvey(c)   { return !!(c && c.surveySubmittedAt); }
+  function hasInterview(c){ return !!(c && c.interview && c.interview.heldAt); }
+  const INTERVIEW_RATINGS = [
+    { key: 'communication', label: 'コミュニケーション' },
+    { key: 'motivation',    label: '志望度・熱意' },
+    { key: 'logic',         label: '論理性・思考力' },
+    { key: 'knowledge',     label: '専門性・知識' },
+    { key: 'fit',           label: '適性・人柄' }
+  ];
+  function interviewAvg(c) {
+    if (!hasInterview(c) || !c.interview.ratings) return 0;
+    const vals = INTERVIEW_RATINGS.map(r => Number(c.interview.ratings[r.key]) || 0).filter(v => v > 0);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+  }
 
   return {
     scoreAcademic, surveyAvg, surveyScore100, totalScore,
     radarData, surveyVector, featureVector,
-    hasResume, hasAcademic, hasSurvey,
-    DEFAULT_ACADEMIC_CATEGORIES, DEFAULT_ACADEMIC_QUESTIONS, DEFAULT_SURVEY_QUESTIONS, DEFAULT_FACULTY_DEPT
+    hasResume, hasAcademic, hasSurvey, hasInterview, interviewAvg,
+    DEFAULT_ACADEMIC_CATEGORIES, DEFAULT_ACADEMIC_QUESTIONS, DEFAULT_SURVEY_QUESTIONS, DEFAULT_FACULTY_DEPT, INTERVIEW_RATINGS
   };
 })();
