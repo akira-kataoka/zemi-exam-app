@@ -3,7 +3,6 @@
 // =========================================================
 const App = (() => {
 
-  let cfg = Storage.loadCfg();
   const charts = {};
   const PHASE_LABEL = { application: '受験申込', resume: '履歴書', academic: '学力試験', survey: 'アンケート', interview: '面接' };
 
@@ -563,7 +562,7 @@ const App = (() => {
     const enriched = list.map(c => {
       const ac = Stats.scoreAcademic(c, sess.academicTest);
       const sv = Stats.surveyAvg(c, sess.surveyTest);
-      const total = Stats.totalScore(c, sess, cfg);
+      const total = Stats.totalScore(c, sess);
       const lastUpdate = [c.resumeSubmittedAt, c.academicSubmittedAt, c.surveySubmittedAt, c.createdAt].filter(Boolean).sort().pop();
       return { c, ac, sv, total, lastUpdate };
     });
@@ -691,7 +690,7 @@ const App = (() => {
   function renderChartView() {
     const sess = getSession();
     const list = Storage.loadForSession();
-    const totals = list.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).map(c => Stats.totalScore(c, sess, cfg));
+    const totals = list.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).map(c => Stats.totalScore(c, sess));
     // distribution
     const dctx = $('#chart-distribution'); if (dctx) {
       const bins = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -892,7 +891,7 @@ const App = (() => {
       const systemName = inferClusterSystem(diffs, cats);
       const acScores = members.map(m => Stats.scoreAcademic(m, sess.academicTest).percent).filter(v => !isNaN(v));
       const svScores = members.map(m => Stats.surveyAvg(m, sess.surveyTest)).filter(v => v > 0);
-      const totalScores = members.map(m => Stats.totalScore(m, sess, cfg));
+      const totalScores = members.map(m => Stats.totalScore(m, sess));
       const passedCount = members.filter(m => m.passed).length;
       const genderDist = {};
       members.forEach(m => { if (m.gender) genderDist[m.gender] = (genderDist[m.gender] || 0) + 1; });
@@ -1104,7 +1103,7 @@ const App = (() => {
     if (!c) { body.innerHTML = ''; return; }
     const ac = Stats.scoreAcademic(c, sess.academicTest);
     const sv = Stats.surveyAvg(c, sess.surveyTest);
-    const total = Stats.totalScore(c, sess, cfg);
+    const total = Stats.totalScore(c, sess);
     const radar = Stats.radarData(c, sess);
 
     body.innerHTML = `
