@@ -1283,7 +1283,7 @@ const App = (() => {
       <div class="iv-summary">
         <div class="iv-meta">
           <div><span class="iv-k">面接実施数</span><span class="iv-v"><strong>${recs.length}件</strong></span></div>
-          <div><span class="iv-k">総合評価<small style="color:var(--muted);font-size:10px">（全${recs.length}人×全${ratings.length}項目の平均）</small></span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5.00</strong></span></div>
+          <div><span class="iv-k">総合評価<small style="color:var(--muted);font-size:10px">${recs.length > 1 ? `（全${recs.length}人×全${ratings.length}項目の平均）` : `（全${ratings.length}項目の平均）`}</small></span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5.00</strong></span></div>
           ${recs.length > 1 ? `<div><span class="iv-k">面接官間ばらつき<small style="color:var(--muted);font-size:10px">（標準偏差・0=全員一致）</small></span><span class="iv-v" title="各面接官の総合評価の標準偏差。0に近いほど一致">${disagree.toFixed(2)} ${disagree >= 0.5 ? '<span style="color:var(--warn);font-size:11px">⚠評価に差あり</span>' : '<span style="color:var(--accent);font-size:11px">✓概ね一致</span>'}</span></div>` : ''}
         </div>
         <div class="grid-2" style="margin-top:10px">
