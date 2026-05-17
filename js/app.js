@@ -2956,10 +2956,75 @@ const App = (() => {
     toast(`デモ試験回「${name}」を作成し、20名投入しました`, 'success', 4000);
   }
 
+  // ===== Auth UI (Supabase) =====
+  function initAuthUI() {
+    const wrap = document.getElementById('auth-status');
+    const txt = document.getElementById('auth-status-text');
+    const signInBtn = document.getElementById('auth-signin-btn');
+    const signOutBtn = document.getElementById('auth-signout-btn');
+    const modal = document.getElementById('login-modal');
+    if (!wrap || !modal || typeof SupabaseClient === 'undefined') return;
+
+    // Supabase 未設定なら何も表示しない (localStorage モードでそのまま動作)
+    if (!SupabaseClient.isConfigured()) return;
+    SupabaseClient.init();
+    wrap.style.display = 'inline-flex';
+
+    const closeLogin = () => { modal.style.display = 'none'; document.getElementById('login-error').style.display = 'none'; };
+    const openLogin = () => { modal.style.display = 'flex'; setTimeout(() => document.getElementById('login-email').focus(), 0); };
+
+    document.getElementById('login-close').addEventListener('click', closeLogin);
+    document.getElementById('login-cancel').addEventListener('click', closeLogin);
+    modal.addEventListener('click', e => { if (e.target === modal) closeLogin(); });
+
+    document.getElementById('login-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errEl = document.getElementById('login-error');
+      const btn = document.getElementById('login-submit');
+      errEl.style.display = 'none';
+      btn.disabled = true; btn.textContent = 'ログイン中...';
+      try {
+        await SupabaseClient.signInAdmin(email, password);
+        closeLogin();
+        toast('ログインしました', 'success');
+      } catch (err) {
+        errEl.textContent = err?.message || 'ログインに失敗しました';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'ログイン';
+      }
+    });
+
+    signInBtn.addEventListener('click', openLogin);
+    signOutBtn.addEventListener('click', async () => {
+      await SupabaseClient.signOut();
+      toast('ログアウトしました', 'info');
+    });
+
+    async function syncAuthUI() {
+      const session = await SupabaseClient.getSession();
+      if (session) {
+        const adm = await SupabaseClient.isAdmin();
+        txt.textContent = adm ? `👤 ${session.user.email} (管理者)` : `👤 ${session.user.email}`;
+        signInBtn.style.display = 'none';
+        signOutBtn.style.display = 'inline-flex';
+      } else {
+        txt.textContent = '未ログイン';
+        signInBtn.style.display = 'inline-flex';
+        signOutBtn.style.display = 'none';
+      }
+    }
+    syncAuthUI();
+    SupabaseClient.onAuthChange(() => syncAuthUI());
+  }
+
   // ===== Init =====
   function init() {
     ensureTests(getSession());
     attachAdminContent();
+    initAuthUI();
 
     // URL候補者モード判定
     if (handleUrlMode()) return;
