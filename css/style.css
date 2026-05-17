@@ -100,7 +100,10 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .data-table tbody tr:hover td{background:#f1f5f9;cursor:pointer}
 .data-table tbody tr:last-child td{border-bottom:none}
 .data-table .num{text-align:right;font-variant-numeric:tabular-nums}
-.data-table .row-actions{display:flex;gap:6px}
+.data-table .row-actions{display:flex;gap:4px;white-space:nowrap}
+.btn-icon{padding:4px 8px;font-size:14px;line-height:1;min-width:auto}
+.btn-icon.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+#toggle-filter-row.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 
 /* Sticky header */
 .sticky-table thead{position:sticky;top:0;z-index:2}

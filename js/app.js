@@ -521,8 +521,8 @@ const App = (() => {
         <td class="num">${iv ? `<div class="cell-status"><strong>${ivAvg.toFixed(1)}/5</strong><span class="cell-time">${formatDateShort(c.interview.heldAt)}</span></div>` : missBadge}</td>
         <td>${formatDate(lastUpdate)}</td>
         <td class="row-actions">
-          <button class="btn" data-act="view">詳細</button>
-          <button class="btn danger" data-act="del">削除</button>
+          <button class="btn btn-icon" data-act="view" title="詳細を見る">👁</button>
+          <button class="btn btn-icon danger" data-act="del" title="削除">🗑</button>
         </td>
       </tr>`;
     }).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`;
@@ -2352,6 +2352,20 @@ const App = (() => {
       el.addEventListener('input', onChange);
       el.addEventListener('change', onChange);
     });
+    // Filter row collapse toggle
+    const filterRow = document.querySelector('#cand-table thead .filter-row');
+    const toggleBtn = document.getElementById('toggle-filter-row');
+    // Restore saved state (default: hidden)
+    const filtersVisible = _uiState.filtersVisible === true;
+    if (filterRow) filterRow.style.display = filtersVisible ? '' : 'none';
+    if (toggleBtn) toggleBtn.classList.toggle('active', filtersVisible);
+    toggleBtn?.addEventListener('click', () => {
+      const visible = filterRow.style.display === 'none';
+      filterRow.style.display = visible ? '' : 'none';
+      toggleBtn.classList.toggle('active', visible);
+      saveUiState({ filtersVisible: visible });
+    });
+
     document.getElementById('reset-filters').addEventListener('click', () => {
       _listFilters = {};
       $('#search-cand').value = '';
