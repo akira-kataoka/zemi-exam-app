@@ -701,6 +701,16 @@
       </div>
     </div>
 
+    <div class="card" id="cloud-sync-card" style="display:none">
+      <h3>☁ クラウド同期 (Supabase)</h3>
+      <p class="muted" style="font-size:12px;margin-top:-4px">管理者ログイン中は自動的に書き込みが同期されます。手動で全件 push/pull したい場合のみ以下を利用してください。</p>
+      <div id="cloud-sync-status" class="hint" style="margin:8px 0"></div>
+      <div class="form-actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="cloud-push-all" title="ローカルの全データを Supabase へ上書き push">⬆ ローカル → Cloud に全件push</button>
+        <button class="btn" id="cloud-pull-all" title="Supabase の全データでローカルを上書き pull">⬇ Cloud → ローカルに全件pull</button>
+      </div>
+    </div>
+
   </section>
 </main>
 

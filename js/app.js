@@ -459,11 +459,14 @@ const App = (() => {
     const modal = document.createElement('div');
     modal.id = 'submission-modal';
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'submission-modal-title');
     modal.innerHTML = `
       <div class="modal-window">
         <div class="modal-head">
-          <h3 style="margin:0">📊 ${escapeHtml(phaseLabel)} ${titleSuffix}</h3>
-          <button class="btn modal-close" aria-label="閉じる">✕</button>
+          <h3 style="margin:0" id="submission-modal-title">📊 ${escapeHtml(phaseLabel)} ${titleSuffix}</h3>
+          <button class="btn modal-close" aria-label="提出状況ダイアログを閉じる">✕</button>
         </div>
         <div class="modal-body">
           <div class="modal-col">
@@ -1347,11 +1350,14 @@ const App = (() => {
     const modal = document.createElement('div');
     modal.id = 'interview-modal';
     modal.className = 'modal-overlay';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'interview-modal-title');
     modal.innerHTML = `
       <div class="modal-window" style="max-width:720px">
         <div class="modal-head">
-          <h3 style="margin:0">🎤 面接記録 — ${escapeHtml(fullName(c))}</h3>
-          <button class="btn modal-close">✕</button>
+          <h3 style="margin:0" id="interview-modal-title">🎤 面接記録 — ${escapeHtml(fullName(c))}</h3>
+          <button class="btn modal-close" aria-label="面接記録ダイアログを閉じる">✕</button>
         </div>
         <div class="modal-body" style="display:block">
           ${records.length > 0 && !editing ? `
@@ -3005,19 +3011,36 @@ const App = (() => {
 
     async function syncAuthUI() {
       const session = await SupabaseClient.getSession();
+      const cloudCard = document.getElementById('cloud-sync-card');
+      const cloudStatus = document.getElementById('cloud-sync-status');
       if (session) {
         const adm = await SupabaseClient.isAdmin();
         txt.textContent = adm ? `👤 ${session.user.email} (管理者)` : `👤 ${session.user.email}`;
         signInBtn.style.display = 'none';
         signOutBtn.style.display = 'inline-flex';
+        if (cloudCard) cloudCard.style.display = '';
+        if (cloudStatus) cloudStatus.innerHTML = adm ? '✅ ログイン中: 全変更がリアルタイムで Supabase へ自動同期されています' : '⚠ ログイン中ですが管理者権限がありません (admins テーブルに INSERT が必要)';
       } else {
         txt.textContent = '未ログイン';
         signInBtn.style.display = 'inline-flex';
         signOutBtn.style.display = 'none';
+        if (cloudCard) cloudCard.style.display = 'none';
       }
     }
     syncAuthUI();
     SupabaseClient.onAuthChange(() => syncAuthUI());
+
+    // 手動 push/pull ハンドラ
+    document.getElementById('cloud-push-all')?.addEventListener('click', async () => {
+      if (!confirm('ローカルの全データを Supabase に上書きします。よろしいですか？')) return;
+      try { toast('Cloud へ push 中...', 'info', 2000); await DataSync.fullPushToSupabase(); toast('Cloud へ全件 push 完了', 'success'); }
+      catch (e) { toast('push 失敗: ' + (e?.message || e), 'error', 5000); }
+    });
+    document.getElementById('cloud-pull-all')?.addEventListener('click', async () => {
+      if (!confirm('Cloud のデータでローカルを上書きします。ローカルの未同期変更は失われます。よろしいですか？')) return;
+      try { toast('Cloud から pull 中...', 'info', 2000); await DataSync.fullPullFromSupabase(); toast('Cloud から全件 pull 完了 (画面を更新します)', 'success'); setTimeout(() => location.reload(), 1500); }
+      catch (e) { toast('pull 失敗: ' + (e?.message || e), 'error', 5000); }
+    });
   }
 
   // ===== Init =====
