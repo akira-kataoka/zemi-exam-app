@@ -571,6 +571,27 @@ body.candidate-mode .topbar{padding:10px 18px}
 body.candidate-mode .brand h1{font-size:16px}
 body.candidate-mode .brand .sub{display:none}
 
+/* App footer */
+.app-footer{margin-top:40px;padding:16px 24px;background:#fff;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.footer-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.app-footer a{color:var(--primary);text-decoration:none}
+.app-footer a:hover{text-decoration:underline}
+.footer-link{cursor:pointer;color:var(--primary)}
+.footer-link:hover{text-decoration:underline}
+.footer-sep{color:#cbd5e1}
+.footer-tip{margin-left:auto;font-size:11px}
+@media(max-width:580px){.footer-tip{margin-left:0;width:100%}}
+
+/* Cluster member checklist */
+.cluster-member-list{display:flex;flex-direction:column;gap:4px;max-height:240px;overflow:auto;padding:4px;background:#fff;border-radius:6px}
+.cluster-member-row{display:grid;grid-template-columns:auto 22px 1fr auto;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;transition:.1s;font-size:12px}
+.cluster-member-row:hover{background:#f1f5f9}
+.cluster-member-row input[type="checkbox"]{margin:0;width:14px;height:14px;cursor:pointer}
+.cluster-member-name{font-weight:600;color:var(--ink)}
+.cluster-member-score{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cluster-member-row input:checked ~ .cluster-member-name{color:#166534}
+.cluster-member-row:has(input:checked){background:#dcfce7}
+
 /* Empty states */
 .empty-state{text-align:center;padding:36px 20px;color:var(--muted);background:#fafafa;border:2px dashed var(--border);border-radius:8px}
 .empty-state .empty-icon{font-size:42px;margin-bottom:6px}

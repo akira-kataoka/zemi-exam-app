@@ -887,8 +887,15 @@ const App = (() => {
         </div>
 
         <div class="cluster-members">
-          <div class="trait-title">全メンバー</div>
-          <div>${members.map(m => `<span class="cluster-chip" style="background:${palette[ci % palette.length]}" data-jump-id="${m.id}">${escapeHtml(fullName(m))}${m.passed ? ' ✅' : ''}</span>`).join('')}</div>
+          <div class="trait-title">全メンバー（チェックで合格マーク）</div>
+          <div class="cluster-member-list">${members.map(m => `
+            <label class="cluster-member-row" data-jump-id="${m.id}">
+              <input type="checkbox" class="cluster-pass-check" data-id="${m.id}" ${m.passed ? 'checked' : ''}>
+              ${m.photo ? `<img class="avatar-sm" src="${m.photo}" alt="" style="width:22px;height:22px">` : '<span class="avatar-sm avatar-blank" style="width:22px;height:22px">👤</span>'}
+              <span class="cluster-member-name">${escapeHtml(fullName(m))}</span>
+              <span class="cluster-member-score">${Stats.hasAcademic(m) ? Stats.scoreAcademic(m, sess.academicTest).percent.toFixed(0) + '%' : ''}</span>
+            </label>
+          `).join('')}</div>
         </div>
 
         <div class="cluster-hint">💡 多様性確保のため、この系統から <strong>${Math.max(1, Math.ceil(members.length / 5))}名</strong> 程度の採用を推奨</div>
@@ -896,9 +903,20 @@ const App = (() => {
     }
     charHtml += '</div>';
     $('#cluster-assign-list').innerHTML = charHtml;
-    // Click on representative or member chip jumps to profile
+    // Pass-check toggles in cluster cards
+    document.querySelectorAll('.cluster-pass-check').forEach(cb => {
+      cb.addEventListener('click', e => e.stopPropagation());
+      cb.addEventListener('change', e => {
+        e.stopPropagation();
+        const updated = Storage.load();
+        const rec = updated.find(x => x.id === cb.dataset.id);
+        if (rec) { rec.passed = cb.checked; Storage.save(updated); toast(`${fullName(rec)} を ${cb.checked ? '合格' : '未合格'} に更新`, 'success', 1500); renderOverview(); }
+      });
+    });
+    // Representative name / member row clicks jump to profile
     document.querySelectorAll('[data-jump-id]').forEach(el => {
       el.addEventListener('click', e => {
+        if (e.target.matches('input,a')) return;
         e.preventDefault();
         const id = el.dataset.jumpId;
         $('#profile-select').value = id;
@@ -2693,6 +2711,7 @@ const App = (() => {
     });
     // Help modal
     document.getElementById('help-btn').addEventListener('click', openHelpModal);
+    document.getElementById('footer-help')?.addEventListener('click', openHelpModal);
     document.getElementById('help-close').addEventListener('click', closeHelpModal);
     document.getElementById('help-modal').addEventListener('click', e => { if (e.target === document.getElementById('help-modal')) closeHelpModal(); });
     document.querySelectorAll('.help-tab').forEach(t => t.addEventListener('click', () => {
