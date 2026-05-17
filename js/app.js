@@ -3025,6 +3025,7 @@ const App = (() => {
     ensureTests(getSession());
     attachAdminContent();
     initAuthUI();
+    if (typeof DataSync !== 'undefined') DataSync.init();
 
     // URL候補者モード判定
     if (handleUrlMode()) return;
