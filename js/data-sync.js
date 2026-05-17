@@ -248,6 +248,22 @@ const DataSync = (() => {
         return ret;
       };
     }
+    // Storage.saveSessions(list) (試験設定編集・問題編集・猶予時間変更等) も差分push
+    const origSaveSessions = Storage.saveSessions;
+    let _prevSessSnap = JSON.stringify(Storage.loadSessions());
+    if (origSaveSessions) {
+      Storage.saveSessions = function (list) {
+        const ret = origSaveSessions.call(Storage, list);
+        if (!_adminLoggedIn) return ret;
+        try {
+          const prev = JSON.parse(_prevSessSnap);
+          const prevById = new Map(prev.map(s => [s.id, JSON.stringify(s)]));
+          list.forEach(s => { if (prevById.get(s.id) !== JSON.stringify(s)) pushSession(s); });
+        } catch (e) { /* noop */ }
+        _prevSessSnap = JSON.stringify(list);
+        return ret;
+      };
+    }
     // Storage.save(list) 直接呼び出し (合格チェック・面接記録編集等) も差分push/delete
     const origSave = Storage.save;
     let _prevSnap = JSON.stringify(Storage.load());
