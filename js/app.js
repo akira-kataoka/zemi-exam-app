@@ -2023,9 +2023,11 @@ const App = (() => {
   function interviewStatus(c, sch) {
     if (!c.interview) return 'unscheduled';
     const slotMs = (Number(sch?.slotMinutes) || 30) * 60000;
-    if (c.interview.heldAt) {
-      if (c.interview.scheduledAt) {
-        const lag = new Date(c.interview.heldAt) - new Date(c.interview.scheduledAt);
+    const recs = Stats.interviewRecords(c);
+    if (recs.length > 0) {
+      const firstHeld = recs[0].heldAt;
+      if (firstHeld && c.interview.scheduledAt) {
+        const lag = new Date(firstHeld) - new Date(c.interview.scheduledAt);
         if (lag > slotMs * 1.5) return 'done-late';
       }
       return 'done';
