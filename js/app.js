@@ -606,7 +606,7 @@ const App = (() => {
         case 'resume':     return ((Stats.hasResume(a.c) ? 1 : 0) - (Stats.hasResume(b.c) ? 1 : 0)) * dir;
         case 'academic':   return (a.ac.percent - b.ac.percent) * dir;
         case 'survey':     return (a.sv - b.sv) * dir;
-        case 'interview':  return (Stats.interviewAvg(a.c) - Stats.interviewAvg(b.c)) * dir;
+        case 'interview':  return (Stats.interviewAvg(a.c, sess) - Stats.interviewAvg(b.c, sess)) * dir;
         case 'updated':    return (new Date(a.lastUpdate || 0) - new Date(b.lastUpdate || 0)) * dir;
         default: return 0;
       }
@@ -625,7 +625,7 @@ const App = (() => {
     const missBadge = '<span class="miss-badge">未</span>';
     tbody.innerHTML = _enriched.map(({ c, ac, sv, lastUpdate }) => {
       const iv = Stats.hasInterview(c);
-      const ivAvg = iv ? Stats.interviewAvg(c) : 0;
+      const ivAvg = iv ? Stats.interviewAvg(c, sess) : 0;
       return `
       <tr data-id="${c.id}" class="${c.passed ? 'row-passed' : ''}">
         <td><input type="checkbox" class="pass-check" data-id="${c.id}" ${c.passed ? 'checked' : ''} title="合格チェック"></td>
@@ -1127,7 +1127,7 @@ const App = (() => {
             <div class="score-badges">
               <span class="score-badge alt">学力 ${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '% (' + ac.total + ' / ' + ac.max + '点)' : '未'}</span>
               <span class="score-badge warn">アンケート ${Stats.hasSurvey(c) ? sv.toFixed(2) + ' / 5.00' : '未'}</span>
-              <span class="score-badge interview">面接 ${Stats.hasInterview(c) ? Stats.interviewAvg(c).toFixed(2) + ' / 5.00' : '未'}</span>
+              <span class="score-badge interview">面接 ${Stats.hasInterview(c) ? Stats.interviewAvg(c, sess).toFixed(2) + ' / 5.00' : '未'}</span>
             </div>
           </div>
         </div>
