@@ -522,8 +522,7 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 .tab-help:hover{background:#fde68a}
 .tab-help.first-visit-pulse,
 .header-action-help.first-visit-pulse{animation:pulse-help 1.6s infinite}
-/* Header right actions - 絶対配置で常に右上に固定 */
-.topbar{position:sticky}
+/* Header right actions - 絶対配置で常に右上に固定 (.topbar 自体が position:sticky でcontaining block) */
 .brand-row{display:flex;align-items:flex-start;gap:14px;padding-right:200px}
 .header-actions{position:absolute;top:14px;right:24px;display:flex;gap:8px;align-items:center;z-index:11}
 @media(max-width:580px){.brand-row{padding-right:0}.header-actions{position:static;margin-top:6px}}
