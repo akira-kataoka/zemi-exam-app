@@ -761,11 +761,10 @@ const App = (() => {
   function runCluster() {
     const sess = getSession();
     const k = Math.max(2, Math.min(8, Number($('#k-value').value) || 4));
-    // 学力試験 OR アンケートのどちらかでもあればクラスタリング対象に
-    // (両方ある人は両特徴量を使用、片方しかない人は欠損のないものだけで距離計算)
+    // 学力試験 OR アンケート OR 面接のいずれかがあればクラスタリング対象に
     const allList = Storage.loadForSession();
-    const list = allList.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c));
-    const incompleteCount = 0; // 全員受け入れるので除外なし
+    const list = allList.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c) || Stats.hasInterview(c));
+    const incompleteCount = 0;
     const emptyEl = document.getElementById('cluster-empty');
     const resultEl = document.getElementById('cluster-result');
     if (list.length < k) {
@@ -801,7 +800,9 @@ const App = (() => {
       ? [...new Set(sess.academicTest.questions.map(q => q.category || 'その他'))]
       : Stats.DEFAULT_ACADEMIC_CATEGORIES;
     const surveyQs = sess.surveyTest?.questions || [];
-    const featLabels = cats.concat(surveyQs.map(q => q.text));
+    const ivRatings = Stats.getInterviewRatings(sess);
+    // 学力カテゴリ + アンケート項目 + 面接評価カテゴリ
+    const featLabels = cats.concat(surveyQs.map(q => q.text)).concat(ivRatings.map(r => '面接:' + r.label));
     const overallMean = featLabels.map((_, fi) => vectors.reduce((s, v) => s + v[fi], 0) / vectors.length);
 
     // Pre-compute system names for each cluster (for legend display)
@@ -863,7 +864,7 @@ const App = (() => {
     if (heroText) {
       let qualEl = heroText.querySelector('.cluster-quality');
       if (!qualEl) { qualEl = document.createElement('div'); qualEl.className = 'cluster-quality'; heroText.appendChild(qualEl); }
-      qualEl.innerHTML = `<small style="color:var(--muted);font-size:11px">⚙ 分析対象: ${list.length}名 (学力試験＋アンケート両方提出済)${incompleteCount > 0 ? ` ・ ${incompleteCount}名は片方未提出のため除外` : ''} ・ <span title="クラスター内の散らばり具合。低いほど各グループがまとまっています。">分類スコア ${clusterInertia.toFixed(1)}</span></small>`;
+      qualEl.innerHTML = `<small style="color:var(--muted);font-size:11px">⚙ 分析対象: ${list.length}名（学力・アンケート・面接のいずれかを提出済） ・ <span title="クラスター内の散らばり具合。低いほど各グループがまとまっています。">分類スコア ${clusterInertia.toFixed(1)}</span></small>`;
     }
 
     let charHtml = '<div class="cluster-grid">';

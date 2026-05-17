@@ -118,14 +118,18 @@ const Stats = (() => {
   }
 
   function featureVector(candidate, session) {
-    // Cluster feature: per-category academic % (0-1) + per-question survey (0-1)
+    // Cluster feature: academic%(0-1) + survey(0-1) + interview avg per category(0-1)
     const { perCategory } = scoreAcademic(candidate, session?.academicTest);
     const cats = session?.academicTest?.questions?.length
       ? [...new Set(session.academicTest.questions.map(q => q.category || 'その他'))]
       : DEFAULT_ACADEMIC_CATEGORIES;
     const a = cats.map(c => (perCategory[c] || 0) / 100);
     const s = (session?.surveyTest?.questions || []).map(q => (Number(candidate.surveyAnswers?.[q.id]) || 0) / 5);
-    return a.concat(s);
+    // 面接評価の各カテゴリ平均 (0-1)
+    const ivRatings = getInterviewRatings(session);
+    const ivAvgs = interviewCategoryAvgs(candidate, session);
+    const iv = ivRatings.map(r => (ivAvgs[r.key] || 0) / 5);
+    return a.concat(s).concat(iv);
   }
 
   // Per-phase completion
