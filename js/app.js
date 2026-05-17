@@ -874,8 +874,9 @@ const App = (() => {
           </div>
           <div>
             <div class="score-badges">
-              <span class="score-badge alt">学力 ${ac.percent.toFixed(1)}% (${ac.total}/${ac.max})</span>
-              <span class="score-badge warn">アンケート ${sv.toFixed(2)}/5</span>
+              <span class="score-badge alt">学力 ${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '% (' + ac.total + '/' + ac.max + ')' : '未'}</span>
+              <span class="score-badge warn">アンケート ${Stats.hasSurvey(c) ? sv.toFixed(2) + '/5' : '未'}</span>
+              <span class="score-badge interview">面接 ${Stats.hasInterview(c) ? Stats.interviewAvg(c).toFixed(2) + '/5' : '未'}</span>
             </div>
           </div>
         </div>
