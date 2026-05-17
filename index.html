@@ -49,9 +49,9 @@
   <section class="view active" id="view-overview">
     <div class="cards">
       <div class="card stat"><span class="k">受験者数</span><span class="v" id="stat-count">0</span></div>
-      <div class="card stat"><span class="k">履歴書提出</span><span class="v" id="stat-resume">-</span></div>
-      <div class="card stat"><span class="k">学力試験完了</span><span class="v" id="stat-academic">-</span></div>
-      <div class="card stat"><span class="k">アンケート完了</span><span class="v" id="stat-survey">-</span></div>
+      <div class="card stat clickable" data-quick-filter="resume"><span class="k">📄 履歴書 提出/未</span><span class="v" id="stat-resume">-</span></div>
+      <div class="card stat clickable" data-quick-filter="academic"><span class="k">📚 学力試験 済/未</span><span class="v" id="stat-academic">-</span></div>
+      <div class="card stat clickable" data-quick-filter="survey"><span class="k">📋 アンケート 済/未</span><span class="v" id="stat-survey">-</span></div>
       <div class="card stat"><span class="k">平均総合点</span><span class="v" id="stat-avg">-</span></div>
       <div class="card stat"><span class="k">最高得点</span><span class="v" id="stat-max">-</span></div>
       <div class="card stat"><span class="k">✅ 合格者</span><span class="v" id="stat-passed">-</span></div>
@@ -92,9 +92,15 @@
               <th><input type="text" data-filter="name" placeholder="検索"></th>
               <th><select data-filter="gender"><option value="">全て</option><option>男性</option><option>女性</option><option>その他</option></select></th>
               <th><input type="text" data-filter="faculty" placeholder="検索"></th>
-              <th><select data-filter="resume"><option value="">全て</option><option value="1">提出済</option><option value="0">未</option></select></th>
-              <th><input type="text" data-filter="academic" placeholder="例: ≥70"></th>
-              <th><input type="text" data-filter="survey" placeholder="例: ≥3.5"></th>
+              <th><select data-filter="resume"><option value="">全て</option><option value="1">✅提出済</option><option value="0">❌未回答</option></select></th>
+              <th>
+                <select data-filter="academicStatus" class="ac-sv-sel"><option value="">全て</option><option value="1">✅受験済</option><option value="0">❌未受験</option></select>
+                <input type="text" data-filter="academic" placeholder="例: ≥70">
+              </th>
+              <th>
+                <select data-filter="surveyStatus" class="ac-sv-sel"><option value="">全て</option><option value="1">✅回答済</option><option value="0">❌未回答</option></select>
+                <input type="text" data-filter="survey" placeholder="例: ≥3.5">
+              </th>
               <th><input type="text" data-filter="total" placeholder="例: ≥60"></th>
               <th></th>
               <th></th>
@@ -174,26 +180,79 @@
     <section class="portal-form" id="portal-resume" style="display:none">
       <h3>📄 履歴書記入</h3>
       <form id="form-resume" autocomplete="off">
-        <div class="form-grid">
-          <label>受験番号<span class="req">*</span><input type="text" name="examineeId" required></label>
-          <label>姓<span class="req">*</span><input type="text" name="lastName" required></label>
-          <label>名<span class="req">*</span><input type="text" name="firstName" required></label>
-          <label>姓（フリガナ）<input type="text" name="lastKana"></label>
-          <label>名（フリガナ）<input type="text" name="firstKana"></label>
-          <label>生年月日<input type="date" name="birthdate"></label>
-          <label>性別<select name="gender"><option value="">選択しない</option><option>男性</option><option>女性</option><option>その他</option></select></label>
-          <label>メールアドレス<input type="email" name="email"></label>
-          <label>電話番号<input type="tel" name="phone"></label>
-          <label>学部<span class="req">*</span><select name="faculty" id="resume-faculty" required></select></label>
-          <label>学科<select name="department" id="resume-department"></select></label>
-          <label>学年<input type="text" name="grade" placeholder="例: 2年"></label>
-          <label>現在のGPA<input type="number" step="0.01" min="0" max="4" name="gpa"></label>
-          <label>取得済資格<input type="text" name="qualifications"></label>
-          <label class="full">志望動機<textarea name="motivation" rows="4"></textarea></label>
-          <label class="full">自己PR<textarea name="selfPr" rows="4"></textarea></label>
-          <label class="full">研究したいテーマ<textarea name="researchTopic" rows="3"></textarea></label>
+
+        <!-- 基本情報（必須） -->
+        <div class="form-section">
+          <div class="form-section-title">👤 基本情報 <span class="req-mark">＊必須</span></div>
+          <div class="resume-basic-grid">
+            <div class="photo-area">
+              <div class="photo-preview" id="photo-preview">
+                <span class="photo-placeholder">📷<br>顔写真</span>
+              </div>
+              <label class="btn photo-btn">
+                顔写真をアップロード
+                <input type="file" id="photo-input" accept="image/*" hidden>
+              </label>
+              <button type="button" class="btn photo-clear" id="photo-clear" style="display:none">写真を削除</button>
+              <input type="hidden" name="photo">
+            </div>
+            <div class="form-grid">
+              <label>受験番号<span class="req">*</span><input type="text" name="examineeId" required></label>
+              <label>姓<span class="req">*</span><input type="text" name="lastName" required></label>
+              <label>名<span class="req">*</span><input type="text" name="firstName" required></label>
+              <label>姓（フリガナ）<input type="text" name="lastKana"></label>
+              <label>名（フリガナ）<input type="text" name="firstKana"></label>
+              <label>性別<select name="gender"><option value="">選択しない</option><option>男性</option><option>女性</option><option>その他</option></select></label>
+              <label>学部<span class="req">*</span><select name="faculty" id="resume-faculty" required></select></label>
+              <label>学科<select name="department" id="resume-department"></select></label>
+              <label>学年<select name="grade">
+                <option value="">選択しない</option>
+                <option>1年</option><option>2年</option><option>3年</option><option>4年</option>
+                <option>修士1年(M1)</option><option>修士2年(M2)</option>
+                <option>その他</option>
+              </select></label>
+            </div>
+          </div>
         </div>
-        <div id="form-resume-custom" class="form-grid"></div>
+
+        <!-- 連絡先・学業情報 -->
+        <details class="form-section collapsible" open>
+          <summary class="form-section-title">📞 連絡先・学業情報 <span class="optional-mark">任意</span></summary>
+          <div class="form-grid">
+            <label>メールアドレス<input type="email" name="email"></label>
+            <label>電話番号<input type="tel" name="phone"></label>
+            <label>生年月日<input type="date" name="birthdate"></label>
+            <label>現在のGPA<input type="number" step="0.01" min="0" max="4" name="gpa" placeholder="例: 3.25"></label>
+          </div>
+          <div style="margin-top:8px">
+            <label class="qual-label">取得資格・スキル（複数追加可）
+              <div class="qual-input-wrap">
+                <input type="text" id="qual-input" placeholder="例: TOEIC 800、簿記2級、Python など。入力してEnter or [追加]">
+                <button type="button" class="btn" id="qual-add">＋追加</button>
+              </div>
+              <div class="qual-tags" id="qual-tags"></div>
+            </label>
+          </div>
+        </details>
+
+        <!-- 志望動機・自己PR -->
+        <details class="form-section collapsible" open>
+          <summary class="form-section-title">✍ 志望動機・自己PR <span class="optional-mark">任意</span></summary>
+          <div class="form-grid">
+            <label class="full">志望動機<textarea name="motivation" rows="3" placeholder="このゼミを志望する理由"></textarea></label>
+            <label class="full">自己PR<textarea name="selfPr" rows="3" placeholder="あなたの強みや実績"></textarea></label>
+            <label class="full">研究したいテーマ<textarea name="researchTopic" rows="2"></textarea></label>
+          </div>
+        </details>
+
+        <!-- 追加質問 -->
+        <div id="form-resume-custom-wrap" style="display:none">
+          <details class="form-section collapsible" open>
+            <summary class="form-section-title">📌 追加質問</summary>
+            <div id="form-resume-custom" class="form-grid"></div>
+          </details>
+        </div>
+
         <div class="form-actions"><button type="button" class="btn" data-cancel>キャンセル</button><button type="submit" class="btn primary">履歴書を提出</button></div>
       </form>
     </section>

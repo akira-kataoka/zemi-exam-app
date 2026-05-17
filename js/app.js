@@ -132,10 +132,14 @@ const App = (() => {
   function renderOverview() {
     const sess = ensureTests(getSession());
     const list = Storage.loadForSession();
-    $('#stat-count').textContent = list.length;
-    $('#stat-resume').textContent   = list.filter(c => Stats.hasResume(c)).length;
-    $('#stat-academic').textContent = list.filter(c => Stats.hasAcademic(c)).length;
-    $('#stat-survey').textContent   = list.filter(c => Stats.hasSurvey(c)).length;
+    const N = list.length;
+    const nR = list.filter(c => Stats.hasResume(c)).length;
+    const nA = list.filter(c => Stats.hasAcademic(c)).length;
+    const nS = list.filter(c => Stats.hasSurvey(c)).length;
+    $('#stat-count').textContent = N;
+    $('#stat-resume').innerHTML   = `${nR} <span class="stat-sub">/ 未 ${N - nR}</span>`;
+    $('#stat-academic').innerHTML = `${nA} <span class="stat-sub">/ 未 ${N - nA}</span>`;
+    $('#stat-survey').innerHTML   = `${nS} <span class="stat-sub">/ 未 ${N - nS}</span>`;
     const totals = list.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).map(c => Stats.totalScore(c, sess, cfg));
     $('#stat-avg').textContent = totals.length ? (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1) : '-';
     $('#stat-max').textContent = totals.length ? Math.max(...totals).toFixed(1) : '-';
@@ -221,6 +225,8 @@ const App = (() => {
           case 'gender':     return (c.gender || '') === val;
           case 'faculty':    return ((c.faculty || '') + ' ' + (c.department || '')).toLowerCase().includes(v);
           case 'resume':     return val === '1' ? Stats.hasResume(c) : !Stats.hasResume(c);
+          case 'academicStatus': return val === '1' ? Stats.hasAcademic(c) : !Stats.hasAcademic(c);
+          case 'surveyStatus':   return val === '1' ? Stats.hasSurvey(c) : !Stats.hasSurvey(c);
           case 'academic':   { const f = parseNumericFilter(val); return f ? (Stats.hasAcademic(c) && f(ac.percent)) : true; }
           case 'survey':     { const f = parseNumericFilter(val); return f ? (Stats.hasSurvey(c) && f(sv)) : true; }
           case 'total':      { const f = parseNumericFilter(val); return f ? f(total) : true; }
@@ -257,19 +263,25 @@ const App = (() => {
 
     // (use 'filtered' below as enriched substitute)
     const _enriched = filtered;
+    const missBadge = '<span class="miss-badge">未</span>';
     tbody.innerHTML = _enriched.map(({ c, ac, sv, total, lastUpdate }) => `
       <tr data-id="${c.id}" class="${c.passed ? 'row-passed' : ''}">
         <td><input type="checkbox" class="pass-check" data-id="${c.id}" ${c.passed ? 'checked' : ''} title="合格チェック"></td>
         <td>${escapeHtml(c.examineeId || '')}</td>
         <td>
-          <div class="name-main">${escapeHtml(fullName(c))}</div>
-          ${fullKana(c) ? `<div class="name-kana">${escapeHtml(fullKana(c))}</div>` : ''}
+          <div class="name-cell">
+            ${c.photo ? `<img class="avatar-sm" src="${c.photo}" alt="">` : '<div class="avatar-sm avatar-blank">👤</div>'}
+            <div>
+              <div class="name-main">${escapeHtml(fullName(c))}</div>
+              ${fullKana(c) ? `<div class="name-kana">${escapeHtml(fullKana(c))}</div>` : ''}
+            </div>
+          </div>
         </td>
         <td>${escapeHtml(c.gender || '—')}</td>
         <td>${escapeHtml((c.faculty || '') + ' ' + (c.department || ''))}</td>
-        <td>${Stats.hasResume(c) ? '✅' : '—'}</td>
-        <td class="num">${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '%' : '—'}</td>
-        <td class="num">${Stats.hasSurvey(c) ? sv.toFixed(2) : '—'}</td>
+        <td>${Stats.hasResume(c) ? '✅' : missBadge}</td>
+        <td class="num">${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '%' : missBadge}</td>
+        <td class="num">${Stats.hasSurvey(c) ? sv.toFixed(2) : missBadge}</td>
         <td class="num"><strong>${(Stats.hasAcademic(c) || Stats.hasSurvey(c)) ? total.toFixed(1) : '—'}</strong></td>
         <td>${formatDate(lastUpdate)}</td>
         <td class="row-actions">
@@ -547,7 +559,8 @@ const App = (() => {
     body.innerHTML = `
       <div class="profile-card">
         <div class="profile-head">
-          <div>
+          ${c.photo ? `<img class="avatar-lg" src="${c.photo}" alt="顔写真">` : '<div class="avatar-lg avatar-blank">👤</div>'}
+          <div style="flex:1;min-width:200px">
             <div class="profile-name">${escapeHtml(fullName(c))}</div>
             <div class="profile-meta">${escapeHtml(fullKana(c))}</div>
             <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${c.gender ? '🚻 ' + escapeHtml(c.gender) + ' ・ ' : ''}${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
@@ -577,7 +590,7 @@ const App = (() => {
           <div><dt>メール</dt><dd>${escapeHtml(c.email || '')}</dd></div>
           <div><dt>電話</dt><dd>${escapeHtml(c.phone || '')}</dd></div>
           <div><dt>GPA</dt><dd>${c.gpa ?? ''}</dd></div>
-          <div><dt>資格</dt><dd>${escapeHtml(c.qualifications || '')}</dd></div>
+          <div class="full"><dt>取得資格・スキル</dt><dd>${(normalizeQualifications(c.qualifications).map(q => `<span class="qual-chip">${escapeHtml(q)}</span>`).join('') || '<span class="muted">なし</span>')}</dd></div>
         </div>
         <h4 style="margin-top:14px">志望動機</h4><p>${escapeHtml(c.motivation || '')}</p>
         <h4>自己PR</h4><p>${escapeHtml(c.selfPr || '')}</p>
@@ -679,19 +692,27 @@ const App = (() => {
       $('#portal-resume').style.display = 'block';
       const form = $('#form-resume');
       form.reset();
-      // Populate faculty/department selects from session config
       populateFacultySelects(form, cand);
       if (cand) {
-        ['examineeId', 'lastName', 'firstName', 'lastKana', 'firstKana', 'birthdate', 'gender', 'email', 'phone', 'grade', 'gpa', 'qualifications', 'motivation', 'selfPr', 'researchTopic'].forEach(k => {
+        ['examineeId', 'lastName', 'firstName', 'lastKana', 'firstKana', 'birthdate', 'gender', 'email', 'phone', 'grade', 'gpa', 'motivation', 'selfPr', 'researchTopic'].forEach(k => {
           if (form.elements[k]) form.elements[k].value = cand[k] || '';
         });
       } else if (examineeId) {
         form.elements.examineeId.value = examineeId;
       }
+      // Photo
+      setPhotoPreview(cand?.photo || '');
+      form.elements.photo.value = cand?.photo || '';
+      // Qualifications as tags
+      const quals = normalizeQualifications(cand?.qualifications);
+      renderQualTags(quals);
       // Build extra fields
       const extraWrap = $('#form-resume-custom');
+      const extraWrapper = document.getElementById('form-resume-custom-wrap');
       extraWrap.innerHTML = '';
-      (sess.resumeExtraFields || []).forEach(f => {
+      const extras = sess.resumeExtraFields || [];
+      extraWrapper.style.display = extras.length ? 'block' : 'none';
+      extras.forEach(f => {
         const lbl = document.createElement('label');
         lbl.className = 'full';
         lbl.innerHTML = `${escapeHtml(f.label)}${f.type === 'textarea' ? `<textarea data-extra-id="${f.id}" rows="3"></textarea>` : `<input type="text" data-extra-id="${f.id}">`}`;
@@ -735,6 +756,71 @@ const App = (() => {
     }
   }
 
+  // ===== Photo handling =====
+  function setPhotoPreview(dataUrl) {
+    const wrap = document.getElementById('photo-preview');
+    const clearBtn = document.getElementById('photo-clear');
+    if (!wrap) return;
+    if (dataUrl) {
+      wrap.innerHTML = `<img src="${dataUrl}" alt="顔写真">`;
+      if (clearBtn) clearBtn.style.display = 'inline-flex';
+    } else {
+      wrap.innerHTML = '<span class="photo-placeholder">📷<br>顔写真</span>';
+      if (clearBtn) clearBtn.style.display = 'none';
+    }
+  }
+  function handlePhotoUpload(file) {
+    const r = new FileReader();
+    r.onload = e => {
+      // Resize to max 320x320 to keep localStorage small
+      const img = new Image();
+      img.onload = () => {
+        const maxSide = 320;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        setPhotoPreview(dataUrl);
+        document.querySelector('#form-resume [name="photo"]').value = dataUrl;
+      };
+      img.src = e.target.result;
+    };
+    r.readAsDataURL(file);
+  }
+
+  // ===== Qualifications (tag input) =====
+  function normalizeQualifications(q) {
+    if (!q) return [];
+    if (Array.isArray(q)) return q.slice();
+    return String(q).split(/[,、\n]/).map(s => s.trim()).filter(Boolean);
+  }
+  let _currentQuals = [];
+  function renderQualTags(quals) {
+    _currentQuals = quals || [];
+    const wrap = document.getElementById('qual-tags');
+    if (!wrap) return;
+    wrap.innerHTML = _currentQuals.map((q, i) =>
+      `<span class="qual-tag">${escapeHtml(q)}<button type="button" data-qrm="${i}" aria-label="削除">×</button></span>`
+    ).join('') || '<span class="muted" style="font-size:11px">資格が登録されていません</span>';
+    wrap.querySelectorAll('[data-qrm]').forEach(b => b.addEventListener('click', () => {
+      _currentQuals.splice(Number(b.dataset.qrm), 1);
+      renderQualTags(_currentQuals);
+    }));
+  }
+  function addQualFromInput() {
+    const input = document.getElementById('qual-input');
+    const v = (input.value || '').trim();
+    if (!v) return;
+    v.split(/[,、\n]/).map(s => s.trim()).filter(Boolean).forEach(s => {
+      if (!_currentQuals.includes(s)) _currentQuals.push(s);
+    });
+    input.value = '';
+    renderQualTags(_currentQuals);
+  }
+
   function populateFacultySelects(form, cand) {
     const sess = getSession();
     const fSel = form.querySelector('select[name="faculty"]');
@@ -762,11 +848,19 @@ const App = (() => {
     const data = {};
     fd.forEach((v, k) => data[k] = v);
     data.gpa = data.gpa ? Number(data.gpa) : null;
+    data.qualifications = _currentQuals.slice();   // array
     data.resumeSubmittedAt = new Date().toISOString();
-    // extras
     data.extra = Object.assign({}, Storage.findByExamineeId(sess.id, data.examineeId)?.extra || {});
     form.querySelectorAll('[data-extra-id]').forEach(inp => { data.extra[inp.dataset.extraId] = inp.value; });
-    Storage.upsert(data);
+    try {
+      Storage.upsert(data);
+    } catch (err) {
+      if (String(err).includes('QuotaExceeded')) {
+        alert('保存容量を超えました。顔写真を削除するか、不要な試験回を削除してください。');
+        return;
+      }
+      throw err;
+    }
     alert('履歴書を提出しました。');
     $('#portal-resume').style.display = 'none';
     renderPortal();
@@ -1166,9 +1260,9 @@ const App = (() => {
         email: `applicant${i + 1}@example.com`, phone: `090-${1000 + i}-${1000 + i}`,
         faculty: fac.name,
         department: dept,
-        grade: '2年',
+        grade: ['1年', '2年', '3年', '4年'][i % 4],
         gpa: Number((2.0 + Math.random() * 2).toFixed(2)),
-        qualifications: i % 3 === 0 ? 'TOEIC 750' : '',
+        qualifications: i % 3 === 0 ? ['TOEIC 750', '簿記2級'] : (i % 4 === 0 ? ['Python', 'Excel VBA'] : []),
         motivation: 'データ分析を通じて社会課題を解決したいと考えています。',
         selfPr: 'チームでの企画運営経験があり、議論をまとめるのが得意です。',
         researchTopic: '消費者行動と購買データの関係',
@@ -1256,6 +1350,33 @@ const App = (() => {
     $('#portal-load').addEventListener('click', renderPortal);
     $('#portal-examinee-id').addEventListener('change', renderPortal);
     $('#form-resume').addEventListener('submit', submitResume);
+    // Photo upload
+    document.getElementById('photo-input').addEventListener('change', e => {
+      const f = e.target.files[0]; if (f) handlePhotoUpload(f);
+    });
+    document.getElementById('photo-clear').addEventListener('click', () => {
+      setPhotoPreview('');
+      document.querySelector('#form-resume [name="photo"]').value = '';
+      document.getElementById('photo-input').value = '';
+    });
+    // Qualification tag input
+    document.getElementById('qual-add').addEventListener('click', addQualFromInput);
+    document.getElementById('qual-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); addQualFromInput(); }
+    });
+    // Dashboard quick filters
+    document.querySelectorAll('[data-quick-filter]').forEach(el => {
+      el.addEventListener('click', () => {
+        const phase = el.dataset.quickFilter;
+        const map = { resume: 'resume', academic: 'academicStatus', survey: 'surveyStatus' };
+        _listFilters = { [map[phase]]: '0' };
+        showSubview('list');
+        document.querySelectorAll('#cand-table thead .filter-row [data-filter]').forEach(input => {
+          input.value = (input.dataset.filter === map[phase]) ? '0' : '';
+        });
+        renderCandidateList();
+      });
+    });
     $('#form-academic').addEventListener('submit', submitAcademic);
     $('#form-survey').addEventListener('submit', submitSurvey);
     $$('[data-cancel]').forEach(b => b.addEventListener('click', () => {
