@@ -1,12 +1,10 @@
 // localStorage wrapper: sessions (with per-phase release flags) + candidates (upsert by examineeId) + settings
 const Storage = (() => {
   const KEY_CAND = 'zemiSA.candidates.v1';
-  const KEY_CFG  = 'zemiSA.config.v1';
   const KEY_SESS = 'zemiSA.sessions.v1';
   const KEY_CUR  = 'zemiSA.currentSession.v1';
   const DEFAULT_SESSION_ID = 's_default';
   const defaultPhases = { application: true, resume: true, academic: false, survey: false };
-  const defaultCfg = { weightAcademic: 70, weightSurvey: 30 };
 
   // ---- Sessions ----
   function loadSessions() {
@@ -204,16 +202,9 @@ const Storage = (() => {
     save(load().filter(c => c.sessionId !== sid));
   }
 
-  function loadCfg() {
-    try { return Object.assign({}, defaultCfg, JSON.parse(localStorage.getItem(KEY_CFG)) || {}); }
-    catch (e) { return Object.assign({}, defaultCfg); }
-  }
-  function saveCfg(cfg) { localStorage.setItem(KEY_CFG, JSON.stringify(cfg)); }
-
   return {
     load, save, loadForSession, findByExamineeId, upsert, remove, clearAll, regenerateCandidatePassword, generatePassword,
     getDefaultInterviewRatings, setDefaultInterviewRatings,
-    loadCfg, saveCfg,
     loadSessions, addSession, renameSession, setPhase, setPhaseSchedule, isPhaseOpen, isPhaseInGrace, phaseStatusText, removeSession, regeneratePin, generatePin,
     getCurrentSessionId, setCurrentSessionId, getCurrentSession,
     DEFAULT_SESSION_ID
