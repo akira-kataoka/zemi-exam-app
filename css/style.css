@@ -555,6 +555,34 @@ body.candidate-mode .topbar{padding:10px 18px}
 body.candidate-mode .brand h1{font-size:16px}
 body.candidate-mode .brand .sub{display:none}
 
+/* Toast notifications */
+#toast-container{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:12px 20px;background:var(--ink);color:#fff;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.25);font-size:13px;font-weight:600;min-width:240px;max-width:380px;opacity:0;transform:translateX(20px);transition:.25s ease-out;pointer-events:auto}
+.toast.show{opacity:1;transform:translateX(0)}
+.toast-success{background:var(--accent)}
+.toast-info{background:var(--primary)}
+.toast-warn{background:var(--warn)}
+.toast-error{background:var(--danger)}
+
+/* Mobile responsive polish */
+@media(max-width:760px){
+  .session-bar{padding:8px}
+  .session-name-input{min-width:140px;font-size:13px}
+  .phase-status{font-size:11px;gap:4px}
+  .phase-pill{padding:2px 6px;font-size:10px}
+  .tab{padding:6px 10px;font-size:12px}
+  .tab-help{margin-left:0}
+  .table-wrap{max-height:55vh}
+  .sticky-table thead .sort-row th{font-size:11px;padding:6px 8px}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .card.stat .v{font-size:18px}
+}
+@media(max-width:480px){
+  .brand h1{font-size:16px}
+  .brand .sub{display:none}
+  .cards{grid-template-columns:1fr}
+}
+
 @media print{
   .topbar,.toolbar,.tabs,.subtabs,.form-actions,.btn,.portal-cards,.portal-form{display:none !important}
   body{background:#fff}

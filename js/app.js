@@ -17,6 +17,25 @@ const App = (() => {
     try { localStorage.setItem(UI_KEY, JSON.stringify(_uiState)); } catch (e) {}
   }
 
+  // ===== Toast notification =====
+  function toast(message, type = 'info', durationMs = 3000) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      document.body.appendChild(container);
+    }
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    t.textContent = message;
+    container.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => {
+      t.classList.remove('show');
+      setTimeout(() => t.remove(), 300);
+    }, durationMs);
+  }
+
   // ===== Helpers =====
   function $(s, root = document) { return root.querySelector(s); }
   function $$(s, root = document) { return Array.from(root.querySelectorAll(s)); }
@@ -310,7 +329,22 @@ const App = (() => {
     saveUiState({ subview: name });
     if (name === 'chart')   renderChartView();
     if (name === 'rank')    renderRanking();
-    if (name === 'cluster') { /* auto-run if enough data */ const list = Storage.loadForSession().filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)); if (list.length >= 4) runCluster(); }
+    if (name === 'cluster') {
+      const list = Storage.loadForSession().filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c));
+      if (list.length >= Math.max(2, Number($('#k-value')?.value) || 4)) runCluster();
+      else {
+        // Show empty/notice
+        const emptyEl = document.getElementById('cluster-empty');
+        const resultEl = document.getElementById('cluster-result');
+        if (emptyEl) {
+          emptyEl.style.display = 'block';
+          emptyEl.innerHTML = list.length === 0
+            ? '<div style="font-size:48px">📊</div><p>学力試験またはアンケート回答済みの受験者がいません。</p><p style="font-size:12px">回答が集まり次第、自動的に分析されます。</p>'
+            : `<div style="font-size:48px">📊</div><p>現在 ${list.length}名 のデータがあります。<br>分類数 k を ${list.length} 以下にして「分析を実行」してください。</p>`;
+        }
+        if (resultEl) resultEl.style.display = 'none';
+      }
+    }
     if (name === 'list')    renderCandidateList();
   }
   function openHelpModal() { document.getElementById('help-modal').style.display = 'flex'; }
@@ -871,7 +905,10 @@ const App = (() => {
       renderProfile(current);
     } else {
       updateProfileTriggerLabel('');
-      $('#profile-body').innerHTML = '<div class="card" style="text-align:center;color:var(--muted)">上のセレクタから受験者を選択してください。</div>';
+      const list = Storage.loadForSession();
+      $('#profile-body').innerHTML = list.length === 0
+        ? '<div class="card" style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px">👤</div><p>受験者がまだ登録されていません。</p><p style="font-size:12px">管理 → データから「デモデータを投入」または、受験申込URLを配布してください。</p></div>'
+        : `<div class="card" style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px">🔍</div><p>上部の「-- 受験者を選択 --」ボタンから ${list.length}名 の中から受験者を選んでください。</p></div>`;
     }
   }
 
@@ -1504,7 +1541,7 @@ const App = (() => {
       }
       throw err;
     }
-    alert('履歴書を提出しました。');
+    toast('履歴書を提出しました', 'success');
     $('#portal-resume').style.display = 'none';
     renderPortal();
     renderOverview();
@@ -1546,7 +1583,7 @@ const App = (() => {
       freeAspiration: form.elements.freeAspiration.value,
       surveySubmittedAt: new Date().toISOString()
     });
-    alert('アンケートを提出しました。');
+    toast('アンケートを提出しました', 'success');
     $('#portal-survey').style.display = 'none';
     renderPortal();
     renderOverview();
@@ -2113,7 +2150,7 @@ const App = (() => {
       qr.make();
       document.getElementById('qr-application').innerHTML = qr.createImgTag(4, 8);
       section.querySelector('[data-copy-app]').addEventListener('click', () => {
-        navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました'));
+        navigator.clipboard.writeText(url).then(() => toast('URLをコピーしました', 'success'));
       });
     } else {
       section.innerHTML = `<p class="hint" style="margin:0">🔗 受験者ごとのアクセスURL・パスワード・配布用メッセージは <strong>管理 → 履歴書</strong> タブの「📨 配布メッセージ」セクションで生成・コピーできます。</p>`;
