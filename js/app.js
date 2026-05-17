@@ -2306,8 +2306,8 @@ const App = (() => {
     if (handleUrlMode()) return;
 
     renderSessionBar();
-    // Restore saved UI state
-    const savedView = _uiState.view || 'overview';
+    // Restore saved UI state (portal is candidate-only now, fall back to overview)
+    const savedView = (_uiState.view === 'portal' ? 'overview' : _uiState.view) || 'overview';
     const savedSubview = _uiState.subview || 'list';
     if (_uiState.search) $('#search-cand').value = _uiState.search;
     if (_uiState.listFilters) {
