@@ -3108,6 +3108,7 @@ const App = (() => {
         document.querySelectorAll('.modal-overlay').forEach(m => {
           if (m.style.display !== 'none' && getComputedStyle(m).display !== 'none') {
             if (m.id === 'help-modal') closeHelpModal();
+            else if (m.id === 'login-modal') m.style.display = 'none';
             else m.remove();
           }
         });
