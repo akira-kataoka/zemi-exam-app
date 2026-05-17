@@ -244,9 +244,9 @@ const App = (() => {
     $('#stat-academic').textContent  = `${nA} / ${N}`;
     $('#stat-survey').textContent    = `${nS} / ${N}`;
     $('#stat-interview').textContent = `${nI} / ${N}`;
-    const totals = list.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).map(c => Stats.totalScore(c, sess, cfg));
-    $('#stat-avg').textContent = totals.length ? (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1) : '-';
-    $('#stat-max').textContent = totals.length ? Math.max(...totals).toFixed(1) : '-';
+    const acScores = list.filter(c => Stats.hasAcademic(c)).map(c => Stats.scoreAcademic(c, sess.academicTest).percent);
+    $('#stat-max').textContent = acScores.length ? Math.max(...acScores).toFixed(1) + '%' : '—';
+    $('#stat-min').textContent = acScores.length ? Math.min(...acScores).toFixed(1) + '%' : '—';
     $('#stat-passed').textContent = list.filter(c => c.passed).length;
     renderEmptyStateBanner(list.length === 0);
     renderCandidateList();

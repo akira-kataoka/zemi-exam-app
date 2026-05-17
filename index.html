@@ -52,15 +52,28 @@
 
   <!-- ===== Overview ===== -->
   <section class="view active" id="view-overview">
-    <div class="cards">
-      <div class="card stat"><span class="k">受験者数</span><span class="v" id="stat-count">0</span></div>
-      <div class="card stat clickable" data-quick-filter="resume"><span class="k">📄 履歴書 提出/未</span><span class="v" id="stat-resume">-</span></div>
-      <div class="card stat clickable" data-quick-filter="academic"><span class="k">📚 学力試験 済/未</span><span class="v" id="stat-academic">-</span></div>
-      <div class="card stat clickable" data-quick-filter="survey"><span class="k">📋 アンケート 済/未</span><span class="v" id="stat-survey">-</span></div>
-      <div class="card stat clickable" data-quick-filter="interview"><span class="k">🎤 面接 実施/未</span><span class="v" id="stat-interview">-</span></div>
-      <div class="card stat"><span class="k">学力平均</span><span class="v" id="stat-avg">-</span></div>
-      <div class="card stat"><span class="k">学力最高</span><span class="v" id="stat-max">-</span></div>
-      <div class="card stat"><span class="k">✅ 合格者</span><span class="v" id="stat-passed">-</span></div>
+    <div class="stats-group">
+      <div class="stats-group-title">👥 人数</div>
+      <div class="cards">
+        <div class="card stat"><span class="k">受験者数</span><span class="v" id="stat-count">0</span></div>
+        <div class="card stat"><span class="k">✅ 合格者数</span><span class="v" id="stat-passed">0</span></div>
+      </div>
+    </div>
+    <div class="stats-group">
+      <div class="stats-group-title">📥 提出状況（クリックで詳細）</div>
+      <div class="cards">
+        <div class="card stat clickable" data-quick-filter="resume"><span class="k">📄 履歴書 済/全</span><span class="v" id="stat-resume">-</span></div>
+        <div class="card stat clickable" data-quick-filter="academic"><span class="k">📚 学力試験 済/全</span><span class="v" id="stat-academic">-</span></div>
+        <div class="card stat clickable" data-quick-filter="survey"><span class="k">📋 アンケート 済/全</span><span class="v" id="stat-survey">-</span></div>
+        <div class="card stat clickable" data-quick-filter="interview"><span class="k">🎤 面接 済/全</span><span class="v" id="stat-interview">-</span></div>
+      </div>
+    </div>
+    <div class="stats-group">
+      <div class="stats-group-title">📚 学力試験スコア</div>
+      <div class="cards">
+        <div class="card stat"><span class="k">最高得点</span><span class="v" id="stat-max">-</span></div>
+        <div class="card stat"><span class="k">最低得点</span><span class="v" id="stat-min">-</span></div>
+      </div>
     </div>
 
     <div class="subtabs">

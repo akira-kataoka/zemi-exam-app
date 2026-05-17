@@ -69,7 +69,9 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 /* Card */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px;box-shadow:var(--shadow)}
 .card h3{margin:0 0 12px;font-size:15px;color:var(--ink)}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:0}
+.stats-group{margin-bottom:14px}
+.stats-group-title{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;padding-left:4px;letter-spacing:.05em}
 .card.stat{padding:14px 18px;display:flex;flex-direction:column;gap:4px}
 .card.stat .k{color:var(--muted);font-size:12px}
 .card.stat .v{font-size:22px;font-weight:700;color:var(--primary)}
