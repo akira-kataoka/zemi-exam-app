@@ -1096,9 +1096,30 @@ const App = (() => {
     const sess = ensureTests(getSession());
     const portalCards = $('#portal-cards');
     const idInput = $('#portal-examinee-id');
-    const examineeId = (idInput.value || '').trim();
-    const cand = examineeId ? Storage.findByExamineeId(sess.id, examineeId) : null;
-    $('#portal-status').textContent = examineeId ? (cand ? `登録あり: ${fullName(cand)}` : '新規受験者として登録できます') : '受験番号を入力してください';
+    const isCandidateMode = document.body.classList.contains('candidate-mode');
+    const idRow = document.querySelector('.portal-id-row');
+    const introP = document.querySelector('.portal-intro > p');
+
+    let examineeId;
+    let cand;
+
+    if (isCandidateMode) {
+      // 候補者モード: URLから来た受験番号で固定。検索不可
+      examineeId = (idInput.value || '').trim();
+      cand = examineeId ? Storage.findByExamineeId(sess.id, examineeId) : null;
+      if (idRow) idRow.style.display = 'none';
+      if (introP) introP.textContent = `${cand ? fullName(cand) + ' さん用の' : ''}受験ページです。受付中の試験をクリックしてご回答ください。`;
+    } else {
+      // 管理者モード: 検索は許可しない（プライバシー）
+      if (idRow) idRow.style.display = 'none';
+      if (introP) introP.innerHTML = '⚠ <strong>受験ポータルは個別配布URLからのみアクセス可能</strong>です。<br>各受験者にメッセージを送るには <strong>管理 → 履歴書 → 📨 配布メッセージ</strong> セクションをご利用ください。受験者専用URLの「プレビュー」ボタンからも本人のポータルを開いて動作確認できます。';
+      portalCards.innerHTML = '';
+      $('#portal-status').textContent = '';
+      // すべてのフォームも閉じる
+      ['portal-resume', 'portal-academic', 'portal-survey'].forEach(id => { const el = $('#' + id); if (el) el.style.display = 'none'; });
+      return;
+    }
+    $('#portal-status').textContent = examineeId ? (cand ? '本人確認OK' : '') : '';
 
     const phases = [
       { key: 'resume',   icon: '📄', title: '履歴書記入', done: cand && Stats.hasResume(cand), doneAt: cand?.resumeSubmittedAt },
@@ -1145,6 +1166,10 @@ const App = (() => {
         });
       } else if (examineeId) {
         form.elements.examineeId.value = examineeId;
+      }
+      // 候補者モードでは受験番号変更不可
+      if (document.body.classList.contains('candidate-mode')) {
+        form.elements.examineeId.readOnly = true;
       }
       // Photo
       setPhotoPreview(cand?.photo || '');
