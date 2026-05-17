@@ -310,9 +310,11 @@ const App = (() => {
     saveUiState({ subview: name });
     if (name === 'chart')   renderChartView();
     if (name === 'rank')    renderRanking();
-    if (name === 'cluster') { /* on-demand */ }
+    if (name === 'cluster') { /* auto-run if enough data */ const list = Storage.loadForSession().filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)); if (list.length >= 4) runCluster(); }
     if (name === 'list')    renderCandidateList();
   }
+  function openHelpModal() { document.getElementById('help-modal').style.display = 'flex'; }
+  function closeHelpModal() { document.getElementById('help-modal').style.display = 'none'; }
 
   // ===== Overview =====
   function renderOverview() {
@@ -671,9 +673,17 @@ const App = (() => {
   // ===== Cluster =====
   function runCluster() {
     const sess = getSession();
-    const k = Math.max(2, Math.min(8, Number($('#k-value').value) || 3));
+    const k = Math.max(2, Math.min(8, Number($('#k-value').value) || 4));
     const list = Storage.loadForSession().filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c));
-    if (list.length < k) { alert(`分析対象が ${k} 人未満です（${list.length}名）。受験者を追加してください。`); return; }
+    const emptyEl = document.getElementById('cluster-empty');
+    const resultEl = document.getElementById('cluster-result');
+    if (list.length < k) {
+      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = `<div style="font-size:48px">⚠</div><p>分析対象が ${k} 人未満です（${list.length}名）。受験者を追加するか分類数を減らしてください。</p>`; }
+      if (resultEl) resultEl.style.display = 'none';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (resultEl) resultEl.style.display = '';
     const vectors = list.map(c => Stats.featureVector(c, sess));
     const { assignments, centroids } = Cluster.kmeans(vectors, k);
     const { points } = Cluster.pca2(vectors);
@@ -719,9 +729,25 @@ const App = (() => {
     const featLabels = cats.concat(surveyQs.map(q => q.text));
     const overallMean = featLabels.map((_, fi) => vectors.reduce((s, v) => s + v[fi], 0) / vectors.length);
 
+    // Stat cards
+    const clusterSizes = [];
+    for (let ci = 0; ci < k; ci++) clusterSizes.push(list.filter((_, i) => assignments[i] === ci).length);
+    if (document.getElementById('cluster-stat-n')) document.getElementById('cluster-stat-n').textContent = list.length + '名';
+    if (document.getElementById('cluster-stat-k')) document.getElementById('cluster-stat-k').textContent = k + 'グループ';
+    if (document.getElementById('cluster-stat-max')) document.getElementById('cluster-stat-max').textContent = Math.max(...clusterSizes) + '名';
+    if (document.getElementById('cluster-stat-min')) document.getElementById('cluster-stat-min').textContent = Math.min(...clusterSizes) + '名';
+
     let charHtml = '<div class="cluster-grid">';
     for (let ci = 0; ci < k; ci++) {
-      const members = list.filter((_, i) => assignments[i] === ci);
+      const memberIdx = list.map((_, i) => i).filter(i => assignments[i] === ci);
+      const members = memberIdx.map(i => list[i]);
+      // Find representative: member closest to centroid
+      let repIdx = memberIdx[0], minDist = Infinity;
+      memberIdx.forEach(i => {
+        const d = vectors[i].reduce((s, x, j) => s + (x - centroids[ci][j]) ** 2, 0);
+        if (d < minDist) { minDist = d; repIdx = i; }
+      });
+      const representative = list[repIdx];
       // diff per feature
       const diffs = featLabels.map((label, fi) => ({
         label, isAcademic: fi < cats.length,
@@ -779,9 +805,20 @@ const App = (() => {
           ${topFaculty.length ? `<div class="demo-row">🏫 ${topFaculty.map(([k, v]) => `${k}${v}`).join(' / ')}</div>` : ''}
         </div>
 
+        <div class="cluster-representative" style="background:${palette[ci % palette.length]}15;border-left:4px solid ${palette[ci % palette.length]}">
+          <div class="rep-label">⭐ 代表的な受験者（中心に最も近い）</div>
+          <div class="rep-info">
+            ${representative.photo ? `<img class="avatar-sm" src="${representative.photo}" alt="">` : '<div class="avatar-sm avatar-blank">👤</div>'}
+            <div>
+              <div class="rep-name"><a href="#" data-jump-id="${representative.id}">${escapeHtml(fullName(representative))}</a></div>
+              <div class="rep-meta">${escapeHtml(representative.examineeId || '')} ・ ${escapeHtml(representative.faculty || '')}</div>
+            </div>
+          </div>
+        </div>
+
         <div class="cluster-members">
-          <div class="trait-title">メンバー</div>
-          <div>${members.map(m => `<span class="cluster-chip" style="background:${palette[ci % palette.length]}">${escapeHtml(fullName(m))}${m.passed ? ' ✅' : ''}</span>`).join('')}</div>
+          <div class="trait-title">全メンバー</div>
+          <div>${members.map(m => `<span class="cluster-chip" style="background:${palette[ci % palette.length]}" data-jump-id="${m.id}">${escapeHtml(fullName(m))}${m.passed ? ' ✅' : ''}</span>`).join('')}</div>
         </div>
 
         <div class="cluster-hint">💡 多様性確保のため、この系統から <strong>${Math.max(1, Math.ceil(members.length / 5))}名</strong> 程度の採用を推奨</div>
@@ -789,6 +826,16 @@ const App = (() => {
     }
     charHtml += '</div>';
     $('#cluster-assign-list').innerHTML = charHtml;
+    // Click on representative or member chip jumps to profile
+    document.querySelectorAll('[data-jump-id]').forEach(el => {
+      el.addEventListener('click', e => {
+        e.preventDefault();
+        const id = el.dataset.jumpId;
+        $('#profile-select').value = id;
+        showView('profile');
+        renderProfile(id);
+      });
+    });
   }
 
   // Infer cluster "系統名" from top traits
@@ -1606,9 +1653,15 @@ const App = (() => {
   function renderResumeMgr() {
     const sess = ensureTests(getSession());
     renderFacultyDeptEditor(sess);
-    // Load message template
+    // Load message template (auto-populate default if empty)
     const msgT = document.getElementById('msg-template');
-    if (msgT) msgT.value = sess.messageTemplate || '';
+    if (msgT) {
+      if (!sess.messageTemplate || sess.messageTemplate.trim() === '') {
+        sess.messageTemplate = DEFAULT_MSG_TEMPLATE;
+        saveSession(sess);
+      }
+      msgT.value = sess.messageTemplate;
+    }
     // Load application passcode
     const passInp = document.getElementById('app-passcode');
     if (passInp) passInp.value = sess.applicationPasscode || '';
@@ -2513,7 +2566,28 @@ const App = (() => {
     nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); } });
 
     // Tabs
-    $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
+    $$('.tab').forEach(t => {
+      if (t.id === 'help-btn') return; // help button handled separately
+      t.addEventListener('click', () => showView(t.dataset.view));
+    });
+    // Help modal
+    document.getElementById('help-btn').addEventListener('click', openHelpModal);
+    document.getElementById('help-close').addEventListener('click', closeHelpModal);
+    document.getElementById('help-modal').addEventListener('click', e => { if (e.target === document.getElementById('help-modal')) closeHelpModal(); });
+    document.querySelectorAll('.help-tab').forEach(t => t.addEventListener('click', () => {
+      document.querySelectorAll('.help-tab').forEach(x => x.classList.toggle('active', x === t));
+      document.querySelectorAll('.help-section').forEach(s => s.classList.toggle('active', s.id === 'helpsec-' + t.dataset.helptab));
+    }));
+    // ESC to close any open modal
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      document.querySelectorAll('.modal-overlay').forEach(m => {
+        if (m.style.display !== 'none' && getComputedStyle(m).display !== 'none') {
+          if (m.id === 'help-modal') closeHelpModal();
+          else m.remove();
+        }
+      });
+    });
     $$('.subtab:not(.adminsubtab)').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
     $$('.adminsubtab').forEach(t => t.addEventListener('click', () => showAdminview(t.dataset.adminview)));
     $$('.resume-subtab').forEach(t => t.addEventListener('click', () => showResumeview(t.dataset.resumeview)));

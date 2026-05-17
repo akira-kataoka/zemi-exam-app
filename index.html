@@ -45,6 +45,7 @@
     <button class="tab active" data-view="overview">📊 全体確認</button>
     <button class="tab" data-view="profile">👤 個人確認</button>
     <button class="tab" data-view="admin">⚙ 管理</button>
+    <button class="tab tab-help" id="help-btn" title="使い方を見る">❓ 使い方</button>
   </nav>
 </header>
 
@@ -157,15 +158,43 @@
 
     <!-- Sub: cluster -->
     <section class="subview" id="sub-cluster">
-      <div class="toolbar">
-        <label>クラスター数 k = <input type="number" id="k-value" value="3" min="2" max="8" style="width:60px"></label>
-        <button class="btn primary" id="run-cluster">クラスター分析を実行</button>
+      <div class="card cluster-hero">
+        <div class="cluster-hero-inner">
+          <div class="cluster-hero-text">
+            <h3 style="margin:0 0 6px;color:var(--primary-d)">🎯 クラスター分析とは？</h3>
+            <p style="margin:0;font-size:13px;color:var(--ink);line-height:1.6">受験者を <strong>学力試験＋アンケート傾向</strong> から似たタイプ同士のグループに自動分類します。<strong>多様性のあるゼミ編成</strong>のために、各グループの代表的な人材をバランスよく採用する参考にできます。</p>
+          </div>
+          <div class="cluster-hero-controls">
+            <label class="hero-k">分類数 k =
+              <input type="number" id="k-value" value="4" min="2" max="8">
+            </label>
+            <button class="btn primary" id="run-cluster">🚀 分析を実行</button>
+          </div>
+        </div>
       </div>
-      <div class="grid-2">
-        <div class="card"><h3>クラスター散布図（PCA 2次元）</h3><canvas id="chart-cluster" height="320"></canvas></div>
-        <div class="card"><h3>クラスター特性（中心値）</h3><canvas id="chart-cluster-radar" height="320"></canvas></div>
+
+      <div id="cluster-result" style="display:none">
+        <div class="cards">
+          <div class="card stat"><span class="k">対象人数</span><span class="v" id="cluster-stat-n">-</span></div>
+          <div class="card stat"><span class="k">分類数</span><span class="v" id="cluster-stat-k">-</span></div>
+          <div class="card stat"><span class="k">最大グループ</span><span class="v" id="cluster-stat-max">-</span></div>
+          <div class="card stat"><span class="k">最小グループ</span><span class="v" id="cluster-stat-min">-</span></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><h3>📍 受験者マップ（PCA 2次元投影）</h3><p class="hint" style="margin:-4px 0 8px">点の色がグループを表します。近い点ほど性質が似ています。</p><canvas id="chart-cluster" height="320"></canvas></div>
+          <div class="card"><h3>📊 グループ別 学力カテゴリ平均</h3><p class="hint" style="margin:-4px 0 8px">各グループの強みカテゴリが一目で分かります。</p><canvas id="chart-cluster-radar" height="320"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>👥 グループ詳細・採用推奨</h3>
+          <p class="hint" style="margin:-4px 0 12px">各グループの特性・代表的な受験者・推奨採用人数を表示します。</p>
+          <div id="cluster-assign-list"></div>
+        </div>
       </div>
-      <div class="card"><h3>クラスター割当一覧</h3><div id="cluster-assign-list"></div></div>
+
+      <div id="cluster-empty" class="card" style="text-align:center;padding:40px;color:var(--muted)">
+        <div style="font-size:48px">📊</div>
+        <p>「🚀 分析を実行」をクリックして始めましょう</p>
+      </div>
     </section>
   </section>
 
@@ -585,6 +614,274 @@
     <input type="hidden" id="weight-survey" value="0">
   </section>
 </main>
+
+<!-- ===== Help Modal ===== -->
+<div id="help-modal" class="modal-overlay" style="display:none">
+  <div class="modal-window help-modal">
+    <div class="modal-head">
+      <h3 style="margin:0">❓ ゼミ試験アプリケーション 使い方ガイド</h3>
+      <button class="btn modal-close" id="help-close">✕</button>
+    </div>
+    <div class="modal-body help-body">
+
+      <div class="help-tabs">
+        <button class="help-tab active" data-helptab="flow">📋 全体フロー</button>
+        <button class="help-tab" data-helptab="admin">👤 管理者の操作</button>
+        <button class="help-tab" data-helptab="candidate">📱 受験者の操作</button>
+        <button class="help-tab" data-helptab="tips">💡 便利な機能</button>
+      </div>
+
+      <div class="help-section active" id="helpsec-flow">
+        <h4>🎯 入試運営の全体フロー</h4>
+        <div class="flow-diagram">
+          <div class="flow-step">
+            <div class="flow-num">1</div>
+            <div class="flow-ico">🗂</div>
+            <div class="flow-title">試験回を作成</div>
+            <div class="flow-desc">画面上部「＋新規」から作成。年度ごとに切替・複製可</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">2</div>
+            <div class="flow-ico">📝</div>
+            <div class="flow-title">申込URL配布</div>
+            <div class="flow-desc">公開URL/QRをSNS等で告知<br>(合言葉オプション付き)</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">3</div>
+            <div class="flow-ico">✅</div>
+            <div class="flow-title">受験者が申込</div>
+            <div class="flow-desc">最小情報を入力→受験番号自動発行</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">4</div>
+            <div class="flow-ico">📨</div>
+            <div class="flow-title">個別URL送付</div>
+            <div class="flow-desc">配布メッセージでパスワード付URLをLINE/メール送信</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">5</div>
+            <div class="flow-ico">📄</div>
+            <div class="flow-title">履歴書・アンケート</div>
+            <div class="flow-desc">受験者が個別URLから提出</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">6</div>
+            <div class="flow-ico">📚</div>
+            <div class="flow-title">学力試験</div>
+            <div class="flow-desc">受験者が回答→自動採点</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">7</div>
+            <div class="flow-ico">🎤</div>
+            <div class="flow-title">面接実施</div>
+            <div class="flow-desc">スケジュール自動配置→評価記録</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">8</div>
+            <div class="flow-ico">🏆</div>
+            <div class="flow-title">合格判定</div>
+            <div class="flow-desc">クラスター分析で多様性確保→合格チェック</div>
+          </div>
+        </div>
+
+        <h4 style="margin-top:24px">🗺 各画面の役割</h4>
+        <div class="help-map">
+          <div class="map-row"><span class="map-tag">📊 全体確認</span><span>受験者一覧・分析・ランキング・<strong>クラスター分析</strong>。提出状況も一望</span></div>
+          <div class="map-row"><span class="map-tag">👤 個人確認</span><span>各受験者の<strong>履歴書・学力試験回答・面接記録</strong>を詳細表示</span></div>
+          <div class="map-row"><span class="map-tag">⚙ 管理</span><span>試験問題・アンケート項目・履歴書設定・面接スケジュール・データ管理</span></div>
+        </div>
+      </div>
+
+      <div class="help-section" id="helpsec-admin">
+        <h4>👤 管理者の主な操作</h4>
+
+        <div class="help-card">
+          <div class="help-card-title">🔹 ステップ1: 試験回を作成</div>
+          <div class="help-illust">
+            <div class="ill-box">🗂 試験回</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">＋新規</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box success">2026年度入試</div>
+          </div>
+          <p>画面上部の「🗂 試験回:」の右にある<strong>＋新規</strong>ボタンから作成します。複数年度・複数の試験回を切替可能です。</p>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title">🔹 ステップ2: 試験問題・アンケートを設定</div>
+          <div class="help-illust">
+            <div class="ill-box">⚙ 管理</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">📚 学力試験</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box">＋問題を追加</div>
+          </div>
+          <p><strong>管理 → 学力試験</strong>: 選択式問題を追加（カテゴリ・配点・正解設定）。自動採点されます。<br>
+            <strong>管理 → アンケート</strong>: 5段階評価の項目を追加。<br>
+            <strong>管理 → 履歴書 → 履歴書フォーム設定</strong>: 学部・学科の選択肢、追加質問を設定。</p>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title">🔹 ステップ3: 受付期間を設定</div>
+          <div class="help-illust">
+            <div class="ill-box">⚙ 管理 → 履歴書</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">🔓 受付制御</div>
+          </div>
+          <p>各フェーズの開始/終了日時を指定すると、その期間だけ自動受付。手動ON/OFFスイッチも併用可能。期間外は受験者画面で「受付期間外」と表示されます。</p>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title">🔹 ステップ4: 受験申込URLを配布</div>
+          <div class="help-illust">
+            <div class="ill-box">⚙ 管理 → 履歴書</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">📝 受験申込URL</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box success">URL/QRをコピー</div>
+          </div>
+          <p>公開URL・QRコードを取得してSNS・ポスター・告知ページに掲載。<strong>合言葉（パスコード）</strong>を設定すれば、内部関係者のみアクセス可能に。</p>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title">🔹 ステップ5: 個別URL+パスワードを送付</div>
+          <div class="help-illust">
+            <div class="ill-box">⚙ 管理 → 履歴書</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">📨 配布メッセージ</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box">全員分生成</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box success">📋 コピー</div>
+          </div>
+          <p>申込済み受験者に対して、自動生成された個別URL（履歴書・学力・アンケート用）＋パスワードを<strong>差し込み変数（{{name}}など）</strong>付きメッセージで生成。LINE/メールに貼り付けて送信。</p>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title">🔹 ステップ6: 面接スケジュール</div>
+          <div class="help-illust">
+            <div class="ill-box">⚙ 管理 → 面接</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">🎯 自動配置</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box">ドラッグで調整</div>
+          </div>
+          <p>開始日・時間枠・休憩を設定して<strong>自動配置</strong>。受験者カードを<strong>ドラッグ&ドロップ</strong>で時間枠変更。遅延中の面接は赤くハイライトされます。</p>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title">🔹 ステップ7: 結果分析・合格判定</div>
+          <div class="help-illust">
+            <div class="ill-box">📊 全体確認</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">クラスター分析</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box success">✅合格チェック</div>
+          </div>
+          <p><strong>学力ランキング</strong>で上位確認、<strong>クラスター分析</strong>で多様性確保（系統別に偏らない選抜）、<strong>個人確認</strong>で1人ひとりの詳細を見て合格判定。</p>
+        </div>
+      </div>
+
+      <div class="help-section" id="helpsec-candidate">
+        <h4>📱 受験者向けの流れ</h4>
+
+        <div class="help-card">
+          <div class="help-card-title">①📝 受験申込（公開URL）</div>
+          <div class="help-illust">
+            <div class="ill-box">QRコード読取</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">最小情報入力</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box success">受験番号取得</div>
+          </div>
+          <p>受験者は配布されたURL・QRから申込フォームを開き、氏名・連絡先・所属学部を入力。<strong>受験番号が自動発行</strong>されます。</p>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title">②📄 履歴書 + 📋 アンケート（個別URL）</div>
+          <div class="help-illust">
+            <div class="ill-box">管理者からLINE/メール受信</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">専用URLクリック</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box success">フォーム提出</div>
+          </div>
+          <p>受験者は配布されたメッセージから自分専用URLを開き、履歴書（顔写真・志望動機など）とアンケート（5段階評価）に回答。</p>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title">③📚 学力試験</div>
+          <div class="help-illust">
+            <div class="ill-box">専用URLアクセス</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">選択式問題</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box success">自動採点</div>
+          </div>
+          <p>受験者は選択式問題に回答。提出後に自動採点され、正答率がその場で表示されます。</p>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title">④🎤 面接</div>
+          <div class="help-illust">
+            <div class="ill-box">配布メッセージで日時通知</div>
+            <div class="ill-arrow">→</div>
+            <div class="ill-box accent">指定時刻に対面</div>
+          </div>
+          <p>面接日時はあらかじめ配布メッセージで通知。当日は対面・オンラインで実施し、評価は管理者が記録。</p>
+        </div>
+      </div>
+
+      <div class="help-section" id="helpsec-tips">
+        <h4>💡 便利な機能・ヒント</h4>
+
+        <div class="tip-card">
+          <div class="tip-icon">🔍</div>
+          <div><strong>受験者一覧の絞り込み</strong><br>
+            「🔍 詳細検索」ボタンで各カラム個別検索が可能。学力 <code>≥70</code>、アンケート <code>≥3.5</code> のような数値条件も使えます。
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">📊</div>
+          <div><strong>提出状況カードをクリック</strong><br>
+            ダッシュボードの統計カード（履歴書・学力・アンケート・面接）をクリックすると、提出者と未提出者を時系列で確認できるモーダルが開きます。
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">📥</div>
+          <div><strong>紙回答のCSVインポート</strong><br>
+            紙で受け取った履歴書・学力試験・アンケートは <strong>管理 → データ</strong> から CSV テンプレートをDL→入力→アップロードで一括取込できます。
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">🎯</div>
+          <div><strong>クラスター分析の活用</strong><br>
+            単純な学力順だけでなく、<strong>系統別に1〜2名ずつ採用</strong>することで多様性のあるゼミ編成が可能。各クラスターの「代表的な受験者」を参考に。
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">🔄</div>
+          <div><strong>状態の自動保存</strong><br>
+            開いていたタブ・検索条件・選択していた受験者は自動保存されます。リフレッシュしても続きから作業できます。
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">🔐</div>
+          <div><strong>受験申込の合言葉</strong><br>
+            <strong>管理 → 履歴書 → 受験申込URL</strong> でパスコードを設定すると、申込フォームが合言葉付きに。意図しない一般申込を防げます。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="js/storage.js"></script>
 <script src="js/stats.js"></script>
