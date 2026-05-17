@@ -67,23 +67,42 @@
     <!-- Sub: list -->
     <section class="subview active" id="sub-list">
       <div class="toolbar">
-        <input type="search" id="search-cand" placeholder="名前・受験番号・大学で検索">
-        <select id="sort-cand">
-          <option value="date-desc">最終更新 新しい順</option>
-          <option value="date-asc">最終更新 古い順</option>
-          <option value="score-desc">総合点 高い順</option>
-          <option value="score-asc">総合点 低い順</option>
-          <option value="name">名前順</option>
-        </select>
+        <input type="search" id="search-cand" placeholder="全カラム横断検索（氏名・受験番号・学部など）">
+        <button class="btn" id="reset-filters">フィルタリセット</button>
       </div>
-      <table class="data-table" id="cand-table">
-        <thead><tr>
-          <th>合格</th><th>受験番号</th><th>氏名 / フリガナ</th><th>性別</th><th>学部・学科</th>
-          <th>履歴書</th><th>学力</th><th>アンケート</th>
-          <th>総合</th><th>最終更新</th><th>操作</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-wrap">
+        <table class="data-table sticky-table" id="cand-table">
+          <thead>
+            <tr class="sort-row">
+              <th data-sort="passed">合格</th>
+              <th data-sort="examineeId">受験番号</th>
+              <th data-sort="name">氏名 / フリガナ</th>
+              <th data-sort="gender">性別</th>
+              <th data-sort="faculty">学部・学科</th>
+              <th data-sort="resume">履歴書</th>
+              <th data-sort="academic">学力</th>
+              <th data-sort="survey">アンケート</th>
+              <th data-sort="total">総合</th>
+              <th data-sort="updated">最終更新</th>
+              <th>操作</th>
+            </tr>
+            <tr class="filter-row">
+              <th><select data-filter="passed"><option value="">全て</option><option value="1">✅合格</option><option value="0">未</option></select></th>
+              <th><input type="text" data-filter="examineeId" placeholder="検索"></th>
+              <th><input type="text" data-filter="name" placeholder="検索"></th>
+              <th><select data-filter="gender"><option value="">全て</option><option>男性</option><option>女性</option><option>その他</option></select></th>
+              <th><input type="text" data-filter="faculty" placeholder="検索"></th>
+              <th><select data-filter="resume"><option value="">全て</option><option value="1">提出済</option><option value="0">未</option></select></th>
+              <th><input type="text" data-filter="academic" placeholder="例: ≥70"></th>
+              <th><input type="text" data-filter="survey" placeholder="例: ≥3.5"></th>
+              <th><input type="text" data-filter="total" placeholder="例: ≥60"></th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- Sub: chart -->

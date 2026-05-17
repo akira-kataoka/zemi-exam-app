@@ -167,17 +167,31 @@ const App = (() => {
     document.getElementById('cta-seed-demo').addEventListener('click', seedDemo);
   }
 
+  // Per-column sort state
+  let _listSort = { key: 'updated', dir: 'desc' };
+  // Per-column filter state
+  let _listFilters = {};
+
+  function parseNumericFilter(expr) {
+    // Supports ≥N, >=N, >N, ≤N, <=N, <N, N..M, N
+    const s = String(expr || '').trim();
+    if (!s) return null;
+    let m;
+    if ((m = s.match(/^(?:>=|≥)\s*(-?\d+\.?\d*)$/))) return v => v >= Number(m[1]);
+    if ((m = s.match(/^>\s*(-?\d+\.?\d*)$/)))          return v => v > Number(m[1]);
+    if ((m = s.match(/^(?:<=|≤)\s*(-?\d+\.?\d*)$/)))   return v => v <= Number(m[1]);
+    if ((m = s.match(/^<\s*(-?\d+\.?\d*)$/)))          return v => v < Number(m[1]);
+    if ((m = s.match(/^(-?\d+\.?\d*)\.\.(-?\d+\.?\d*)$/))) return v => v >= Number(m[1]) && v <= Number(m[2]);
+    if ((m = s.match(/^=?\s*(-?\d+\.?\d*)$/)))         return v => v == Number(m[1]);
+    return null;
+  }
+
   function renderCandidateList() {
     const sess = getSession();
     const tbody = $('#cand-table tbody');
     const q = ($('#search-cand').value || '').trim().toLowerCase();
-    const sort = $('#sort-cand').value;
     let list = Storage.loadForSession();
-    if (q) list = list.filter(c =>
-      fullName(c).toLowerCase().includes(q) ||
-      (c.examineeId || '').toLowerCase().includes(q) ||
-      (c.university || '').toLowerCase().includes(q)
-    );
+
     const enriched = list.map(c => {
       const ac = Stats.scoreAcademic(c, sess.academicTest);
       const sv = Stats.surveyAvg(c, sess.surveyTest);
@@ -185,14 +199,65 @@ const App = (() => {
       const lastUpdate = [c.resumeSubmittedAt, c.academicSubmittedAt, c.surveySubmittedAt, c.createdAt].filter(Boolean).sort().pop();
       return { c, ac, sv, total, lastUpdate };
     });
-    switch (sort) {
-      case 'date-asc':   enriched.sort((a, b) => new Date(a.lastUpdate) - new Date(b.lastUpdate)); break;
-      case 'score-desc': enriched.sort((a, b) => b.total - a.total); break;
-      case 'score-asc':  enriched.sort((a, b) => a.total - b.total); break;
-      case 'name':       enriched.sort((a, b) => fullName(a.c).localeCompare(fullName(b.c), 'ja')); break;
-      default:           enriched.sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate));
+
+    // Global search across visible textual fields
+    let filtered = enriched;
+    if (q) {
+      filtered = filtered.filter(({ c }) => [
+        fullName(c), fullKana(c), c.examineeId, c.gender, c.faculty, c.department, c.email, c.phone
+      ].some(v => String(v || '').toLowerCase().includes(q)));
     }
-    tbody.innerHTML = enriched.map(({ c, ac, sv, total, lastUpdate }) => `
+
+    // Per-column filters
+    Object.entries(_listFilters).forEach(([key, val]) => {
+      if (val === '' || val == null) return;
+      const v = String(val).toLowerCase();
+      filtered = filtered.filter(row => {
+        const { c, ac, sv, total } = row;
+        switch (key) {
+          case 'passed':     return val === '1' ? !!c.passed : !c.passed;
+          case 'examineeId': return (c.examineeId || '').toLowerCase().includes(v);
+          case 'name':       return (fullName(c) + ' ' + fullKana(c)).toLowerCase().includes(v);
+          case 'gender':     return (c.gender || '') === val;
+          case 'faculty':    return ((c.faculty || '') + ' ' + (c.department || '')).toLowerCase().includes(v);
+          case 'resume':     return val === '1' ? Stats.hasResume(c) : !Stats.hasResume(c);
+          case 'academic':   { const f = parseNumericFilter(val); return f ? (Stats.hasAcademic(c) && f(ac.percent)) : true; }
+          case 'survey':     { const f = parseNumericFilter(val); return f ? (Stats.hasSurvey(c) && f(sv)) : true; }
+          case 'total':      { const f = parseNumericFilter(val); return f ? f(total) : true; }
+          default: return true;
+        }
+      });
+    });
+
+    // Per-column sort
+    const dir = _listSort.dir === 'asc' ? 1 : -1;
+    const cmp = (a, b) => {
+      switch (_listSort.key) {
+        case 'passed':     return ((a.c.passed ? 1 : 0) - (b.c.passed ? 1 : 0)) * dir;
+        case 'examineeId': return (a.c.examineeId || '').localeCompare(b.c.examineeId || '', 'ja') * dir;
+        case 'name':       return fullName(a.c).localeCompare(fullName(b.c), 'ja') * dir;
+        case 'gender':     return (a.c.gender || '').localeCompare(b.c.gender || '', 'ja') * dir;
+        case 'faculty':    return ((a.c.faculty || '') + (a.c.department || '')).localeCompare((b.c.faculty || '') + (b.c.department || ''), 'ja') * dir;
+        case 'resume':     return ((Stats.hasResume(a.c) ? 1 : 0) - (Stats.hasResume(b.c) ? 1 : 0)) * dir;
+        case 'academic':   return (a.ac.percent - b.ac.percent) * dir;
+        case 'survey':     return (a.sv - b.sv) * dir;
+        case 'total':      return (a.total - b.total) * dir;
+        case 'updated':    return (new Date(a.lastUpdate || 0) - new Date(b.lastUpdate || 0)) * dir;
+        default: return 0;
+      }
+    };
+    filtered.sort(cmp);
+
+    // Update sort indicator on header
+    document.querySelectorAll('#cand-table thead .sort-row th').forEach(th => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (th.dataset.sort === _listSort.key) th.classList.add(_listSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+    });
+    document.querySelector('#cand-table thead .sort-row th[data-sort="' + _listSort.key + '"]')?.classList.add('sort-' + _listSort.dir);
+
+    // (use 'filtered' below as enriched substitute)
+    const _enriched = filtered;
+    tbody.innerHTML = _enriched.map(({ c, ac, sv, total, lastUpdate }) => `
       <tr data-id="${c.id}" class="${c.passed ? 'row-passed' : ''}">
         <td><input type="checkbox" class="pass-check" data-id="${c.id}" ${c.passed ? 'checked' : ''} title="合格チェック"></td>
         <td>${escapeHtml(c.examineeId || '')}</td>
@@ -1159,7 +1224,26 @@ const App = (() => {
 
     // Overview controls
     $('#search-cand').addEventListener('input', renderCandidateList);
-    $('#sort-cand').addEventListener('change', renderCandidateList);
+    // Column header sort
+    document.querySelectorAll('#cand-table thead .sort-row th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.sort;
+        if (_listSort.key === key) _listSort.dir = _listSort.dir === 'asc' ? 'desc' : 'asc';
+        else { _listSort.key = key; _listSort.dir = 'asc'; }
+        renderCandidateList();
+      });
+    });
+    // Per-column filters
+    document.querySelectorAll('#cand-table thead .filter-row [data-filter]').forEach(el => {
+      el.addEventListener('input', () => { _listFilters[el.dataset.filter] = el.value; renderCandidateList(); });
+      el.addEventListener('change', () => { _listFilters[el.dataset.filter] = el.value; renderCandidateList(); });
+    });
+    document.getElementById('reset-filters').addEventListener('click', () => {
+      _listFilters = {};
+      $('#search-cand').value = '';
+      document.querySelectorAll('#cand-table thead .filter-row [data-filter]').forEach(el => { el.value = ''; });
+      renderCandidateList();
+    });
     $('#rank-n').addEventListener('change', renderRanking);
     $('#rank-metric').addEventListener('change', renderRanking);
     $('#run-cluster').addEventListener('click', runCluster);
