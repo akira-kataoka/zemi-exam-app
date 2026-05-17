@@ -7,6 +7,16 @@ const App = (() => {
   const charts = {};
   const PHASE_LABEL = { resume: '履歴書', academic: '学力試験', survey: 'アンケート' };
 
+  // ===== UI state persistence (active tab / subview / profile / filters / sort) =====
+  const UI_KEY = 'zemiSA.uiState.v1';
+  let _uiState = (() => {
+    try { return JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch (e) { return {}; }
+  })();
+  function saveUiState(patch) {
+    Object.assign(_uiState, patch);
+    try { localStorage.setItem(UI_KEY, JSON.stringify(_uiState)); } catch (e) {}
+  }
+
   // ===== Helpers =====
   function $(s, root = document) { return root.querySelector(s); }
   function $$(s, root = document) { return Array.from(root.querySelectorAll(s)); }
@@ -68,6 +78,9 @@ const App = (() => {
     const sessions = Storage.loadSessions();
     const sel = $('#session-select');
     sel.innerHTML = sessions.map(s => `<option value="${s.id}" ${s.id === sess.id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+    // editable session name
+    const nameInput = $('#session-name-input');
+    if (nameInput && document.activeElement !== nameInput) nameInput.value = sess.name;
     const list = Storage.loadForSession();
     $('#session-meta').textContent = `${list.length}名 / 作成 ${formatDate(sess.createdAt)}`;
     ['resume', 'academic', 'survey'].forEach(p => {
@@ -135,6 +148,7 @@ const App = (() => {
   function showView(name) {
     $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
     $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+    saveUiState({ view: name });
     if (name === 'overview') renderOverview();
     if (name === 'profile') refreshProfileSelect();
     if (name === 'portal')   renderPortal();
@@ -146,6 +160,7 @@ const App = (() => {
   function showSubview(name) {
     $$('.subtab').forEach(t => t.classList.toggle('active', t.dataset.subview === name));
     $$('.subview').forEach(v => v.classList.toggle('active', v.id === 'sub-' + name));
+    saveUiState({ subview: name });
     if (name === 'chart')   renderChartView();
     if (name === 'rank')    renderRanking();
     if (name === 'cluster') { /* on-demand */ }
@@ -268,10 +283,10 @@ const App = (() => {
     document.getElementById('cta-seed-demo').addEventListener('click', seedDemo);
   }
 
-  // Per-column sort state
-  let _listSort = { key: 'updated', dir: 'desc' };
-  // Per-column filter state
-  let _listFilters = {};
+  // Per-column sort state (restored from saved UI state)
+  let _listSort = _uiState.listSort || { key: 'updated', dir: 'desc' };
+  // Per-column filter state (restored)
+  let _listFilters = _uiState.listFilters || {};
 
   function parseNumericFilter(expr) {
     // Supports ≥N, >=N, >N, ≤N, <=N, <N, N..M, N
@@ -1408,38 +1423,72 @@ const App = (() => {
     if (handleUrlMode()) return;
 
     renderSessionBar();
-    showView('overview');
+    // Restore saved UI state
+    const savedView = _uiState.view || 'overview';
+    const savedSubview = _uiState.subview || 'list';
+    if (_uiState.search) $('#search-cand').value = _uiState.search;
+    if (_uiState.listFilters) {
+      document.querySelectorAll('#cand-table thead .filter-row [data-filter]').forEach(el => {
+        const v = _uiState.listFilters[el.dataset.filter];
+        if (v != null) el.value = v;
+      });
+    }
+    showView(savedView);
+    if (savedView === 'overview') showSubview(savedSubview);
+    if (savedView === 'profile' && _uiState.profileId) {
+      const sel = $('#profile-select');
+      if (sel.querySelector(`option[value="${_uiState.profileId}"]`)) {
+        sel.value = _uiState.profileId;
+        renderProfile(_uiState.profileId);
+      }
+    }
 
     // Session bar
     $('#session-select').addEventListener('change', onSessionChange);
     $('#session-add').addEventListener('click', onAddSession);
-    $('#session-rename').addEventListener('click', onRenameSession);
     $('#session-delete').addEventListener('click', onDeleteSession);
+    // inline rename via name input
+    const nameInput = $('#session-name-input');
+    const commitRename = () => {
+      const v = nameInput.value.trim();
+      const cur = getSession();
+      if (!v || v === cur.name) { nameInput.value = cur.name; return; }
+      Storage.renameSession(cur.id, v);
+      renderSessionBar();
+    };
+    nameInput.addEventListener('blur', commitRename);
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); } });
 
     // Tabs
     $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
     $$('.subtab').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
 
     // Overview controls
-    $('#search-cand').addEventListener('input', renderCandidateList);
+    $('#search-cand').addEventListener('input', () => {
+      saveUiState({ search: $('#search-cand').value });
+      renderCandidateList();
+    });
     // Column header sort
     document.querySelectorAll('#cand-table thead .sort-row th[data-sort]').forEach(th => {
       th.addEventListener('click', () => {
         const key = th.dataset.sort;
         if (_listSort.key === key) _listSort.dir = _listSort.dir === 'asc' ? 'desc' : 'asc';
         else { _listSort.key = key; _listSort.dir = 'asc'; }
+        saveUiState({ listSort: _listSort });
         renderCandidateList();
       });
     });
     // Per-column filters
     document.querySelectorAll('#cand-table thead .filter-row [data-filter]').forEach(el => {
-      el.addEventListener('input', () => { _listFilters[el.dataset.filter] = el.value; renderCandidateList(); });
-      el.addEventListener('change', () => { _listFilters[el.dataset.filter] = el.value; renderCandidateList(); });
+      const onChange = () => { _listFilters[el.dataset.filter] = el.value; saveUiState({ listFilters: _listFilters }); renderCandidateList(); };
+      el.addEventListener('input', onChange);
+      el.addEventListener('change', onChange);
     });
     document.getElementById('reset-filters').addEventListener('click', () => {
       _listFilters = {};
       $('#search-cand').value = '';
       document.querySelectorAll('#cand-table thead .filter-row [data-filter]').forEach(el => { el.value = ''; });
+      saveUiState({ listFilters: {}, search: '' });
       renderCandidateList();
     });
     $('#rank-n').addEventListener('change', renderRanking);
@@ -1447,7 +1496,7 @@ const App = (() => {
     $('#run-cluster').addEventListener('click', runCluster);
 
     // Profile
-    $('#profile-select').addEventListener('change', e => renderProfile(e.target.value));
+    $('#profile-select').addEventListener('change', e => { saveUiState({ profileId: e.target.value }); renderProfile(e.target.value); });
     $('#print-profile').addEventListener('click', () => window.print());
 
     // Portal

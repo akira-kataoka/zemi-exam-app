@@ -19,12 +19,11 @@
     </div>
   </div>
   <div class="session-bar">
-    <label class="session-label">🗂 試験回:
-      <select id="session-select"></select>
-    </label>
-    <button class="btn" id="session-add">＋新規試験回</button>
-    <button class="btn" id="session-rename">名称変更</button>
-    <button class="btn danger" id="session-delete">この試験回を削除</button>
+    <label class="session-label">🗂 試験回:</label>
+    <input type="text" id="session-name-input" class="session-name-input" title="クリックして名称を編集" placeholder="試験回の名前">
+    <select id="session-select" class="session-switch" title="別の試験回に切り替え"></select>
+    <button class="btn" id="session-add" title="新規試験回を作成">＋新規</button>
+    <button class="btn danger icon-btn" id="session-delete" title="この試験回を削除">🗑</button>
     <span class="phase-status">受付:
       <span class="phase-pill" data-phase="resume">履歴書: <span data-phase-state="resume">-</span></span>
       <span class="phase-pill" data-phase="academic">学力試験: <span data-phase-state="academic">-</span></span>
