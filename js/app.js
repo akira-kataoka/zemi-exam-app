@@ -139,9 +139,31 @@ const App = (() => {
     $('#stat-avg').textContent = totals.length ? (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1) : '-';
     $('#stat-max').textContent = totals.length ? Math.max(...totals).toFixed(1) : '-';
     $('#stat-passed').textContent = list.filter(c => c.passed).length;
+    renderEmptyStateBanner(list.length === 0);
     renderCandidateList();
     renderChartView();
     renderRanking();
+  }
+
+  function renderEmptyStateBanner(empty) {
+    const exist = document.getElementById('empty-cta');
+    if (!empty) { if (exist) exist.remove(); return; }
+    if (exist) return;
+    const banner = document.createElement('div');
+    banner.id = 'empty-cta';
+    banner.className = 'card empty-cta';
+    banner.innerHTML = `
+      <div class="empty-cta-inner">
+        <div>
+          <h3 style="margin:0 0 4px">📭 受験者データがまだありません</h3>
+          <p style="margin:0;color:var(--muted);font-size:13px">アプリの機能をすぐ試すには、20名分のデモデータを投入してください。</p>
+        </div>
+        <button class="btn primary" id="cta-seed-demo">🚀 デモデータを投入</button>
+      </div>
+    `;
+    const view = document.getElementById('view-overview');
+    view.insertBefore(banner, view.firstChild.nextSibling);
+    document.getElementById('cta-seed-demo').addEventListener('click', seedDemo);
   }
 
   function renderCandidateList() {

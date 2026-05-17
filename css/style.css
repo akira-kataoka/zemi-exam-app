@@ -192,6 +192,11 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .cluster-members{margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
 .cluster-hint{margin-top:8px;padding:6px 8px;background:#fffbeb;border-left:3px solid var(--warn);border-radius:4px;font-size:11px;color:#92400e}
 
+/* Empty state CTA */
+.empty-cta{background:linear-gradient(135deg,#dbeafe,#ede9fe);border-color:#a5b4fc}
+.empty-cta-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.empty-cta h3{color:var(--primary-d)}
+
 /* Pass / fail */
 .row-passed{background:#dcfce7 !important}
 .row-passed:hover{background:#bbf7d0 !important}
