@@ -24,17 +24,31 @@ const Storage = (() => {
     return list;
   }
   function saveSessions(list) { localStorage.setItem(KEY_SESS, JSON.stringify(list)); }
+  function generatePin() {
+    // Avoid confusable characters (0/O/1/I)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let out = '';
+    for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    return out;
+  }
   function addSession(name, phases) {
     const list = loadSessions();
     const s = {
       id: 's_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
       name: name || '新規試験回',
       createdAt: new Date().toISOString(),
-      phases: phases ? { ...defaultPhases, ...phases } : { ...defaultPhases }
+      phases: phases ? { ...defaultPhases, ...phases } : { ...defaultPhases },
+      pin: generatePin()
     };
     list.push(s);
     saveSessions(list);
     return s;
+  }
+  function regeneratePin(sessionId) {
+    const list = loadSessions();
+    const s = list.find(x => x.id === sessionId);
+    if (s) { s.pin = generatePin(); saveSessions(list); return s.pin; }
+    return null;
   }
   function renameSession(id, name) {
     const list = loadSessions();
@@ -122,7 +136,7 @@ const Storage = (() => {
   return {
     load, save, loadForSession, findByExamineeId, upsert, remove, clearAll,
     loadCfg, saveCfg,
-    loadSessions, addSession, renameSession, setPhase, removeSession,
+    loadSessions, addSession, renameSession, setPhase, removeSession, regeneratePin, generatePin,
     getCurrentSessionId, setCurrentSessionId, getCurrentSession,
     DEFAULT_SESSION_ID
   };

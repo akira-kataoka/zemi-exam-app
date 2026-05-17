@@ -192,6 +192,30 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .cluster-members{margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
 .cluster-hint{margin-top:8px;padding:6px 8px;background:#fffbeb;border-left:3px solid var(--warn);border-radius:4px;font-size:11px;color:#92400e}
 
+/* Name + furigana in table */
+.name-main{font-weight:600;color:var(--ink)}
+.name-kana{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* PIN */
+.pin-row{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;margin-bottom:12px}
+.pin-label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px}
+.pin-value{font-size:24px;font-weight:700;color:var(--warn);font-family:monospace;letter-spacing:.15em}
+.pin-hint{font-size:11px;color:var(--muted);margin-top:4px}
+.pin-badge{display:inline-block;padding:2px 8px;background:#fef3c7;color:#92400e;border-radius:999px;font-size:10px;margin-left:6px;font-weight:600}
+
+/* Cluster card head + ranges + demographics */
+.cluster-card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px}
+.cluster-card-meta{text-align:right;font-size:12px;color:var(--muted)}
+.cluster-card-meta strong{color:var(--ink);font-size:14px;display:block}
+.cluster-system{font-size:14px;font-weight:700;color:var(--ink);margin-top:4px;padding:6px 10px;background:#f1f5f9;border-radius:6px;display:inline-block}
+.range-block{background:#f8fafc;border-radius:6px;padding:10px;margin-bottom:10px}
+.range-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;gap:8px}
+.range-row span:first-child{color:var(--muted);min-width:80px}
+.range-row strong{color:var(--primary)}
+.range-mean{color:var(--muted);font-size:11px}
+.cluster-demographics{margin:8px 0;padding:8px;background:#eef2ff;border-radius:6px;font-size:12px;color:var(--ink)}
+.demo-row{padding:2px 0}
+
 /* Empty state CTA */
 .empty-cta{background:linear-gradient(135deg,#dbeafe,#ede9fe);border-color:#a5b4fc}
 .empty-cta-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}

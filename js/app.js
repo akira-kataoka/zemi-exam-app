@@ -41,6 +41,7 @@ const App = (() => {
     }
     if (!sess.resumeExtraFields) { sess.resumeExtraFields = []; changed = true; }
     if (!sess.facultyDept) { sess.facultyDept = JSON.parse(JSON.stringify(Stats.DEFAULT_FACULTY_DEPT)); changed = true; }
+    if (!sess.pin) { sess.pin = Storage.generatePin(); changed = true; }
     if (changed) {
       const list = Storage.loadSessions();
       const idx = list.findIndex(s => s.id === sess.id);
@@ -195,7 +196,11 @@ const App = (() => {
       <tr data-id="${c.id}" class="${c.passed ? 'row-passed' : ''}">
         <td><input type="checkbox" class="pass-check" data-id="${c.id}" ${c.passed ? 'checked' : ''} title="合格チェック"></td>
         <td>${escapeHtml(c.examineeId || '')}</td>
-        <td>${escapeHtml(fullName(c))}</td>
+        <td>
+          <div class="name-main">${escapeHtml(fullName(c))}</div>
+          ${fullKana(c) ? `<div class="name-kana">${escapeHtml(fullKana(c))}</div>` : ''}
+        </td>
+        <td>${escapeHtml(c.gender || '—')}</td>
         <td>${escapeHtml((c.faculty || '') + ' ' + (c.department || ''))}</td>
         <td>${Stats.hasResume(c) ? '✅' : '—'}</td>
         <td class="num">${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '%' : '—'}</td>
@@ -207,7 +212,7 @@ const App = (() => {
           <button class="btn danger" data-act="del">削除</button>
         </td>
       </tr>
-    `).join('') || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`;
+    `).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`;
     tbody.querySelectorAll('.pass-check').forEach(cb => {
       cb.addEventListener('click', e => e.stopPropagation());
       cb.addEventListener('change', e => {
@@ -353,41 +358,55 @@ const App = (() => {
       options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
     });
 
-    // ===== Cluster characterization: which attributes make each cluster distinctive =====
+    // ===== Cluster characterization: 系統名・属性差分・スコア範囲 =====
     const surveyQs = sess.surveyTest?.questions || [];
     const featLabels = cats.concat(surveyQs.map(q => q.text));
-    // overall mean per feature
     const overallMean = featLabels.map((_, fi) => vectors.reduce((s, v) => s + v[fi], 0) / vectors.length);
-    let html = '';
-    for (let ci = 0; ci < k; ci++) {
-      const members = list.filter((_, i) => assignments[ci === assignments[i]]);  // placeholder; recomputed below
-    }
-    const characterizations = [];
+
+    let charHtml = '<div class="cluster-grid">';
     for (let ci = 0; ci < k; ci++) {
       const members = list.filter((_, i) => assignments[i] === ci);
       // diff per feature
       const diffs = featLabels.map((label, fi) => ({
-        label,
-        isAcademic: fi < cats.length,
+        label, isAcademic: fi < cats.length,
         diff: centroids[ci][fi] - overallMean[fi],
-        absDiff: Math.abs(centroids[ci][fi] - overallMean[fi]),
         centroidVal: centroids[ci][fi]
       }));
       const sortedHi = [...diffs].sort((a, b) => b.diff - a.diff).slice(0, 3);
       const sortedLo = [...diffs].sort((a, b) => a.diff - b.diff).slice(0, 2);
       const fmtVal = (d) => d.isAcademic ? `${(d.centroidVal * 100).toFixed(0)}%` : `${(d.centroidVal * 5).toFixed(1)}/5`;
-      // Auto label
-      const labelParts = [];
-      if (sortedHi[0]) labelParts.push(sortedHi[0].label + 'が高い');
-      if (sortedLo[0] && sortedLo[0].diff < -0.05) labelParts.push(sortedLo[0].label + 'が低い');
-      const autoLabel = labelParts.join(' / ') || 'バランス型';
-      characterizations.push({ ci, members, sortedHi, sortedLo, autoLabel, fmtVal });
-    }
-    let charHtml = '<div class="cluster-grid">';
-    characterizations.forEach(({ ci, members, sortedHi, sortedLo, autoLabel, fmtVal }) => {
+      const systemName = inferClusterSystem(diffs, cats);
+      const acScores = members.map(m => Stats.scoreAcademic(m, sess.academicTest).percent).filter(v => !isNaN(v));
+      const svScores = members.map(m => Stats.surveyAvg(m, sess.surveyTest)).filter(v => v > 0);
+      const totalScores = members.map(m => Stats.totalScore(m, sess, cfg));
+      const passedCount = members.filter(m => m.passed).length;
+      const genderDist = {};
+      members.forEach(m => { if (m.gender) genderDist[m.gender] = (genderDist[m.gender] || 0) + 1; });
+      const facultyDist = {};
+      members.forEach(m => { if (m.faculty) facultyDist[m.faculty] = (facultyDist[m.faculty] || 0) + 1; });
+      const topFaculty = Object.entries(facultyDist).sort((a, b) => b[1] - a[1]).slice(0, 2);
+
+      const rangeBlock = (label, arr, suffix = '') => arr.length ? `<div class="range-row"><span>${label}</span><strong>${Math.min(...arr).toFixed(1)}${suffix} 〜 ${Math.max(...arr).toFixed(1)}${suffix}</strong> <span class="range-mean">(平均 ${(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)}${suffix})</span></div>` : '';
+
       charHtml += `<div class="cluster-card" style="border-top:6px solid ${palette[ci % palette.length]}">
-        <h4 style="color:${palette[ci % palette.length]};margin:0 0 8px">クラスター ${ci + 1} <small style="color:var(--muted);font-weight:normal">(${members.length}名)</small></h4>
-        <div class="cluster-label">${escapeHtml(autoLabel)}</div>
+        <div class="cluster-card-head">
+          <div>
+            <h4 style="color:${palette[ci % palette.length]};margin:0">クラスター ${ci + 1}</h4>
+            <div class="cluster-system">${escapeHtml(systemName)}</div>
+          </div>
+          <div class="cluster-card-meta">
+            <div><strong>${members.length}名</strong></div>
+            ${passedCount ? `<div>合格 ${passedCount}名</div>` : ''}
+          </div>
+        </div>
+
+        <div class="range-block">
+          <div class="trait-title">📊 スコア範囲</div>
+          ${rangeBlock('学力', acScores, '%')}
+          ${rangeBlock('アンケート', svScores, '/5')}
+          ${rangeBlock('総合', totalScores)}
+        </div>
+
         <div class="cluster-traits">
           <div class="trait-block">
             <div class="trait-title">▲ 強み（平均より高い）</div>
@@ -398,15 +417,45 @@ const App = (() => {
             ${sortedLo.map(d => `<div class="trait-row"><span class="trait-name">${escapeHtml(d.label)}</span><span class="trait-val down">${fmtVal(d)}</span></div>`).join('')}
           </div>
         </div>
-        <div class="cluster-members">
-          <div class="trait-title">メンバー (${members.length}名)</div>
-          <div>${members.map(m => `<span class="cluster-chip" style="background:${palette[ci % palette.length]}">${escapeHtml(fullName(m))} (${escapeHtml(m.examineeId || '')})${m.passed ? ' ✅' : ''}</span>`).join('')}</div>
+
+        <div class="cluster-demographics">
+          ${Object.keys(genderDist).length ? `<div class="demo-row">🚻 ${Object.entries(genderDist).map(([k, v]) => `${k}${v}`).join(' / ')}</div>` : ''}
+          ${topFaculty.length ? `<div class="demo-row">🏫 ${topFaculty.map(([k, v]) => `${k}${v}`).join(' / ')}</div>` : ''}
         </div>
-        <div class="cluster-hint">💡 多様性確保: このグループから ${Math.max(1, Math.ceil(members.length / 5))} 名程度を採用すると、グループ全体としてバランスがとれます。</div>
+
+        <div class="cluster-members">
+          <div class="trait-title">メンバー</div>
+          <div>${members.map(m => `<span class="cluster-chip" style="background:${palette[ci % palette.length]}">${escapeHtml(fullName(m))}${m.passed ? ' ✅' : ''}</span>`).join('')}</div>
+        </div>
+
+        <div class="cluster-hint">💡 多様性確保のため、この系統から <strong>${Math.max(1, Math.ceil(members.length / 5))}名</strong> 程度の採用を推奨</div>
       </div>`;
-    });
+    }
     charHtml += '</div>';
     $('#cluster-assign-list').innerHTML = charHtml;
+  }
+
+  // Infer cluster "系統名" from top traits
+  function inferClusterSystem(diffs, cats) {
+    const sorted = [...diffs].sort((a, b) => b.diff - a.diff);
+    const topPos = sorted.filter(d => d.diff > 0.05);
+    const acHi = topPos.filter(d => d.isAcademic).map(d => d.label);
+    const svHi = topPos.filter(d => !d.isAcademic).map(d => d.label);
+    const acCount = acHi.length;
+    const svCount = svHi.length;
+
+    // Pattern matching for 系統 (heuristic)
+    const has = (arr, kw) => arr.some(l => l.includes(kw));
+    if (acCount >= 3 && svCount < 2) return '🎓 学力重視・知識型';
+    if (svCount >= 4 && acCount < 2) return '🤝 対人スキル・人間性型';
+    if (has(acHi, '論理') || has(acHi, '統計') || has(svHi, 'データ')) return '📊 分析・データ思考型';
+    if (has(acHi, '英語')) return '🌐 グローバル・語学型';
+    if (has(acHi, 'プレゼン') || has(acHi, '文章') || has(svHi, '人前で話す')) return '💬 表現・コミュ型';
+    if (has(svHi, 'リーダー')) return '👑 リーダーシップ型';
+    if (has(svHi, '創造') || has(svHi, '新しいアイデア')) return '🎨 創造・イノベーション型';
+    if (acCount === 0 && svCount === 0) return '⚖ バランス・標準型';
+    if (acCount >= 2 && svCount >= 2) return '✨ オールラウンド型';
+    return '🌟 個性派型';
   }
 
   // ===== Profile =====
@@ -436,7 +485,7 @@ const App = (() => {
           <div>
             <div class="profile-name">${escapeHtml(fullName(c))}</div>
             <div class="profile-meta">${escapeHtml(fullKana(c))}</div>
-            <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
+            <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${c.gender ? '🚻 ' + escapeHtml(c.gender) + ' ・ ' : ''}${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
             <div style="margin-top:10px"><label class="pass-toggle"><input type="checkbox" id="profile-pass" ${c.passed ? 'checked' : ''}> <span>🏆 この受験者を合格にする</span></label></div>
             <div class="profile-meta">履歴書: ${c.resumeSubmittedAt ? formatDate(c.resumeSubmittedAt) : '未'} / 学力: ${c.academicSubmittedAt ? formatDate(c.academicSubmittedAt) : '未'} / アンケート: ${c.surveySubmittedAt ? formatDate(c.surveySubmittedAt) : '未'}</div>
           </div>
@@ -877,9 +926,13 @@ const App = (() => {
   function buildPhaseUrl(phase) {
     const sess = getSession();
     const base = location.href.split('?')[0].split('#')[0];
-    return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}`;
+    // 履歴書のみPIN不要、学力試験/アンケートはPIN付与
+    const needPin = phase !== 'resume';
+    const pinPart = needPin && sess.pin ? `&pin=${encodeURIComponent(sess.pin)}` : '';
+    return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}${pinPart}`;
   }
   function renderShareUrls() {
+    const sess = ensureTests(getSession());
     const exist = $('#share-urls-section');
     if (exist) exist.remove();
     const wrap = document.createElement('div');
@@ -887,11 +940,19 @@ const App = (() => {
     wrap.className = 'card';
     wrap.innerHTML = `
       <h3>🔗 受験者配布用URL / QRコード</h3>
+      <div class="pin-row">
+        <div>
+          <div class="pin-label">🔐 アクセスPIN（学力試験・アンケート用）</div>
+          <div class="pin-value">${escapeHtml(sess.pin)}</div>
+          <div class="pin-hint">学力試験とアンケートのURLにはこのPINが含まれます。流出した場合は再発行してください。</div>
+        </div>
+        <button class="btn" id="regenerate-pin">🔄 PINを再発行</button>
+      </div>
       <p class="hint">下記URLまたはQRコードを受験者に配布してください。リンクをクリックすると受験者モードで該当の試験画面が直接開きます。</p>
       <div class="share-grid">
         ${['resume', 'academic', 'survey'].map(p => `
           <div class="share-card">
-            <h4>${PHASE_LABEL[p]}</h4>
+            <h4>${PHASE_LABEL[p]}${p !== 'resume' ? ' <span class="pin-badge">🔐 PIN付</span>' : ''}</h4>
             <div class="share-url" id="share-url-${p}">${escapeHtml(buildPhaseUrl(p))}</div>
             <div class="share-actions">
               <button class="btn" data-copy="${p}">URLをコピー</button>
@@ -903,6 +964,11 @@ const App = (() => {
       </div>
     `;
     $('#view-mgr-resume').appendChild(wrap);
+    document.getElementById('regenerate-pin').addEventListener('click', () => {
+      if (!confirm('PINを再発行すると、既に配布したURLは無効になります。続行しますか？')) return;
+      Storage.regeneratePin(sess.id);
+      renderShareUrls();
+    });
     ['resume', 'academic', 'survey'].forEach(p => {
       const url = buildPhaseUrl(p);
       const qr = qrcode(0, 'M');
@@ -921,9 +987,19 @@ const App = (() => {
     const sid = params.get('session');
     const phase = params.get('phase');
     const idParam = params.get('id');
+    const pinParam = params.get('pin');
     if (!sid || !phase) return false;
     const sessions = Storage.loadSessions();
-    if (!sessions.find(s => s.id === sid)) { alert('指定された試験回が見つかりません。'); return false; }
+    const sess = sessions.find(s => s.id === sid);
+    if (!sess) { alert('指定された試験回が見つかりません。'); return false; }
+    // PIN check for academic/survey
+    if ((phase === 'academic' || phase === 'survey') && sess.pin) {
+      let pin = pinParam;
+      if (!pin || pin !== sess.pin) {
+        pin = prompt(`この試験を受けるにはアクセスPINが必要です（${PHASE_LABEL[phase]}）。配布されたPINを入力してください:`);
+        if (!pin || pin !== sess.pin) { alert('PINが正しくありません。'); return false; }
+      }
+    }
     Storage.setCurrentSessionId(sid);
     document.body.classList.add('candidate-mode');
     // Hide admin chrome
