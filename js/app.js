@@ -618,9 +618,9 @@ const App = (() => {
         <td>${escapeHtml((c.faculty || '') + ' ' + (c.department || ''))}</td>
         <td>${Stats.hasApplication(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.applicationSubmittedAt))}">✅<span class="cell-time">${formatRelative(c.applicationSubmittedAt)}</span></div>` : missBadge}</td>
         <td>${Stats.hasResume(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.resumeSubmittedAt))}">✅<span class="cell-time">${formatRelative(c.resumeSubmittedAt)}</span></div>` : missBadge}</td>
-        <td class="num">${Stats.hasSurvey(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.surveySubmittedAt))}"><strong>${sv.toFixed(2)}</strong><span class="cell-time">${formatRelative(c.surveySubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${Stats.hasSurvey(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.surveySubmittedAt))}"><strong>${sv.toFixed(2)}/5.00</strong><span class="cell-time">${formatRelative(c.surveySubmittedAt)}</span></div>` : missBadge}</td>
         <td class="num">${Stats.hasAcademic(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.academicSubmittedAt))}"><strong>${ac.percent.toFixed(1)}%</strong><span class="cell-time">${formatRelative(c.academicSubmittedAt)}</span></div>` : missBadge}</td>
-        <td class="num">${iv ? `<div class="cell-status" title="${escapeHtml(formatDate(c.interview.heldAt))}"><strong>${ivAvg.toFixed(1)}/5</strong><span class="cell-time">${formatRelative(c.interview.heldAt)}</span></div>` : missBadge}</td>
+        <td class="num">${iv ? `<div class="cell-status" title="${escapeHtml(formatDate(c.interview.heldAt))}"><strong>${ivAvg.toFixed(2)}/5.00</strong><span class="cell-time">${formatRelative(c.interview.heldAt)}</span></div>` : missBadge}</td>
         <td title="${escapeHtml(formatDate(lastUpdate))}">${formatRelative(lastUpdate)}</td>
         <td class="row-actions">
           <button class="btn btn-icon" data-act="view" title="詳細を見る">👁</button>
@@ -738,11 +738,17 @@ const App = (() => {
   function runCluster() {
     const sess = getSession();
     const k = Math.max(2, Math.min(8, Number($('#k-value').value) || 4));
-    const list = Storage.loadForSession().filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c));
+    // 完全なデータ(学力かつアンケート両方提出)のみを対象とする (欠損が0として混入するのを防ぐ)
+    const allList = Storage.loadForSession();
+    const list = allList.filter(c => Stats.hasAcademic(c) && Stats.hasSurvey(c));
+    const incompleteCount = allList.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).length - list.length;
     const emptyEl = document.getElementById('cluster-empty');
     const resultEl = document.getElementById('cluster-result');
     if (list.length < k) {
-      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.innerHTML = `<div style="font-size:48px">⚠</div><p>分析対象が ${k} 人未満です（${list.length}名）。受験者を追加するか分類数を減らしてください。</p>`; }
+      if (emptyEl) {
+        emptyEl.style.display = 'block';
+        emptyEl.innerHTML = `<div style="font-size:48px">⚠</div><p>分析対象（学力試験＋アンケート両方提出済）が ${k} 人未満です。<br>現在 ${list.length}名 が分析可能${incompleteCount > 0 ? `（${incompleteCount}名は片方のみで除外）` : ''}。</p>`;
+      }
       if (resultEl) resultEl.style.display = 'none';
       return;
     }
@@ -754,18 +760,43 @@ const App = (() => {
       resultEl.style.opacity = '.4';
       setTimeout(() => { resultEl.style.opacity = oldOpacity || '1'; }, 100);
     }
-    const vectors = list.map(c => Stats.featureVector(c, sess));
-    const { assignments, centroids } = Cluster.kmeans(vectors, k);
-    const { points } = Cluster.pca2(vectors);
+    const rawVectors = list.map(c => Stats.featureVector(c, sess));
+    // Standardize features (z-score) for fair clustering across dimensions
+    const std = Cluster.standardize(rawVectors);
+    const stdVectors = std.data;
+    // Multiple restarts (20) to escape local minima
+    const { assignments, centroids: stdCentroids, inertia: clusterInertia } = Cluster.kmeansBest(stdVectors, k, 20);
+    // Convert centroids back to original scale for display
+    const centroids = stdCentroids.map(c => c.map((x, i) => x * std.std[i] + std.mean[i]));
+    const vectors = rawVectors;
+    const { points } = Cluster.pca2(stdVectors);
 
     const palette = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+
+    const cats = sess.academicTest?.questions?.length
+      ? [...new Set(sess.academicTest.questions.map(q => q.category || 'その他'))]
+      : Stats.DEFAULT_ACADEMIC_CATEGORIES;
+    const surveyQs = sess.surveyTest?.questions || [];
+    const featLabels = cats.concat(surveyQs.map(q => q.text));
+    const overallMean = featLabels.map((_, fi) => vectors.reduce((s, v) => s + v[fi], 0) / vectors.length);
+
+    // Pre-compute system names for each cluster (for legend display)
+    const clusterSystemNames = [];
+    for (let ci = 0; ci < k; ci++) {
+      const diffs = featLabels.map((label, fi) => ({
+        label, isAcademic: fi < cats.length,
+        diff: centroids[ci][fi] - overallMean[fi],
+        centroidVal: centroids[ci][fi]
+      }));
+      clusterSystemNames.push(inferClusterSystem(diffs, cats));
+    }
 
     if (charts.cluster) charts.cluster.destroy();
     const datasets = [];
     for (let c = 0; c < k; c++) {
       const pts = points.map((p, i) => ({ x: p[0], y: p[1], _idx: i }))
                         .filter((_, i) => assignments[i] === c);
-      datasets.push({ label: `クラスター ${c + 1} (${pts.length}名)`, data: pts, backgroundColor: palette[c % palette.length], pointRadius: 6, pointHoverRadius: 9 });
+      datasets.push({ label: `${clusterSystemNames[c]} (${pts.length}名)`, data: pts, backgroundColor: palette[c % palette.length], pointRadius: 6, pointHoverRadius: 9 });
     }
     charts.cluster = new Chart($('#chart-cluster'), {
       type: 'scatter',
@@ -777,12 +808,9 @@ const App = (() => {
       }
     });
 
-    const cats = sess.academicTest?.questions?.length
-      ? [...new Set(sess.academicTest.questions.map(q => q.category || 'その他'))]
-      : Stats.DEFAULT_ACADEMIC_CATEGORIES;
     if (charts.clusterRadar) charts.clusterRadar.destroy();
     const radarDS = centroids.map((centroid, i) => ({
-      label: `クラスター ${i + 1}`,
+      label: clusterSystemNames[i],
       data: centroid.slice(0, cats.length).map(v => v * 100),
       backgroundColor: palette[i % palette.length] + '33',
       borderColor: palette[i % palette.length],
@@ -795,9 +823,6 @@ const App = (() => {
     });
 
     // ===== Cluster characterization: 系統名・属性差分・スコア範囲 =====
-    const surveyQs = sess.surveyTest?.questions || [];
-    const featLabels = cats.concat(surveyQs.map(q => q.text));
-    const overallMean = featLabels.map((_, fi) => vectors.reduce((s, v) => s + v[fi], 0) / vectors.length);
 
     // Stat cards
     const clusterSizes = [];
@@ -806,6 +831,13 @@ const App = (() => {
     if (document.getElementById('cluster-stat-k')) document.getElementById('cluster-stat-k').textContent = k + 'グループ';
     if (document.getElementById('cluster-stat-max')) document.getElementById('cluster-stat-max').textContent = Math.max(...clusterSizes) + '名';
     if (document.getElementById('cluster-stat-min')) document.getElementById('cluster-stat-min').textContent = Math.min(...clusterSizes) + '名';
+    // 分析品質情報をヒーローカードに表示
+    const heroText = document.querySelector('.cluster-hero-text');
+    if (heroText) {
+      let qualEl = heroText.querySelector('.cluster-quality');
+      if (!qualEl) { qualEl = document.createElement('div'); qualEl.className = 'cluster-quality'; heroText.appendChild(qualEl); }
+      qualEl.innerHTML = `<small style="color:var(--muted);font-size:11px">📐 アルゴリズム: K-means++ (20回試行で最良解選択) + 標準化(z-score) + PCA 2次元投影 ・ 慣性 ${clusterInertia.toFixed(2)} ${incompleteCount > 0 ? ` ・ ${incompleteCount}名は片方のみ提出で除外` : ''}</small>`;
+    }
 
     let charHtml = '<div class="cluster-grid">';
     for (let ci = 0; ci < k; ci++) {
@@ -826,7 +858,7 @@ const App = (() => {
       }));
       const sortedHi = [...diffs].sort((a, b) => b.diff - a.diff).slice(0, 3);
       const sortedLo = [...diffs].sort((a, b) => a.diff - b.diff).slice(0, 2);
-      const fmtVal = (d) => d.isAcademic ? `${(d.centroidVal * 100).toFixed(0)}%` : `${(d.centroidVal * 5).toFixed(1)}/5`;
+      const fmtVal = (d) => d.isAcademic ? `${(d.centroidVal * 100).toFixed(1)}%` : `${(d.centroidVal * 5).toFixed(1)}/5.0`;
       const systemName = inferClusterSystem(diffs, cats);
       const acScores = members.map(m => Stats.scoreAcademic(m, sess.academicTest).percent).filter(v => !isNaN(v));
       const svScores = members.map(m => Stats.surveyAvg(m, sess.surveyTest)).filter(v => v > 0);
@@ -838,7 +870,12 @@ const App = (() => {
       members.forEach(m => { if (m.faculty) facultyDist[m.faculty] = (facultyDist[m.faculty] || 0) + 1; });
       const topFaculty = Object.entries(facultyDist).sort((a, b) => b[1] - a[1]).slice(0, 2);
 
-      const rangeBlock = (label, arr, suffix = '') => arr.length ? `<div class="range-row"><span>${label}</span><strong>${Math.min(...arr).toFixed(1)}${suffix} 〜 ${Math.max(...arr).toFixed(1)}${suffix}</strong> <span class="range-mean">(平均 ${(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)}${suffix})</span></div>` : '';
+      const rangeBlock = (label, arr, suffix = '') => {
+        if (!arr.length) return '';
+        // 分母にも同じ精度を付与 (例: 5 → 5.0)
+        const sfx = suffix.replace(/(\d+)$/, (m) => Number(m).toFixed(1));
+        return `<div class="range-row"><span>${label}</span><strong>${Math.min(...arr).toFixed(1)}${sfx} 〜 ${Math.max(...arr).toFixed(1)}${sfx}</strong> <span class="range-mean">(平均 ${(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)}${sfx})</span></div>`;
+      };
 
       charHtml += `<div class="cluster-card" style="border-top:6px solid ${palette[ci % palette.length]}">
         <div class="cluster-card-head">
@@ -1067,9 +1104,9 @@ const App = (() => {
           </div>
           <div>
             <div class="score-badges">
-              <span class="score-badge alt">学力 ${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '% (' + ac.total + '/' + ac.max + ')' : '未'}</span>
-              <span class="score-badge warn">アンケート ${Stats.hasSurvey(c) ? sv.toFixed(2) + '/5' : '未'}</span>
-              <span class="score-badge interview">面接 ${Stats.hasInterview(c) ? Stats.interviewAvg(c).toFixed(2) + '/5' : '未'}</span>
+              <span class="score-badge alt">学力 ${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '% (' + ac.total + ' / ' + ac.max + '点)' : '未'}</span>
+              <span class="score-badge warn">アンケート ${Stats.hasSurvey(c) ? sv.toFixed(2) + ' / 5.00' : '未'}</span>
+              <span class="score-badge interview">面接 ${Stats.hasInterview(c) ? Stats.interviewAvg(c).toFixed(2) + ' / 5.00' : '未'}</span>
             </div>
           </div>
         </div>
@@ -1175,7 +1212,7 @@ const App = (() => {
         <div class="iv-meta">
           <div><span class="iv-k">面接日時</span><span class="iv-v">${escapeHtml(formatDate(iv.heldAt))}</span></div>
           <div><span class="iv-k">面接官</span><span class="iv-v">${escapeHtml(iv.interviewer || '—')}</span></div>
-          <div><span class="iv-k">総合評価</span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5</strong></span></div>
+          <div><span class="iv-k">総合評価</span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5.00</strong></span></div>
         </div>
         <div class="grid-2" style="margin-top:10px">
           <div>
@@ -1183,7 +1220,7 @@ const App = (() => {
           </div>
           <div>
             <h4 style="margin-top:0">評価項目</h4>
-            ${Stats.INTERVIEW_RATINGS.map(r => `<div class="iv-rating-row"><span>${escapeHtml(r.label)}</span><strong>${Number(iv.ratings?.[r.key]) || 0} / 5</strong></div>`).join('')}
+            ${Stats.INTERVIEW_RATINGS.map(r => `<div class="iv-rating-row"><span>${escapeHtml(r.label)}</span><strong>${Number(iv.ratings?.[r.key]) || 0} / 5</strong></div>`).join('')}<!-- rating items are integer 1-5, both sides integer for consistency -->
           </div>
         </div>
         ${iv.notes ? `<div style="margin-top:10px"><h4>所見・メモ</h4><p>${escapeHtml(iv.notes)}</p></div>` : ''}

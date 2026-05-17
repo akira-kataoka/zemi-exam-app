@@ -96,5 +96,37 @@ const Cluster = (() => {
     return { points, variance: [pc1.val, pc2.val] };
   }
 
-  return { kmeans, pca2, meanVec };
+  // Standardize features (z-score) so dimensions with different scales contribute equally
+  function standardize(data) {
+    if (data.length === 0) return { data: [], mean: [], std: [] };
+    const dim = data[0].length;
+    const mean = meanVec(data);
+    const std = new Array(dim).fill(0);
+    for (let i = 0; i < dim; i++) {
+      let s = 0;
+      for (const v of data) s += (v[i] - mean[i]) ** 2;
+      std[i] = Math.sqrt(s / Math.max(1, data.length - 1)) || 1;
+    }
+    return { data: data.map(v => v.map((x, i) => (x - mean[i]) / std[i])), mean, std };
+  }
+
+  // Compute total within-cluster sum of squares (inertia) - lower is better
+  function inertia(data, assignments, centroids) {
+    let s = 0;
+    for (let i = 0; i < data.length; i++) s += distance(data[i], centroids[assignments[i]]) ** 2;
+    return s;
+  }
+
+  // Run kmeans multiple times and pick the best (lowest inertia) result
+  function kmeansBest(data, k, restarts = 20, maxIter = 100) {
+    let best = null;
+    for (let r = 0; r < restarts; r++) {
+      const result = kmeans(data, k, maxIter);
+      const score = inertia(data, result.assignments, result.centroids);
+      if (!best || score < best.inertia) best = { ...result, inertia: score };
+    }
+    return best || { assignments: [], centroids: [], inertia: 0 };
+  }
+
+  return { kmeans, kmeansBest, pca2, meanVec, standardize, inertia };
 })();
