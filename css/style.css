@@ -522,9 +522,11 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 .tab-help:hover{background:#fde68a}
 .tab-help.first-visit-pulse,
 .header-action-help.first-visit-pulse{animation:pulse-help 1.6s infinite}
-/* Header right actions */
-.brand-row{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
-.header-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+/* Header right actions - 絶対配置で常に右上に固定 */
+.topbar{position:sticky}
+.brand-row{display:flex;align-items:flex-start;gap:14px;padding-right:200px}
+.header-actions{position:absolute;top:14px;right:24px;display:flex;gap:8px;align-items:center;z-index:11}
+@media(max-width:580px){.brand-row{padding-right:0}.header-actions{position:static;margin-top:6px}}
 .header-action-btn{padding:8px 14px;font-size:13px}
 .header-action-btn[data-view="admin"]{background:#f1f5f9;color:var(--ink)}
 .header-action-btn[data-view="admin"]:hover{background:#e2e8f0}
