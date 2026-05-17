@@ -747,12 +747,79 @@ const App = (() => {
   // ===== Profile =====
   function refreshProfileSelect() {
     const sel = $('#profile-select');
-    const current = sel.value;
     const list = Storage.loadForSession();
-    sel.innerHTML = '<option value="">-- 受験者を選択 --</option>' +
-      list.map(c => `<option value="${c.id}">${escapeHtml(c.examineeId || '')} ${escapeHtml(fullName(c))}</option>`).join('');
-    if (current && list.find(c => c.id === current)) { sel.value = current; renderProfile(current); }
-    else { $('#profile-body').innerHTML = '<div class="card" style="text-align:center;color:var(--muted)">上のドロップダウンから受験者を選択してください。</div>'; }
+    const current = sel.value;
+    if (current && list.find(c => c.id === current)) {
+      updateProfileTriggerLabel(current);
+      renderProfile(current);
+    } else {
+      updateProfileTriggerLabel('');
+      $('#profile-body').innerHTML = '<div class="card" style="text-align:center;color:var(--muted)">上のセレクタから受験者を選択してください。</div>';
+    }
+  }
+
+  function updateProfileTriggerLabel(id) {
+    const lbl = document.getElementById('profile-trigger-label');
+    if (!lbl) return;
+    if (!id) { lbl.textContent = '-- 受験者を選択 --'; return; }
+    const c = Storage.loadForSession().find(x => x.id === id);
+    if (!c) { lbl.textContent = '-- 受験者を選択 --'; return; }
+    lbl.innerHTML = `${c.photo ? `<img class="avatar-sm" src="${c.photo}" style="width:24px;height:24px;margin-right:6px;vertical-align:middle">` : ''}${escapeHtml(c.examineeId || '')} ${escapeHtml(fullName(c))}`;
+  }
+
+  function toggleProfilePicker() {
+    const pop = document.getElementById('profile-picker-popover');
+    if (pop.style.display === 'none') {
+      pop.style.display = 'block';
+      document.getElementById('profile-picker-search').value = '';
+      renderProfilePickerList();
+      setTimeout(() => document.getElementById('profile-picker-search').focus(), 0);
+    } else closeProfilePicker();
+  }
+  function closeProfilePicker() { document.getElementById('profile-picker-popover').style.display = 'none'; }
+
+  function renderProfilePickerList() {
+    const q = (document.getElementById('profile-picker-search').value || '').trim().toLowerCase();
+    const sess = getSession();
+    const curId = document.getElementById('profile-select').value;
+    let list = Storage.loadForSession();
+    if (q) list = list.filter(c => [fullName(c), fullKana(c), c.examineeId, c.faculty, c.department].some(v => String(v || '').toLowerCase().includes(q)));
+    const wrap = document.getElementById('profile-picker-list');
+    if (list.length === 0) {
+      wrap.innerHTML = '<div class="muted" style="padding:14px;text-align:center;font-size:12px">該当する受験者がいません</div>';
+      return;
+    }
+    wrap.innerHTML = list.map(c => {
+      const ac = Stats.scoreAcademic(c, sess.academicTest);
+      const isCurrent = c.id === curId;
+      const phaseDots = [
+        Stats.hasResume(c) ? '<span class="pp-dot done" title="履歴書済">📄</span>' : '<span class="pp-dot miss" title="履歴書未">📄</span>',
+        Stats.hasAcademic(c) ? '<span class="pp-dot done" title="学力済">📚</span>' : '<span class="pp-dot miss" title="学力未">📚</span>',
+        Stats.hasSurvey(c) ? '<span class="pp-dot done" title="アンケ済">📋</span>' : '<span class="pp-dot miss" title="アンケ未">📋</span>',
+        Stats.hasInterview(c) ? '<span class="pp-dot done" title="面接済">🎤</span>' : '<span class="pp-dot miss" title="面接未">🎤</span>'
+      ].join('');
+      return `<div class="pp-item ${isCurrent ? 'current' : ''} ${c.passed ? 'passed' : ''}" data-id="${c.id}">
+        ${c.photo ? `<img class="avatar-sm" src="${c.photo}" alt="">` : '<div class="avatar-sm avatar-blank">👤</div>'}
+        <div class="pp-main">
+          <div class="pp-name">${escapeHtml(fullName(c))} ${c.passed ? '<span class="pp-pass">✅合格</span>' : ''}</div>
+          <div class="pp-meta">${escapeHtml(c.examineeId || '')} ・ ${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')}</div>
+          <div class="pp-detail">
+            <span class="pp-phases">${phaseDots}</span>
+            <span class="pp-score">学力 <strong>${Stats.hasAcademic(c) ? ac.percent.toFixed(0) + '%' : '—'}</strong></span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    wrap.querySelectorAll('.pp-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.id;
+        document.getElementById('profile-select').value = id;
+        saveUiState({ profileId: id });
+        updateProfileTriggerLabel(id);
+        renderProfile(id);
+        closeProfilePicker();
+      });
+    });
   }
 
   function renderProfile(id) {
@@ -783,7 +850,6 @@ const App = (() => {
           </div>
           <div>
             <div class="score-badges">
-              <span class="score-badge">総合 ${total.toFixed(1)}</span>
               <span class="score-badge alt">学力 ${ac.percent.toFixed(1)}% (${ac.total}/${ac.max})</span>
               <span class="score-badge warn">アンケート ${sv.toFixed(2)}/5</span>
             </div>
@@ -2198,7 +2264,15 @@ const App = (() => {
     $('#run-cluster').addEventListener('click', runCluster);
 
     // Profile
-    $('#profile-select').addEventListener('change', e => { saveUiState({ profileId: e.target.value }); renderProfile(e.target.value); });
+    // Profile picker
+    document.getElementById('profile-trigger').addEventListener('click', e => { e.stopPropagation(); toggleProfilePicker(); });
+    document.getElementById('profile-picker-search').addEventListener('input', renderProfilePickerList);
+    document.addEventListener('click', e => {
+      const pop = document.getElementById('profile-picker-popover');
+      if (pop && pop.style.display !== 'none' && !pop.contains(e.target) && e.target !== document.getElementById('profile-trigger') && !document.getElementById('profile-trigger').contains(e.target)) {
+        closeProfilePicker();
+      }
+    });
     $('#print-profile').addEventListener('click', () => window.print());
 
     // Portal

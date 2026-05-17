@@ -169,7 +169,17 @@
   <!-- ===== Profile ===== -->
   <section class="view" id="view-profile">
     <div class="toolbar">
-      <select id="profile-select"><option value="">-- 受験者を選択 --</option></select>
+      <div class="profile-picker-wrap">
+        <button class="btn profile-picker-trigger" id="profile-trigger" type="button">
+          <span id="profile-trigger-label">-- 受験者を選択 --</span>
+          <span class="caret">▼</span>
+        </button>
+        <div class="profile-picker-popover" id="profile-picker-popover" style="display:none">
+          <input type="search" id="profile-picker-search" placeholder="名前・受験番号・学部で検索...">
+          <div class="profile-picker-list" id="profile-picker-list"></div>
+        </div>
+      </div>
+      <input type="hidden" id="profile-select">
       <button class="btn" id="print-profile">🖨 印刷</button>
     </div>
     <div id="profile-body"></div>
