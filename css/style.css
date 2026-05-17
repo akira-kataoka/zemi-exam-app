@@ -514,13 +514,6 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 .iv-scale label{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer}
 
 /* Help modal */
-.tabs-spacer{flex:1}
-.tab-settings{background:#f1f5f9;color:var(--ink);border-color:var(--border)}
-.tab-settings:hover{background:#e2e8f0}
-.tab-settings.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-.tab-help{background:#fef3c7;border-color:#fde68a;color:#92400e;font-weight:700}
-.tab-help:hover{background:#fde68a}
-.tab-help.first-visit-pulse,
 .header-action-help.first-visit-pulse{animation:pulse-help 1.6s infinite}
 /* Header right actions - 絶対配置で常に右上に固定 (.topbar 自体が position:sticky でcontaining block) */
 .brand-row{display:flex;align-items:flex-start;gap:14px;padding-right:200px}
