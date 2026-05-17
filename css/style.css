@@ -680,6 +680,7 @@ body.candidate-mode .brand .sub{display:none}
 /* Mobile responsive polish */
 @media(max-width:760px){
   .session-bar{padding:8px}
+  .session-bar select{min-width:140px;font-size:12px}
   .session-name-input{min-width:140px;font-size:13px}
   .phase-status{font-size:11px;gap:4px}
   .phase-pill{padding:2px 6px;font-size:10px}
@@ -689,6 +690,9 @@ body.candidate-mode .brand .sub{display:none}
   .sticky-table thead .sort-row th{font-size:11px;padding:6px 8px}
   .cards{grid-template-columns:repeat(2,1fr)}
   .card.stat .v{font-size:18px}
+  .profile-picker-trigger{min-width:0;width:100%}
+  .profile-picker-popover{width:96vw}
+  .toolbar input[type="search"]{min-width:0;flex:1 1 160px}
 }
 @media(max-width:480px){
   .brand h1{font-size:16px}
