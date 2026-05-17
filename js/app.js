@@ -40,6 +40,16 @@ const App = (() => {
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
+  function calcAge(birthdate) {
+    if (!birthdate) return null;
+    const d = new Date(birthdate);
+    if (isNaN(d.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - d.getFullYear();
+    const m = now.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+    return age;
+  }
   function formatDateShort(iso) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -863,7 +873,7 @@ const App = (() => {
           <div style="flex:1;min-width:200px">
             <div class="profile-name">${escapeHtml(fullName(c))}</div>
             <div class="profile-meta">${escapeHtml(fullKana(c))}</div>
-            <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${c.gender ? '🚻 ' + escapeHtml(c.gender) + ' ・ ' : ''}${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
+            <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${c.gender ? '🚻 ' + escapeHtml(c.gender) + ' ・ ' : ''}${calcAge(c.birthdate) != null ? `🎂 ${calcAge(c.birthdate)}歳 ・ ` : ''}${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
             <div style="margin-top:10px"><label class="pass-toggle"><input type="checkbox" id="profile-pass" ${c.passed ? 'checked' : ''}> <span>🏆 この受験者を合格にする</span></label></div>
             <div class="profile-submissions">
               <span class="ps-item ${c.resumeSubmittedAt ? 'ps-done' : 'ps-miss'}">📄 履歴書: ${c.resumeSubmittedAt ? formatDate(c.resumeSubmittedAt) : '未提出'}</span>
@@ -890,7 +900,7 @@ const App = (() => {
       <div class="profile-card">
         <h3>📄 履歴書情報</h3>
         <div class="form-grid">
-          <div><dt>生年月日</dt><dd>${escapeHtml(c.birthdate || '')}</dd></div>
+          <div><dt>生年月日</dt><dd>${escapeHtml(c.birthdate || '')}${calcAge(c.birthdate) != null ? ` <span class="muted">(${calcAge(c.birthdate)}歳)</span>` : ''}</dd></div>
           <div><dt>性別</dt><dd>${escapeHtml(c.gender || '')}</dd></div>
           <div><dt>メール</dt><dd>${escapeHtml(c.email || '')}</dd></div>
           <div><dt>電話</dt><dd>${escapeHtml(c.phone || '')}</dd></div>
