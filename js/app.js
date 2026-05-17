@@ -1245,8 +1245,8 @@ const App = (() => {
       <div class="iv-summary">
         <div class="iv-meta">
           <div><span class="iv-k">面接実施数</span><span class="iv-v"><strong>${recs.length}件</strong></span></div>
-          <div><span class="iv-k">総合評価（${recs.length}人平均）</span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5.00</strong></span></div>
-          ${recs.length > 1 ? `<div><span class="iv-k">面接官間ばらつき</span><span class="iv-v" title="標準偏差。0に近いほど面接官の評価が一致">${disagree.toFixed(2)} ${disagree >= 0.5 ? '<span style="color:var(--warn);font-size:11px">⚠評価に差あり</span>' : ''}</span></div>` : ''}
+          <div><span class="iv-k">総合評価<small style="color:var(--muted);font-size:10px">（全${recs.length}人×全${Stats.INTERVIEW_RATINGS.length}項目の平均）</small></span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5.00</strong></span></div>
+          ${recs.length > 1 ? `<div><span class="iv-k">面接官間ばらつき<small style="color:var(--muted);font-size:10px">（標準偏差・0=全員一致）</small></span><span class="iv-v" title="各面接官の総合評価の標準偏差。0に近いほど一致">${disagree.toFixed(2)} ${disagree >= 0.5 ? '<span style="color:var(--warn);font-size:11px">⚠評価に差あり</span>' : '<span style="color:var(--accent);font-size:11px">✓概ね一致</span>'}</span></div>` : ''}
         </div>
         <div class="grid-2" style="margin-top:10px">
           <div>
@@ -1257,11 +1257,16 @@ const App = (() => {
             ${catRows}
           </div>
         </div>
-        <h4 style="margin-top:14px">面接記録一覧</h4>
-        ${recs.map((r, i) => `
+        <h4 style="margin-top:14px">面接記録一覧（${recs.length}件・各面接官の評価）</h4>
+        ${recs.map((r, i) => {
+          const ratingVals = Stats.INTERVIEW_RATINGS.map(k => Number(r.ratings?.[k.key]) || 0).filter(v => v > 0);
+          const ravg = ratingVals.length ? ratingVals.reduce((a, b) => a + b, 0) / ratingVals.length : 0;
+          const sum = ratingVals.reduce((a, b) => a + b, 0);
+          return `
           <div class="iv-record-card">
             <div class="iv-record-head">
               <strong>面接 ${i + 1}: ${escapeHtml(r.interviewer || '（面接官未記入）')}</strong>
+              <span class="iv-rec-avg">この面接官の評価: <strong>${ravg.toFixed(2)} / 5.00</strong> <span class="muted" style="font-size:11px">(${sum}/${ratingVals.length * 5}点)</span></span>
               <span class="muted" style="font-size:12px">${formatDate(r.heldAt)}</span>
             </div>
             <div class="iv-record-ratings">
@@ -1269,7 +1274,7 @@ const App = (() => {
             </div>
             ${r.notes ? `<div class="iv-record-notes">${escapeHtml(r.notes)}</div>` : ''}
           </div>
-        `).join('')}
+        `;}).join('')}
       </div>
     `;
   }

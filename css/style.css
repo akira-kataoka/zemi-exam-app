@@ -469,6 +469,8 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 /* Interview records (multi-interviewer) */
 .iv-record-card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:8px}
 .iv-record-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed var(--border)}
+.iv-rec-avg{font-size:12px;background:#ede9fe;padding:3px 10px;border-radius:999px;color:#5b21b6}
+.iv-rec-avg strong{color:#5b21b6}
 .iv-record-ratings{display:flex;flex-wrap:wrap;gap:10px;font-size:12px}
 .iv-rec-rating{padding:2px 6px;background:#f8fafc;border-radius:4px}
 .iv-record-notes{margin-top:6px;padding:6px 10px;background:#fafafa;border-left:3px solid var(--primary);border-radius:4px;font-size:12px;color:var(--ink);line-height:1.5}
