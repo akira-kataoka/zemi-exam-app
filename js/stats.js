@@ -99,11 +99,9 @@ const Stats = (() => {
   function surveyScore100(c, st) { return (surveyAvg(c, st) / 5) * 100; }
 
   function totalScore(candidate, session, cfg) {
+    // アンケートはスコア化しない方針: 総合点 = 学力試験の正答率(%)
     const ac = scoreAcademic(candidate, session?.academicTest);
-    const sv = surveyScore100(candidate, session?.surveyTest);
-    const wA = (cfg?.weightAcademic ?? 70) / 100;
-    const wS = (cfg?.weightSurvey ?? 30) / 100;
-    return ac.percent * wA + sv * wS;
+    return ac.percent;
   }
 
   function radarData(candidate, session) {

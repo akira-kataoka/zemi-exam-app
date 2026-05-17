@@ -13,6 +13,17 @@ const App = (() => {
   function escapeHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+  function toLocalInputValue(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function localInputToIso(v) {
+    if (!v) return null;
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
   function formatDate(iso) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -42,6 +53,7 @@ const App = (() => {
     if (!sess.resumeExtraFields) { sess.resumeExtraFields = []; changed = true; }
     if (!sess.facultyDept) { sess.facultyDept = JSON.parse(JSON.stringify(Stats.DEFAULT_FACULTY_DEPT)); changed = true; }
     if (!sess.pin) { sess.pin = Storage.generatePin(); changed = true; }
+    if (!sess.phaseSchedule) { sess.phaseSchedule = { resume:{startsAt:null,endsAt:null}, academic:{startsAt:null,endsAt:null}, survey:{startsAt:null,endsAt:null} }; changed = true; }
     if (changed) {
       const list = Storage.loadSessions();
       const idx = list.findIndex(s => s.id === sess.id);
@@ -60,13 +72,25 @@ const App = (() => {
     $('#session-meta').textContent = `${list.length}名 / 作成 ${formatDate(sess.createdAt)}`;
     ['resume', 'academic', 'survey'].forEach(p => {
       const el = document.querySelector(`[data-phase-state="${p}"]`);
-      const open = !!sess.phases?.[p];
+      const open = Storage.isPhaseOpen(sess, p);
       el.textContent = open ? '受付中' : '停止';
       el.parentElement.classList.toggle('open', open);
       el.parentElement.classList.toggle('closed', !open);
     });
-    // sync toggle checkboxes (if admin view rendered)
+    // sync toggle checkboxes + datetime inputs (if admin view rendered)
     $$('[data-phase-toggle]').forEach(cb => { cb.checked = !!sess.phases?.[cb.dataset.phaseToggle]; });
+    $$('[data-phase-start]').forEach(inp => {
+      const v = sess.phaseSchedule?.[inp.dataset.phaseStart]?.startsAt;
+      inp.value = v ? toLocalInputValue(v) : '';
+    });
+    $$('[data-phase-end]').forEach(inp => {
+      const v = sess.phaseSchedule?.[inp.dataset.phaseEnd]?.endsAt;
+      inp.value = v ? toLocalInputValue(v) : '';
+    });
+    $$('[data-phase-status]').forEach(el => {
+      el.textContent = Storage.phaseStatusText(sess, el.dataset.phaseStatus);
+      el.classList.toggle('s-open', Storage.isPhaseOpen(sess, el.dataset.phaseStatus));
+    });
   }
   function onSessionChange(e) {
     Storage.setCurrentSessionId(e.target.value);
@@ -661,9 +685,10 @@ const App = (() => {
       { key: 'survey',   icon: '📋', title: 'アンケート', done: cand && Stats.hasSurvey(cand), doneAt: cand?.surveySubmittedAt, requiresResume: true }
     ];
     portalCards.innerHTML = phases.map(p => {
-      const open = !!sess.phases?.[p.key];
+      const open = Storage.isPhaseOpen(sess, p.key);
       const blocked = p.requiresResume && !(cand && Stats.hasResume(cand)) && p.key !== 'resume';
-      const status = !open ? '受付停止中' : p.done ? '提出済' : blocked ? '履歴書を先に提出してください' : '受付中';
+      const statusText = Storage.phaseStatusText(sess, p.key);
+      const status = !open ? statusText : p.done ? '提出済' : blocked ? '履歴書を先に提出してください' : statusText;
       const cls = !open ? 'closed' : p.done ? 'done' : blocked ? 'blocked' : 'open';
       const clickable = open && !blocked && (p.key === 'resume' || examineeId);
       return `<div class="portal-card ${cls}" data-phase="${p.key}" ${clickable ? '' : 'data-disabled="1"'}>
@@ -842,7 +867,7 @@ const App = (() => {
   function submitResume(e) {
     e.preventDefault();
     const sess = ensureTests(getSession());
-    if (!sess.phases.resume) { alert('履歴書の受付は停止中です。'); return; }
+    if (!Storage.isPhaseOpen(sess, 'resume')) { alert('履歴書の受付期間外です。'); return; }
     const form = e.target;
     const fd = new FormData(form);
     const data = {};
@@ -870,7 +895,7 @@ const App = (() => {
   function submitAcademic(e) {
     e.preventDefault();
     const sess = ensureTests(getSession());
-    if (!sess.phases.academic) { alert('学力試験の受付は停止中です。'); return; }
+    if (!Storage.isPhaseOpen(sess, 'academic')) { alert('学力試験の受付期間外です。'); return; }
     const form = e.target;
     const examineeId = form.elements.examineeId.value;
     const answers = {};
@@ -889,7 +914,7 @@ const App = (() => {
   function submitSurvey(e) {
     e.preventDefault();
     const sess = ensureTests(getSession());
-    if (!sess.phases.survey) { alert('アンケートの受付は停止中です。'); return; }
+    if (!Storage.isPhaseOpen(sess, 'survey')) { alert('アンケートの受付期間外です。'); return; }
     const form = e.target;
     const examineeId = form.elements.examineeId.value;
     const answers = {};
@@ -1436,18 +1461,25 @@ const App = (() => {
     // Phase toggles
     $$('[data-phase-toggle]').forEach(cb => cb.addEventListener('change', () => {
       Storage.setPhase(Storage.getCurrentSessionId(), cb.dataset.phaseToggle, cb.checked);
-      renderSessionBar();
-      renderPortal();
-      // Re-render share blocks in all mgr tabs since URLs may include phase status
-      if ($('#academic-q-list')) renderPhaseShare('academic', 'view-mgr-academic');
-      if ($('#survey-q-list')) renderPhaseShare('survey', 'view-mgr-survey');
-      if ($('#resume-fields-list')) renderPhaseShare('resume', 'view-mgr-resume');
+      renderSessionBar(); renderPortal();
     }));
+    // Phase schedule inputs
+    function onScheduleChange(phase) {
+      const sid = Storage.getCurrentSessionId();
+      const start = document.querySelector(`[data-phase-start="${phase}"]`).value;
+      const end   = document.querySelector(`[data-phase-end="${phase}"]`).value;
+      Storage.setPhaseSchedule(sid, phase, localInputToIso(start), localInputToIso(end));
+      renderSessionBar(); renderPortal();
+    }
+    $$('[data-phase-start], [data-phase-end]').forEach(inp => {
+      const phase = inp.dataset.phaseStart || inp.dataset.phaseEnd;
+      inp.addEventListener('change', () => onScheduleChange(phase));
+    });
 
     // Data tab
     $('#export-json').addEventListener('click', exportJson);
     $('#import-json').addEventListener('change', e => { if (e.target.files[0]) importJson(e.target.files[0]); });
-    $('#save-weights').addEventListener('click', saveWeights);
+    // weight editor removed — survey is no longer scored
     $('#seed-demo').addEventListener('click', seedDemo);
     $('#clear-all').addEventListener('click', () => {
       if (!confirm('この試験回の全受験者データを削除しますか？（試験回自体は残ります）')) return;

@@ -337,12 +337,21 @@
     </div>
 
     <div class="card">
-      <h3>🔓 受付制御</h3>
-      <p class="hint">各フェーズの受付ON/OFFを切り替えると、受験ポータルに即時反映されます。</p>
-      <div class="phase-toggles">
-        <label class="phase-toggle"><input type="checkbox" data-phase-toggle="resume"><span>履歴書 受付</span></label>
-        <label class="phase-toggle"><input type="checkbox" data-phase-toggle="academic"><span>学力試験 受付</span></label>
-        <label class="phase-toggle"><input type="checkbox" data-phase-toggle="survey"><span>アンケート 受付</span></label>
+      <h3>🔓 受付制御（手動ON/OFF + 日時スケジュール）</h3>
+      <p class="hint">手動ONの上で開始/終了日時を指定すると、その期間だけ自動で受付状態になります。手動OFFはスケジュールに関わらず常に停止です。空欄なら期限なし。</p>
+      <div class="schedule-table">
+        <div class="schedule-row schedule-head">
+          <div>フェーズ</div><div>手動</div><div>開始日時</div><div>終了日時</div><div>状態</div>
+        </div>
+        ${['resume', 'academic', 'survey'].map(p => `
+          <div class="schedule-row" data-phase="${p}">
+            <div class="phase-name">${ {resume:'📄 履歴書', academic:'📚 学力試験', survey:'📋 アンケート'}[p] }</div>
+            <div><label class="switch"><input type="checkbox" data-phase-toggle="${p}"><span class="slider"></span></label></div>
+            <div><input type="datetime-local" data-phase-start="${p}"></div>
+            <div><input type="datetime-local" data-phase-end="${p}"></div>
+            <div class="phase-status-cell" data-phase-status="${p}">-</div>
+          </div>
+        `).join('')}
       </div>
     </div>
   </section>
@@ -360,13 +369,10 @@
       </div>
     </div>
     <div class="card">
-      <h3>採点ウェイト設定</h3>
-      <p>総合点 = 学力試験スコア × W1 + アンケート × W2 （合計100％）</p>
-      <div class="form-grid">
-        <label>学力試験ウェイト (%)<input type="number" id="weight-academic" min="0" max="100" value="70"></label>
-        <label>アンケートウェイト (%)<input type="number" id="weight-survey" min="0" max="100" value="30"></label>
-      </div>
-      <button class="btn primary" id="save-weights">保存</button>
+      <h3>採点ポリシー</h3>
+      <p>総合点 = <strong>学力試験の正答率(%)</strong>。アンケートは個人の傾向把握とクラスター分析のみに使用され、点数化されません。</p>
+      <input type="hidden" id="weight-academic" value="100">
+      <input type="hidden" id="weight-survey" value="0">
     </div>
     <div class="card">
       <h3>このアプリについて</h3>

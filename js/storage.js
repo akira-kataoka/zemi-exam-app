@@ -60,6 +60,42 @@ const Storage = (() => {
     const s = list.find(x => x.id === sessionId);
     if (s) { s.phases = s.phases || { ...defaultPhases }; s.phases[phase] = !!open; saveSessions(list); }
   }
+  function setPhaseSchedule(sessionId, phase, startsAt, endsAt) {
+    const list = loadSessions();
+    const s = list.find(x => x.id === sessionId);
+    if (!s) return;
+    s.phaseSchedule = s.phaseSchedule || {};
+    s.phaseSchedule[phase] = { startsAt: startsAt || null, endsAt: endsAt || null };
+    saveSessions(list);
+  }
+  // Effective open: manual ON AND (no start or now >= start) AND (no end or now < end)
+  function isPhaseOpen(session, phase, now) {
+    if (!session || !session.phases) return false;
+    if (!session.phases[phase]) return false;
+    const sch = session.phaseSchedule?.[phase];
+    if (!sch) return true;
+    const t = (now || new Date()).getTime();
+    if (sch.startsAt && t < new Date(sch.startsAt).getTime()) return false;
+    if (sch.endsAt && t >= new Date(sch.endsAt).getTime()) return false;
+    return true;
+  }
+  function phaseStatusText(session, phase) {
+    if (!session?.phases?.[phase]) return '🔒 手動停止中';
+    const sch = session.phaseSchedule?.[phase];
+    if (!sch || (!sch.startsAt && !sch.endsAt)) return '✅ 受付中';
+    const now = new Date();
+    if (sch.startsAt && now < new Date(sch.startsAt)) return `⏳ ${fmtJ(sch.startsAt)} 開始予定`;
+    if (sch.endsAt   && now >= new Date(sch.endsAt))  return `⛔ ${fmtJ(sch.endsAt)} 終了`;
+    if (sch.endsAt)    return `✅ 受付中（${fmtJ(sch.endsAt)} まで）`;
+    if (sch.startsAt)  return `✅ 受付中（${fmtJ(sch.startsAt)} から）`;
+    return '✅ 受付中';
+  }
+  function fmtJ(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
   function removeSession(id) {
     let remaining = loadSessions().filter(s => s.id !== id);
     if (remaining.length === 0) remaining = [{ id: DEFAULT_SESSION_ID, name: '通常入試', createdAt: new Date().toISOString(), phases: { ...defaultPhases } }];
@@ -136,7 +172,7 @@ const Storage = (() => {
   return {
     load, save, loadForSession, findByExamineeId, upsert, remove, clearAll,
     loadCfg, saveCfg,
-    loadSessions, addSession, renameSession, setPhase, removeSession, regeneratePin, generatePin,
+    loadSessions, addSession, renameSession, setPhase, setPhaseSchedule, isPhaseOpen, phaseStatusText, removeSession, regeneratePin, generatePin,
     getCurrentSessionId, setCurrentSessionId, getCurrentSession,
     DEFAULT_SESSION_ID
   };
