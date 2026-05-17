@@ -917,6 +917,24 @@ const App = (() => {
     }
   }
 
+  // Generate a tiny SVG-based avatar (data URL) — used for demo data so storage stays small
+  function generateAvatarDataUrl(name, gender) {
+    const palette = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+    const color = palette[Math.abs(hash) % palette.length];
+    const initial = (name || '?').slice(0, 1);
+    const accent = gender === '女性' ? '#fda4af' : (gender === '男性' ? '#93c5fd' : '#d1d5db');
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140">` +
+      `<rect width="120" height="140" fill="${accent}"/>` +
+      `<circle cx="60" cy="55" r="28" fill="${color}"/>` +
+      `<path d="M20 140 C20 100, 100 100, 100 140 Z" fill="${color}" opacity="0.9"/>` +
+      `<text x="60" y="68" font-size="32" font-family="sans-serif" font-weight="700" fill="white" text-anchor="middle">${initial}</text>` +
+      `</svg>`;
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+  }
+
   // ===== Photo handling =====
   function setPhotoPreview(dataUrl) {
     const wrap = document.getElementById('photo-preview');
@@ -1419,11 +1437,13 @@ const App = (() => {
       // resume
       const fac = facDeptList[i % facDeptList.length];
       const dept = fac.departments[(i * 3) % fac.departments.length];
+      const gender = i % 2 ? '女性' : '男性';
       const cand = {
         examineeId: 'Z' + String(2026001 + i),
         lastName: n[0], firstName: n[1], lastKana: n[2], firstKana: n[3],
+        photo: generateAvatarDataUrl(n[0] + n[1], gender),
         birthdate: `200${3 + (i % 5)}-0${1 + (i % 9)}-1${i % 9}`,
-        gender: i % 2 ? '女性' : '男性',
+        gender: gender,
         email: `applicant${i + 1}@example.com`, phone: `090-${1000 + i}-${1000 + i}`,
         faculty: fac.name,
         department: dept,

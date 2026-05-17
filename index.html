@@ -194,9 +194,7 @@
           <div class="form-section-title">👤 基本情報 <span class="req-mark">＊必須</span></div>
           <div class="resume-basic-grid">
             <div class="photo-area">
-              <div class="photo-preview" id="photo-preview">
-                <span class="photo-placeholder">📷<br>顔写真</span>
-              </div>
+              <div class="photo-preview" id="photo-preview"><span class="photo-placeholder">📷<br>顔写真</span></div>
               <label class="btn photo-btn">
                 顔写真をアップロード
                 <input type="file" id="photo-input" accept="image/*" hidden>
@@ -204,22 +202,20 @@
               <button type="button" class="btn photo-clear" id="photo-clear" style="display:none">写真を削除</button>
               <input type="hidden" name="photo">
             </div>
-            <div class="form-grid">
-              <label>受験番号<span class="req">*</span><input type="text" name="examineeId" required></label>
-              <label>姓<span class="req">*</span><input type="text" name="lastName" required></label>
-              <label>名<span class="req">*</span><input type="text" name="firstName" required></label>
-              <label>姓（フリガナ）<input type="text" name="lastKana"></label>
-              <label>名（フリガナ）<input type="text" name="firstKana"></label>
-              <label>性別<select name="gender"><option value="">選択しない</option><option>男性</option><option>女性</option><option>その他</option></select></label>
-              <label>学部<span class="req">*</span><select name="faculty" id="resume-faculty" required></select></label>
-              <label>学科<select name="department" id="resume-department"></select></label>
-              <label>学年<select name="grade">
-                <option value="">選択しない</option>
-                <option>1年</option><option>2年</option><option>3年</option><option>4年</option>
-                <option>修士1年(M1)</option><option>修士2年(M2)</option>
-                <option>その他</option>
-              </select></label>
-            </div>
+            <label>受験番号<span class="req">*</span><input type="text" name="examineeId" required></label>
+            <label>姓<span class="req">*</span><input type="text" name="lastName" required></label>
+            <label>名<span class="req">*</span><input type="text" name="firstName" required></label>
+            <label>姓（フリガナ）<input type="text" name="lastKana"></label>
+            <label>名（フリガナ）<input type="text" name="firstKana"></label>
+            <label>性別<select name="gender"><option value="">選択しない</option><option>男性</option><option>女性</option><option>その他</option></select></label>
+            <label>学部<span class="req">*</span><select name="faculty" id="resume-faculty" required></select></label>
+            <label>学科<select name="department" id="resume-department"></select></label>
+            <label>学年<select name="grade">
+              <option value="">選択しない</option>
+              <option>1年</option><option>2年</option><option>3年</option><option>4年</option>
+              <option>修士1年(M1)</option><option>修士2年(M2)</option>
+              <option>その他</option>
+            </select></label>
           </div>
         </div>
 
