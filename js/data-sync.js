@@ -228,6 +228,26 @@ const DataSync = (() => {
       deleteSession(id);
       return origRemoveSession.call(Storage, id);
     };
+    // フェーズ開閉・スケジュール・PIN/PW 再発行も漏れなく同期
+    ['setPhase', 'setPhaseSchedule', 'regeneratePin'].forEach(fn => {
+      const orig = Storage[fn];
+      if (!orig) return;
+      Storage[fn] = function (sessionId, ...rest) {
+        const ret = orig.call(Storage, sessionId, ...rest);
+        const s = Storage.loadSessions().find(x => x.id === sessionId);
+        if (s) pushSession(s);
+        return ret;
+      };
+    });
+    const origRegenPw = Storage.regenerateCandidatePassword;
+    if (origRegenPw) {
+      Storage.regenerateCandidatePassword = function (candId) {
+        const ret = origRegenPw.call(Storage, candId);
+        const c = Storage.load().find(x => x.id === candId);
+        if (c) pushCandidate(c);
+        return ret;
+      };
+    }
   }
 
   function init() {
