@@ -2719,35 +2719,38 @@ const App = (() => {
   }
 
   // --- Template generators ---
+  // 日本語ラベル → 内部キーの対応（履歴書）
+  const RESUME_LABEL_TO_KEY = {
+    '受験番号': 'examineeId', '姓': 'lastName', '名': 'firstName',
+    '姓フリガナ': 'lastKana', '名フリガナ': 'firstKana',
+    '性別': 'gender', 'メールアドレス': 'email', '電話番号': 'phone',
+    '学部': 'faculty', '学科': 'department', '学年': 'grade',
+    '生年月日': 'birthdate', 'GPA': 'gpa', 'サークル': 'club',
+    '志望動機': 'motivation', '自己PR': 'selfPr', '研究テーマ': 'researchTopic',
+    '取得資格': 'qualifications'
+  };
+
   function downloadResumeTemplate() {
-    // 必須・よく使う列のみ。任意項目は除外（必要なら個別画面で追加可能）
-    const headers = [
-      'examineeId', 'lastName', 'firstName', 'lastKana', 'firstKana',
-      'gender', 'email', 'phone', 'faculty', 'department', 'grade'
-    ];
-    const sample = [
-      'Z2026001', '佐藤', '太郎', 'サトウ', 'タロウ',
-      '男性', 'sato@example.com', '090-1234-5678',
-      '商学部', '商学科', '2年'
-    ];
+    const headers = ['受験番号', '姓', '名', '姓フリガナ', '名フリガナ', '性別', 'メールアドレス', '電話番号', '学部', '学科', '学年'];
+    const sample  = ['Z2026001', '佐藤', '太郎', 'サトウ', 'タロウ', '男性', 'sato@example.com', '090-1234-5678', '商学部', '商学科', '2年'];
     downloadCsv(`履歴書テンプレート_${todayStr()}.csv`, [headers, sample]);
   }
 
   function downloadAcademicTemplate() {
     const sess = ensureTests(getSession());
     const qs = sess.academicTest.questions;
-    // ヘッダー行のみ（コメント行は廃止 — Excelで混乱の元になるため）
-    const idRow = ['examineeId', ...qs.map(q => q.id)];
-    const sample = ['Z2026001', ...qs.map(q => String(q.correctIndex + 1))];
-    downloadCsv(`学力試験テンプレート_${todayStr()}.csv`, [idRow, sample]);
+    // 人間が読める日本語ヘッダー（問1, 問2, ...）。パーサーは位置で照合
+    const headers = ['受験番号', ...qs.map((q, i) => `問${i + 1}${q.category ? `(${q.category})` : ''}`)];
+    const sample  = ['Z2026001', ...qs.map(q => String(q.correctIndex + 1))];
+    downloadCsv(`学力試験テンプレート_${todayStr()}.csv`, [headers, sample]);
   }
 
   function downloadSurveyTemplate() {
     const sess = ensureTests(getSession());
     const qs = sess.surveyTest.questions;
-    const idRow = ['examineeId', ...qs.map(q => q.id), 'freeAchievement', 'freeAspiration'];
-    const sample = ['Z2026001', ...qs.map(() => '4'), '学園祭実行委員', '実データを使った研究'];
-    downloadCsv(`アンケートテンプレート_${todayStr()}.csv`, [idRow, sample]);
+    const headers = ['受験番号', ...qs.map((_, i) => `項目${i + 1}`), '力を入れた活動', '挑戦したいこと'];
+    const sample  = ['Z2026001', ...qs.map(() => '4'), '学園祭実行委員', '実データを使った研究'];
+    downloadCsv(`アンケートテンプレート_${todayStr()}.csv`, [headers, sample]);
   }
 
   function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -2761,10 +2764,12 @@ const App = (() => {
       if (rows.length < 2) { alert('データ行が見つかりません。'); return; }
       const headers = rows[0].map(h => h.trim());
       let added = 0, updated = 0;
+      // ヘッダーを内部キーに変換（日本語ラベル → key、未知のラベルはそのまま使用）
+      const keyHeaders = headers.map(h => RESUME_LABEL_TO_KEY[h] || h);
       rows.slice(1).forEach(r => {
         const obj = {};
         // 空欄は既存データを上書きしない（CSVは部分更新として動作）
-        headers.forEach((h, i) => { const v = (r[i] ?? '').trim(); if (v !== '') obj[h] = v; });
+        keyHeaders.forEach((h, i) => { const v = (r[i] ?? '').trim(); if (v !== '') obj[h] = v; });
         if (!obj.examineeId) return;
         if (obj.gpa) obj.gpa = Number(obj.gpa);
         if (obj.qualifications) obj.qualifications = obj.qualifications.split(/[、,]/).map(s => s.trim()).filter(Boolean);
@@ -2784,19 +2789,27 @@ const App = (() => {
       const rows = parseCsv(text.replace(/^﻿/, ''));
       while (rows.length && rows[0][0] && rows[0][0].startsWith('#')) rows.shift();
       if (rows.length < 2) { alert('データ行が見つかりません。'); return; }
+      // 位置ベース: 1列目=受験番号, 2列目以降=問1, 問2, ... (session の問題順)
+      // 後方互換: ヘッダーが q_xxx 形式なら従来通りキー照合も試す
       const headers = rows[0].map(h => h.trim());
-      const qIds = headers.slice(1);
+      const qIds = sess.academicTest.questions.map(q => q.id);
+      const usingLegacyKeys = headers.slice(1).every(h => qIds.includes(h));
       let imported = 0, skipped = 0;
       rows.slice(1).forEach(r => {
         const examineeId = (r[0] || '').trim();
         if (!examineeId) return;
         const answers = {};
-        qIds.forEach((qid, i) => {
-          const v = (r[i + 1] || '').trim();
-          if (!v) return;
-          const idx = Number(v) - 1; // user enters 1-based
-          if (idx >= 0) answers[qid] = idx;
-        });
+        if (usingLegacyKeys) {
+          headers.slice(1).forEach((qid, i) => {
+            const v = (r[i + 1] || '').trim(); if (!v) return;
+            const idx = Number(v) - 1; if (idx >= 0) answers[qid] = idx;
+          });
+        } else {
+          qIds.forEach((qid, i) => {
+            const v = (r[i + 1] || '').trim(); if (!v) return;
+            const idx = Number(v) - 1; if (idx >= 0) answers[qid] = idx;
+          });
+        }
         if (Object.keys(answers).length === 0) { skipped++; return; }
         const result = Stats.scoreAcademic({ academicAnswers: answers }, sess.academicTest);
         Storage.upsert({ examineeId, academicAnswers: answers, academicScore: result, academicSubmittedAt: new Date().toISOString() });
@@ -2815,23 +2828,29 @@ const App = (() => {
       if (rows.length < 2) { alert('データ行が見つかりません。'); return; }
       const headers = rows[0].map(h => h.trim());
       const qIds = sess.surveyTest.questions.map(q => q.id);
+      // 位置ベース: 1列目=受験番号, 2〜=各項目, 末尾2列=自由記述
+      // 後方互換: ヘッダーが q_xxx 形式ならキー照合
+      const usingLegacyKeys = headers.slice(1).some(h => qIds.includes(h) || h === 'freeAchievement' || h === 'freeAspiration');
       let imported = 0;
       rows.slice(1).forEach(r => {
         const examineeId = (r[0] || '').trim();
         if (!examineeId) return;
         const answers = {};
-        qIds.forEach(qid => {
-          const idx = headers.indexOf(qid);
-          if (idx >= 0) {
-            const v = Number(r[idx]);
-            if (!isNaN(v)) answers[qid] = v;
-          }
-        });
-        const freeIdx1 = headers.indexOf('freeAchievement');
-        const freeIdx2 = headers.indexOf('freeAspiration');
         const payload = { examineeId, surveyAnswers: answers, surveySubmittedAt: new Date().toISOString() };
-        if (freeIdx1 >= 0) payload.freeAchievement = r[freeIdx1] || '';
-        if (freeIdx2 >= 0) payload.freeAspiration = r[freeIdx2] || '';
+        if (usingLegacyKeys) {
+          qIds.forEach(qid => {
+            const idx = headers.indexOf(qid);
+            if (idx >= 0) { const v = Number(r[idx]); if (!isNaN(v)) answers[qid] = v; }
+          });
+          const freeIdx1 = headers.indexOf('freeAchievement');
+          const freeIdx2 = headers.indexOf('freeAspiration');
+          if (freeIdx1 >= 0) payload.freeAchievement = r[freeIdx1] || '';
+          if (freeIdx2 >= 0) payload.freeAspiration = r[freeIdx2] || '';
+        } else {
+          qIds.forEach((qid, i) => { const v = Number(r[i + 1]); if (!isNaN(v)) answers[qid] = v; });
+          payload.freeAchievement = r[qIds.length + 1] || '';
+          payload.freeAspiration = r[qIds.length + 2] || '';
+        }
         Storage.upsert(payload);
         imported++;
       });

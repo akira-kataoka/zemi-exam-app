@@ -640,7 +640,7 @@
           <details style="font-size:11px;margin:6px 0">
             <summary style="cursor:pointer;color:var(--muted)">テンプレート内容を見る</summary>
             <div style="margin-top:4px;padding:6px;background:#f8fafc;border-radius:4px;line-height:1.4">
-              <strong>11列のみ（必須項目）</strong>: examineeId, lastName, firstName, lastKana, firstKana, gender, email, phone, faculty, department, grade<br>
+              <strong>11列（日本語ヘッダー）</strong>: 受験番号, 姓, 名, 姓フリガナ, 名フリガナ, 性別, メールアドレス, 電話番号, 学部, 学科, 学年<br>
               ※サンプル1行が入っているので削除して書き換えてください<br>
               ※志望動機・GPA等の詳細項目は個別画面で追加可能
             </div>
@@ -654,9 +654,9 @@
           <details style="font-size:11px;margin:6px 0">
             <summary style="cursor:pointer;color:var(--muted)">テンプレート内容を見る</summary>
             <div style="margin-top:4px;padding:6px;background:#f8fafc;border-radius:4px;line-height:1.4">
-              1行目: <code>examineeId, q_a1, q_a2 ...</code> ← <strong>ヘッダー（消さない）</strong><br>
+              1行目: <code>受験番号, 問1, 問2, ...</code> ← <strong>ヘッダー（消さない）</strong><br>
               2行目以降: 受験番号と各問題の<strong>選択番号 (1〜)</strong> を入力<br>
-              ※現在の試験回の問題セットに基づいて生成されます<br>
+              ※カラム順は <strong>設定 → 学力試験</strong> の問題順と一致<br>
               ※問題文と正解の確認は <strong>設定 → 学力試験</strong> の問題編集画面で
             </div>
           </details>
@@ -669,9 +669,9 @@
           <details style="font-size:11px;margin:6px 0">
             <summary style="cursor:pointer;color:var(--muted)">テンプレート内容を見る</summary>
             <div style="margin-top:4px;padding:6px;background:#f8fafc;border-radius:4px;line-height:1.4">
-              1行目: <code>examineeId, q_s1, q_s2 ..., freeAchievement, freeAspiration</code> ← <strong>ヘッダー</strong><br>
+              1行目: <code>受験番号, 項目1, 項目2, ..., 力を入れた活動, 挑戦したいこと</code> ← <strong>ヘッダー</strong><br>
               2行目以降: 受験番号と各項目の <strong>1〜5の数値</strong> + 自由記述<br>
-              ※現在の試験回の項目セットに基づいて生成されます<br>
+              ※カラム順は <strong>設定 → アンケート</strong> の項目順と一致<br>
               ※質問文の確認は <strong>設定 → アンケート</strong> の編集画面で
             </div>
           </details>
