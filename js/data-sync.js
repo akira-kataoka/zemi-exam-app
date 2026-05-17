@@ -248,7 +248,7 @@ const DataSync = (() => {
         return ret;
       };
     }
-    // Storage.save(list) 直接呼び出し (合格チェック・面接記録編集等) も差分push
+    // Storage.save(list) 直接呼び出し (合格チェック・面接記録編集等) も差分push/delete
     const origSave = Storage.save;
     let _prevSnap = JSON.stringify(Storage.load());
     Storage.save = function (list) {
@@ -257,7 +257,10 @@ const DataSync = (() => {
       try {
         const prev = JSON.parse(_prevSnap);
         const prevById = new Map(prev.map(c => [c.id, JSON.stringify(c)]));
+        const newIds = new Set(list.map(c => c.id));
         list.forEach(c => { if (prevById.get(c.id) !== JSON.stringify(c)) pushCandidate(c); });
+        // 削除(clearAll/remove経由)も同期
+        prev.forEach(c => { if (!newIds.has(c.id)) deleteCandidate(c.id); });
       } catch (e) { /* noop */ }
       _prevSnap = JSON.stringify(list);
       return ret;
