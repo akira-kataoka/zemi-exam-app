@@ -1036,8 +1036,8 @@ const App = (() => {
       updateProfileTriggerLabel('');
       const list = Storage.loadForSession();
       $('#profile-body').innerHTML = list.length === 0
-        ? '<div class="card" style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px">👤</div><p>受験者がまだ登録されていません。</p><p style="font-size:12px">設定 → データから「デモデータを投入」または、受験申込URLを配布してください。</p></div>'
-        : `<div class="card" style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:48px">🔍</div><p>上部の「-- 受験者を選択 --」ボタンから ${list.length}名 の中から受験者を選んでください。</p></div>`;
+        ? '<div class="empty-state"><div class="empty-icon">👤</div><p>受験者がまだ登録されていません。</p><p style="font-size:12px">設定 → データから「デモデータを投入」、または受験申込URLを配布してください。</p></div>'
+        : `<div class="empty-state"><div class="empty-icon">🔍</div><p>上部の「-- 受験者を選択 --」ボタンから ${list.length}名 の中から受験者を選んでください。</p></div>`;
     }
   }
 
