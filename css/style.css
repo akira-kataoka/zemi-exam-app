@@ -707,7 +707,7 @@ body.candidate-mode .brand .sub{display:none}
 @media print{
   @page{size:A4;margin:14mm 12mm}
   /* Hide all chrome */
-  .topbar,.toolbar,.tabs,.subtabs,.form-actions,.btn,.portal-cards,.portal-form,#toast-container,.modal-overlay,.session-bar,.admintabs,.adminsubtab,.profile-nav,.app-footer,#autosave-indicator,.empty-cta,#empty-cta,.help-modal,.tab-help,.help-tabs{display:none !important}
+  .topbar,.toolbar,.tabs,.subtabs,.form-actions,.btn,.portal-cards,.portal-form,#toast-container,.modal-overlay,.session-bar,.admintabs,.adminsubtab,.profile-nav,.app-footer,#autosave-indicator,.empty-cta,#empty-cta,.empty-state,.help-modal,.tab-help,.help-tabs{display:none !important}
   body{background:#fff;color:#000;font-size:11pt;line-height:1.5}
   main{padding:0;max-width:100%}
   /* Card styling for print */
