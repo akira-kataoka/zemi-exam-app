@@ -34,8 +34,9 @@
     <button class="btn danger icon-btn" id="session-delete" title="この試験回を削除">🗑</button>
     <select id="session-select" class="session-switch-hidden" hidden></select>
     <span class="phase-status">受付:
+      <span class="phase-pill" data-phase="application">申込: <span data-phase-state="application">-</span></span>
       <span class="phase-pill" data-phase="resume">履歴書: <span data-phase-state="resume">-</span></span>
-      <span class="phase-pill" data-phase="academic">学力試験: <span data-phase-state="academic">-</span></span>
+      <span class="phase-pill" data-phase="academic">学力: <span data-phase-state="academic">-</span></span>
       <span class="phase-pill" data-phase="survey">アンケート: <span data-phase-state="survey">-</span></span>
     </span>
     <span class="session-meta" id="session-meta"></span>
@@ -61,6 +62,7 @@
     <div class="stats-group">
       <div class="stats-group-title">📥 提出状況（クリックで詳細）</div>
       <div class="cards">
+        <div class="card stat clickable" data-quick-filter="application"><span class="k">📝 受験申込 済/全</span><span class="v" id="stat-application">-</span></div>
         <div class="card stat clickable" data-quick-filter="resume"><span class="k">📄 履歴書 済/全</span><span class="v" id="stat-resume">-</span></div>
         <div class="card stat clickable" data-quick-filter="academic"><span class="k">📚 学力試験 済/全</span><span class="v" id="stat-academic">-</span></div>
         <div class="card stat clickable" data-quick-filter="survey"><span class="k">📋 アンケート 済/全</span><span class="v" id="stat-survey">-</span></div>
@@ -200,6 +202,27 @@
     </div>
 
     <div class="portal-cards" id="portal-cards"></div>
+
+    <section class="portal-form" id="portal-application" style="display:none">
+      <h3>📝 受験申込</h3>
+      <form id="form-application" autocomplete="off">
+        <p class="hint">最低限の情報をご入力ください。後日、専用URL・パスワードをお送りし、本格的な書類提出（履歴書・学力試験・アンケート）の案内をいたします。</p>
+        <div class="form-grid">
+          <label>姓<span class="req">*</span><input type="text" name="lastName" required></label>
+          <label>名<span class="req">*</span><input type="text" name="firstName" required></label>
+          <label>姓（フリガナ）<input type="text" name="lastKana"></label>
+          <label>名（フリガナ）<input type="text" name="firstKana"></label>
+          <label>メールアドレス<span class="req">*</span><input type="email" name="email" required></label>
+          <label>電話番号<span class="req">*</span><input type="tel" name="phone" required></label>
+          <label>学部<span class="req">*</span><select name="faculty" id="app-faculty" required></select></label>
+          <label>学科<select name="department" id="app-department"></select></label>
+        </div>
+        <div class="form-actions">
+          <span></span>
+          <button type="submit" class="btn primary">申込する</button>
+        </div>
+      </form>
+    </section>
 
     <section class="portal-form" id="portal-resume" style="display:none">
       <h3>📄 履歴書記入</h3>
@@ -425,6 +448,13 @@
       <div class="schedule-table">
         <div class="schedule-row schedule-head">
           <div>フェーズ</div><div>手動</div><div>開始日時</div><div>終了日時</div><div>状態</div>
+        </div>
+        <div class="schedule-row" data-phase="application">
+          <div class="phase-name">📝 受験申込</div>
+          <div><label class="switch"><input type="checkbox" data-phase-toggle="application"><span class="slider"></span></label></div>
+          <div><input type="datetime-local" data-phase-start="application"></div>
+          <div><input type="datetime-local" data-phase-end="application"></div>
+          <div class="phase-status-cell" data-phase-status="application">-</div>
         </div>
         <div class="schedule-row" data-phase="resume">
           <div class="phase-name">📄 履歴書</div>

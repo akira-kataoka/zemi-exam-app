@@ -5,7 +5,7 @@ const Storage = (() => {
   const KEY_SESS = 'zemiSA.sessions.v1';
   const KEY_CUR  = 'zemiSA.currentSession.v1';
   const DEFAULT_SESSION_ID = 's_default';
-  const defaultPhases = { resume: true, academic: false, survey: false };
+  const defaultPhases = { application: true, resume: true, academic: false, survey: false };
   const defaultCfg = { weightAcademic: 70, weightSurvey: 30 };
 
   // ---- Sessions ----

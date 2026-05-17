@@ -129,7 +129,8 @@ const Stats = (() => {
   }
 
   // Per-phase completion
-  function hasResume(c) { return !!(c && (c.lastName || c.firstName || c.name)); }
+  function hasApplication(c) { return !!(c && c.applicationSubmittedAt); }
+  function hasResume(c) { return !!(c && c.resumeSubmittedAt); }
   function hasAcademic(c) { return !!(c && c.academicSubmittedAt); }
   function hasSurvey(c)   { return !!(c && c.surveySubmittedAt); }
   function hasInterview(c){ return !!(c && c.interview && c.interview.heldAt); }
@@ -149,7 +150,7 @@ const Stats = (() => {
   return {
     scoreAcademic, surveyAvg, surveyScore100, totalScore,
     radarData, surveyVector, featureVector,
-    hasResume, hasAcademic, hasSurvey, hasInterview, interviewAvg,
+    hasApplication, hasResume, hasAcademic, hasSurvey, hasInterview, interviewAvg,
     DEFAULT_ACADEMIC_CATEGORIES, DEFAULT_ACADEMIC_QUESTIONS, DEFAULT_SURVEY_QUESTIONS, DEFAULT_FACULTY_DEPT, INTERVIEW_RATINGS
   };
 })();

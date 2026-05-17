@@ -5,7 +5,7 @@ const App = (() => {
 
   let cfg = Storage.loadCfg();
   const charts = {};
-  const PHASE_LABEL = { resume: '履歴書', academic: '学力試験', survey: 'アンケート', interview: '面接' };
+  const PHASE_LABEL = { application: '受験申込', resume: '履歴書', academic: '学力試験', survey: 'アンケート', interview: '面接' };
 
   // ===== UI state persistence (active tab / subview / profile / filters / sort) =====
   const UI_KEY = 'zemiSA.uiState.v1';
@@ -79,7 +79,10 @@ const App = (() => {
     if (!sess.resumeExtraFields) { sess.resumeExtraFields = []; changed = true; }
     if (!sess.facultyDept) { sess.facultyDept = JSON.parse(JSON.stringify(Stats.DEFAULT_FACULTY_DEPT)); changed = true; }
     if (!sess.pin) { sess.pin = Storage.generatePin(); changed = true; }
-    if (!sess.phaseSchedule) { sess.phaseSchedule = { resume:{startsAt:null,endsAt:null}, academic:{startsAt:null,endsAt:null}, survey:{startsAt:null,endsAt:null} }; changed = true; }
+    if (!sess.phaseSchedule) { sess.phaseSchedule = { application:{startsAt:null,endsAt:null}, resume:{startsAt:null,endsAt:null}, academic:{startsAt:null,endsAt:null}, survey:{startsAt:null,endsAt:null} }; changed = true; }
+    if (sess.phaseSchedule && !sess.phaseSchedule.application) { sess.phaseSchedule.application = {startsAt:null,endsAt:null}; changed = true; }
+    // Migrate sessions created before application phase
+    if (sess.phases && sess.phases.application === undefined) { sess.phases.application = true; changed = true; }
     if (!sess.messageTemplate) {
       sess.messageTemplate = `{{name}}さん
 
@@ -136,8 +139,9 @@ const App = (() => {
     if (nameInput && document.activeElement !== nameInput) nameInput.value = sess.name;
     const list = Storage.loadForSession();
     $('#session-meta').textContent = `${list.length}名 / 作成 ${formatDate(sess.createdAt)}`;
-    ['resume', 'academic', 'survey'].forEach(p => {
+    ['application', 'resume', 'academic', 'survey'].forEach(p => {
       const el = document.querySelector(`[data-phase-state="${p}"]`);
+      if (!el) return;
       const open = Storage.isPhaseOpen(sess, p);
       el.textContent = open ? '受付中' : '停止';
       el.parentElement.classList.toggle('open', open);
@@ -289,11 +293,13 @@ const App = (() => {
     const sess = ensureTests(getSession());
     const list = Storage.loadForSession();
     const N = list.length;
+    const nApp = list.filter(c => Stats.hasApplication(c)).length;
     const nR = list.filter(c => Stats.hasResume(c)).length;
     const nA = list.filter(c => Stats.hasAcademic(c)).length;
     const nS = list.filter(c => Stats.hasSurvey(c)).length;
     const nI = list.filter(c => Stats.hasInterview(c)).length;
     $('#stat-count').textContent = N;
+    if ($('#stat-application')) $('#stat-application').textContent = `${nApp} / ${N}`;
     $('#stat-resume').textContent    = `${nR} / ${N}`;
     $('#stat-academic').textContent  = `${nA} / ${N}`;
     $('#stat-survey').textContent    = `${nS} / ${N}`;
@@ -312,8 +318,9 @@ const App = (() => {
   function openSubmissionModal(phase) {
     const list = Storage.loadForSession();
     const phaseLabel = PHASE_LABEL[phase] || phase;
-    const hasFn   = { resume: Stats.hasResume, academic: Stats.hasAcademic, survey: Stats.hasSurvey, interview: Stats.hasInterview }[phase];
-    const tsField = { resume: 'resumeSubmittedAt', academic: 'academicSubmittedAt', survey: 'surveySubmittedAt', interview: '_interviewHeldAt' }[phase];
+    const hasFn   = { application: Stats.hasApplication, resume: Stats.hasResume, academic: Stats.hasAcademic, survey: Stats.hasSurvey, interview: Stats.hasInterview }[phase];
+    if (!hasFn) { alert('不明なフェーズ: ' + phase); return; }
+    const tsField = { application: 'applicationSubmittedAt', resume: 'resumeSubmittedAt', academic: 'academicSubmittedAt', survey: 'surveySubmittedAt', interview: '_interviewHeldAt' }[phase];
     // Map interview timestamp for sort purposes
     if (phase === 'interview') list.forEach(c => { c._interviewHeldAt = c.interview?.heldAt; });
     const submitted   = list.filter(c => hasFn(c));
@@ -1108,6 +1115,16 @@ const App = (() => {
       examineeId = (idInput.value || '').trim();
       cand = examineeId ? Storage.findByExamineeId(sess.id, examineeId) : null;
       if (idRow) idRow.style.display = 'none';
+      // 申込ポータル（公開URL）の場合は名前なし
+      const params = new URLSearchParams(location.search);
+      if (params.get('phase') === 'application') {
+        if (introP) introP.textContent = '受験申込フォームです。下記の項目をご入力ください。';
+        portalCards.innerHTML = '';
+        $('#portal-status').textContent = '';
+        // フォームを直接開く
+        openPortalForm('application');
+        return;
+      }
       if (introP) introP.textContent = `${cand ? fullName(cand) + ' さん用の' : ''}受験ページです。受付中の試験をクリックしてご回答ください。`;
     } else {
       // 管理者モード: 検索は許可しない（プライバシー）
@@ -1150,10 +1167,28 @@ const App = (() => {
 
   function openPortalForm(phase) {
     const sess = ensureTests(getSession());
-    ['portal-resume', 'portal-academic', 'portal-survey'].forEach(id => $('#' + id).style.display = 'none');
+    ['portal-application', 'portal-resume', 'portal-academic', 'portal-survey'].forEach(id => { const el = $('#' + id); if (el) el.style.display = 'none'; });
     const idInput = $('#portal-examinee-id');
     const examineeId = (idInput.value || '').trim();
     const cand = Storage.findByExamineeId(sess.id, examineeId);
+
+    if (phase === 'application') {
+      const sec = $('#portal-application');
+      sec.style.display = 'block';
+      // 学部・学科セレクトを充填（カスケード）
+      const fSel = sec.querySelector('select[name="faculty"]');
+      const dSel = sec.querySelector('select[name="department"]');
+      fSel.innerHTML = '<option value="">-- 学部を選択 --</option>' + (sess.facultyDept || []).map(f => `<option value="${escapeHtml(f.name)}">${escapeHtml(f.name)}</option>`).join('');
+      function updateDepts() {
+        const f = (sess.facultyDept || []).find(x => x.name === fSel.value);
+        const depts = f?.departments || [];
+        dSel.innerHTML = '<option value="">-- 学科を選択 --</option>' + depts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+      }
+      updateDepts();
+      fSel.addEventListener('change', updateDepts);
+      sec.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
 
     if (phase === 'resume') {
       $('#portal-resume').style.display = 'block';
@@ -1326,6 +1361,48 @@ const App = (() => {
     }
     updateDepartments();
     fSel.addEventListener('change', updateDepartments);
+  }
+
+  function nextExamineeId(sessionId) {
+    const list = Storage.loadForSession(sessionId);
+    const year = new Date().getFullYear();
+    const prefix = 'Z' + year;
+    const existing = list.map(c => c.examineeId)
+      .filter(id => id && id.startsWith(prefix))
+      .map(id => parseInt(id.slice(prefix.length), 10))
+      .filter(n => !isNaN(n));
+    const next = (existing.length ? Math.max(...existing) : 0) + 1;
+    return prefix + String(next).padStart(3, '0');
+  }
+
+  function submitApplication(e) {
+    e.preventDefault();
+    const sess = ensureTests(getSession());
+    if (!Storage.isPhaseOpen(sess, 'application')) { alert('受験申込の受付期間外です。'); return; }
+    const form = e.target;
+    const fd = new FormData(form);
+    const data = {};
+    fd.forEach((v, k) => data[k] = v);
+    // メアド重複チェック
+    const existing = Storage.loadForSession(sess.id).find(c => c.email && c.email === data.email);
+    if (existing) {
+      alert('このメールアドレスは既に申込済みです。重複の場合は事務局までご連絡ください。');
+      return;
+    }
+    data.examineeId = nextExamineeId(sess.id);
+    data.applicationSubmittedAt = new Date().toISOString();
+    const saved = Storage.upsert(data);
+    form.reset();
+    // 完了画面
+    document.getElementById('portal-application').innerHTML = `
+      <div class="card" style="background:#dcfce7;border-color:#86efac;text-align:center;padding:30px">
+        <h2 style="color:#166534">✅ 受験申込を受け付けました</h2>
+        <p>${escapeHtml(saved.lastName)} ${escapeHtml(saved.firstName)} 様</p>
+        <p>あなたの受験番号は <strong style="font-size:24px;color:var(--primary);font-family:monospace">${escapeHtml(saved.examineeId)}</strong> です。</p>
+        <p class="muted" style="font-size:13px">後日、メールアドレス <strong>${escapeHtml(saved.email)}</strong> 宛に専用URL・パスワードをお送りし、履歴書／学力試験／アンケートの提出をご案内します。</p>
+        <p class="muted" style="font-size:12px;margin-top:20px">このページは閉じていただいて構いません。</p>
+      </div>
+    `;
   }
 
   function submitResume(e) {
@@ -1912,10 +1989,37 @@ const App = (() => {
     if (exist) exist.remove();
     const section = document.createElement('div');
     section.className = 'card share-section';
-    section.innerHTML = `
-      <p class="hint" style="margin:0">🔗 受験者ごとのアクセスURL・パスワード・配布用メッセージは <strong>管理 → 履歴書</strong> タブの「📨 配布メッセージ」セクションで生成・コピーできます。</p>
-    `;
-    container.insertBefore(section, container.firstChild);
+    if (phase === 'resume') {
+      // 履歴書タブ: 受験申込URL（誰でも開ける公開URL）をQR付きで表示
+      const url = buildPhaseUrl('application');
+      section.innerHTML = `
+        <h3>🌐 受験申込ポータル（公開URL）</h3>
+        <p class="hint">この URL は <strong>誰でもアクセス可能</strong>な公開申込ページです。学内ポスター・SNS・告知ページに掲載してください。</p>
+        <div class="share-grid">
+          <div class="share-card">
+            <h4>📝 受験申込フォーム</h4>
+            <div class="share-url">${escapeHtml(url)}</div>
+            <div class="share-actions">
+              <button class="btn" data-copy-app>URLをコピー</button>
+              <a class="btn" href="${escapeHtml(url)}" target="_blank">プレビュー</a>
+            </div>
+            <div class="qr-area" id="qr-application"></div>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:14px">💡 申込後に届く <strong>受験者ごとの個別URL（履歴書・学力・アンケート）</strong>は下記「📨 配布メッセージ」から生成・送信してください。</p>
+      `;
+      container.insertBefore(section, container.firstChild);
+      const qr = qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      document.getElementById('qr-application').innerHTML = qr.createImgTag(4, 8);
+      section.querySelector('[data-copy-app]').addEventListener('click', () => {
+        navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました'));
+      });
+    } else {
+      section.innerHTML = `<p class="hint" style="margin:0">🔗 受験者ごとのアクセスURL・パスワード・配布用メッセージは <strong>管理 → 履歴書</strong> タブの「📨 配布メッセージ」セクションで生成・コピーできます。</p>`;
+      container.insertBefore(section, container.firstChild);
+    }
   }
 
   // ===== URL routing (candidate mode) =====
@@ -1930,6 +2034,10 @@ const App = (() => {
     const sessions = Storage.loadSessions();
     const sess = sessions.find(s => s.id === sid);
     if (!sess) { alert('指定された試験回が見つかりません。'); return false; }
+    // 'application' phase is open (no auth needed) — anyone can apply
+    if (phase === 'application') {
+      // pass through
+    } else
     // Per-candidate password check (preferred). Fallback to legacy session-wide PIN.
     if (idParam && pwdParam) {
       const cand = Storage.findByExamineeId(sid, idParam);
@@ -2416,6 +2524,7 @@ const App = (() => {
     // Portal
     $('#portal-load').addEventListener('click', renderPortal);
     $('#portal-examinee-id').addEventListener('change', renderPortal);
+    $('#form-application').addEventListener('submit', submitApplication);
     $('#form-resume').addEventListener('submit', submitResume);
     // Photo upload
     document.getElementById('photo-input').addEventListener('change', e => {
