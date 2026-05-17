@@ -632,11 +632,40 @@ body.candidate-mode .brand .sub{display:none}
 }
 
 @media print{
-  .topbar,.toolbar,.tabs,.subtabs,.form-actions,.btn,.portal-cards,.portal-form,#toast-container,.modal-overlay,.session-bar,.admintabs,.adminsubtab{display:none !important}
-  body{background:#fff}
+  @page{size:A4;margin:14mm 12mm}
+  /* Hide all chrome */
+  .topbar,.toolbar,.tabs,.subtabs,.form-actions,.btn,.portal-cards,.portal-form,#toast-container,.modal-overlay,.session-bar,.admintabs,.adminsubtab,.profile-nav,.app-footer,#autosave-indicator,.empty-cta,#empty-cta,.help-modal,.tab-help,.help-tabs{display:none !important}
+  body{background:#fff;color:#000;font-size:11pt;line-height:1.5}
   main{padding:0;max-width:100%}
-  .profile-card,.card{box-shadow:none;break-inside:avoid;page-break-inside:avoid;border:1px solid #ccc}
-  .profile-name{font-size:24px}
-  .avatar-lg{width:80px;height:80px}
-  canvas{max-width:100% !important;height:auto !important}
+  /* Card styling for print */
+  .profile-card,.card{box-shadow:none;break-inside:avoid;page-break-inside:avoid;border:1px solid #999;margin:0 0 10mm;padding:6mm;background:#fff}
+  .profile-card h3,.card h3{font-size:14pt;margin:0 0 4mm;padding-bottom:2mm;border-bottom:1.5px solid #333;color:#000}
+  .profile-card h4{font-size:11pt;margin:3mm 0 1mm;color:#000}
+  /* Profile head */
+  .profile-head{display:flex !important;justify-content:space-between;align-items:flex-start;gap:6mm;padding-bottom:4mm;border-bottom:1px solid #ccc}
+  .profile-name{font-size:20pt;font-weight:700;color:#000;margin:0}
+  .profile-meta{font-size:10pt;color:#333}
+  .avatar-lg{width:80px;height:80px;border:1px solid #999}
+  /* Score badges as plain text in print */
+  .score-badge{background:#fff !important;color:#000 !important;border:1px solid #333;padding:2mm 4mm;font-size:11pt}
+  /* Submissions chips simplified */
+  .profile-submissions{display:flex;flex-wrap:wrap;gap:2mm}
+  .ps-item{background:#fff !important;color:#000 !important;border:1px solid #999;padding:1.5mm 3mm;font-size:9pt}
+  /* Charts: keep but contain */
+  canvas{max-width:100% !important;height:auto !important;max-height:90mm}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:4mm}
+  /* Tables for print */
+  .data-table{border-collapse:collapse;font-size:9pt}
+  .data-table th,.data-table td{border:1px solid #ccc;padding:2mm 3mm;background:#fff !important}
+  .data-table th{background:#f5f5f5 !important;font-weight:700;color:#000}
+  /* Pass toggle as text marker */
+  .pass-toggle{background:#fff !important;border:1px solid #333;color:#000 !important}
+  /* Avoid orphan headings */
+  h3,h4{page-break-after:avoid}
+  /* Force section breaks for readability */
+  #sec-resume,#sec-academic,#sec-survey,#sec-interview{page-break-inside:avoid}
+  /* Hide qual chips background, just show text with comma */
+  .qual-chip{background:#fff !important;color:#000 !important;border:1px solid #999;padding:0.5mm 2mm;margin-right:2mm;font-size:9pt}
+  /* Print header */
+  body::before{content:"ゼミ試験アプリケーション — 受験者プロフィール";display:block;text-align:center;font-size:9pt;color:#666;border-bottom:1px solid #ccc;padding-bottom:2mm;margin-bottom:4mm}
 }

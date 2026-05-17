@@ -688,13 +688,6 @@ const App = (() => {
         options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
       });
     }
-    // recent list
-    const wrap = $('#recent-list'); if (wrap) {
-      const recent = [...list].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
-      wrap.innerHTML = recent.length
-        ? recent.map(c => `<div class="row"><div><strong>${escapeHtml(fullName(c))}</strong> <span class="meta">${escapeHtml(c.examineeId || '')} ・ ${escapeHtml(c.university || '')}</span></div><div class="meta">${formatDate(c.createdAt)}</div></div>`).join('')
-        : '<div class="row">まだデータがありません。</div>';
-    }
   }
 
   // ===== Ranking =====
@@ -804,7 +797,10 @@ const App = (() => {
       options: {
         responsive: true,
         plugins: { tooltip: { callbacks: { label: ctx => { const c = list[ctx.raw._idx]; return `${fullName(c)} (${c.examineeId})`; } } } },
-        scales: { x: { title: { display: true, text: 'PC1' } }, y: { title: { display: true, text: 'PC2' } } }
+        scales: {
+          x: { title: { display: true, text: '← 違いの軸1 →' }, ticks: { display: false } },
+          y: { title: { display: true, text: '↑ 違いの軸2 ↓' }, ticks: { display: false } }
+        }
       }
     });
 
@@ -836,7 +832,7 @@ const App = (() => {
     if (heroText) {
       let qualEl = heroText.querySelector('.cluster-quality');
       if (!qualEl) { qualEl = document.createElement('div'); qualEl.className = 'cluster-quality'; heroText.appendChild(qualEl); }
-      qualEl.innerHTML = `<small style="color:var(--muted);font-size:11px">📐 アルゴリズム: K-means++ (20回試行で最良解選択) + 標準化(z-score) + PCA 2次元投影 ・ 慣性 ${clusterInertia.toFixed(2)} ${incompleteCount > 0 ? ` ・ ${incompleteCount}名は片方のみ提出で除外` : ''}</small>`;
+      qualEl.innerHTML = `<small style="color:var(--muted);font-size:11px">⚙ 分析対象: ${list.length}名 (学力試験＋アンケート両方提出済)${incompleteCount > 0 ? ` ・ ${incompleteCount}名は片方未提出のため除外` : ''} ・ <span title="クラスター内の散らばり具合。低いほど各グループがまとまっています。">分類スコア ${clusterInertia.toFixed(1)}</span></small>`;
     }
 
     let charHtml = '<div class="cluster-grid">';
@@ -930,7 +926,7 @@ const App = (() => {
               <input type="checkbox" class="cluster-pass-check" data-id="${m.id}" ${m.passed ? 'checked' : ''}>
               ${m.photo ? `<img class="avatar-sm" src="${m.photo}" alt="" style="width:22px;height:22px">` : '<span class="avatar-sm avatar-blank" style="width:22px;height:22px">👤</span>'}
               <span class="cluster-member-name">${escapeHtml(fullName(m))}</span>
-              <span class="cluster-member-score">${Stats.hasAcademic(m) ? Stats.scoreAcademic(m, sess.academicTest).percent.toFixed(0) + '%' : ''}</span>
+              <span class="cluster-member-score">${Stats.hasAcademic(m) ? Stats.scoreAcademic(m, sess.academicTest).percent.toFixed(1) + '%' : ''}</span>
             </label>
           `).join('')}</div>
         </div>
@@ -1050,7 +1046,7 @@ const App = (() => {
           <div class="pp-meta">${escapeHtml(c.examineeId || '')} ・ ${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')}</div>
           <div class="pp-detail">
             <span class="pp-phases">${phaseDots}</span>
-            <span class="pp-score">学力 <strong>${Stats.hasAcademic(c) ? ac.percent.toFixed(0) + '%' : '—'}</strong></span>
+            <span class="pp-score">学力 <strong>${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '%' : '—'}</strong></span>
           </div>
         </div>
       </div>`;
@@ -1673,7 +1669,7 @@ const App = (() => {
     });
     const result = Stats.scoreAcademic({ academicAnswers: answers }, sess.academicTest);
     Storage.upsert({ examineeId, academicAnswers: answers, academicScore: result, academicSubmittedAt: new Date().toISOString() });
-    alert(`学力試験を提出しました。\n自動採点結果: ${result.total} / ${result.max} (${result.percent.toFixed(1)}%)`);
+    toast(`学力試験を提出しました（自動採点 ${result.total} / ${result.max}点・${result.percent.toFixed(1)}%）`, 'success', 5000);
     $('#portal-academic').style.display = 'none';
     renderPortal();
     renderOverview();
