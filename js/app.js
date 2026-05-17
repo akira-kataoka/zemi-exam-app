@@ -347,6 +347,13 @@ const App = (() => {
     }
     if (name === 'list')    renderCandidateList();
   }
+  function updateTabBadges() {
+    const list = Storage.loadForSession();
+    const overviewTab = document.querySelector('.tab[data-view="overview"]');
+    if (overviewTab && !overviewTab.dataset.label) overviewTab.dataset.label = overviewTab.innerHTML;
+    if (overviewTab) overviewTab.innerHTML = `${overviewTab.dataset.label} <span class="tab-count">${list.length}</span>`;
+  }
+
   function openHelpModal() {
     document.getElementById('help-modal').style.display = 'flex';
     document.getElementById('help-btn').classList.remove('first-visit-pulse');
@@ -374,6 +381,8 @@ const App = (() => {
     $('#stat-max').textContent = acScores.length ? Math.max(...acScores).toFixed(1) + '%' : '—';
     $('#stat-min').textContent = acScores.length ? Math.min(...acScores).toFixed(1) + '%' : '—';
     $('#stat-passed').textContent = list.filter(c => c.passed).length;
+    // Update tab counters
+    updateTabBadges();
     renderEmptyStateBanner(list.length === 0);
     renderCandidateList();
     renderChartView();
@@ -2033,7 +2042,7 @@ const App = (() => {
     });
     document.getElementById('msg-copy-all').addEventListener('click', () => {
       const allTexts = list.map(c => `=== ${fullName(c)} (${c.examineeId}) ===\n${fillTemplate(template, c, sess)}`).join('\n\n---\n\n');
-      navigator.clipboard.writeText(allTexts).then(() => alert('全員分をコピーしました'));
+      navigator.clipboard.writeText(allTexts).then(() => toast('全員分をクリップボードにコピーしました', 'success'));
     });
   }
 
@@ -2258,7 +2267,7 @@ const App = (() => {
         if (!arr.length) throw new Error('候補データがありません');
         if (!confirm(`${arr.length}件のデータをこの試験回に取り込みます。よろしいですか？`)) return;
         arr.forEach(c => { delete c.id; Storage.upsert(c); });
-        alert('取り込みました。');
+        toast('JSONを取り込みました', 'success');
         renderOverview();
       } catch (e) { alert('JSON読み込みに失敗しました: ' + e.message); }
     };
@@ -2375,7 +2384,7 @@ const App = (() => {
         Storage.upsert(obj);
         if (existed) updated++; else added++;
       });
-      alert(`履歴書を取り込みました（新規 ${added}名 / 更新 ${updated}名）`);
+      toast(`履歴書を取り込みました（新規 ${added}名 / 更新 ${updated}名）`, 'success', 4000);
       renderOverview();
     });
   }
@@ -2404,7 +2413,7 @@ const App = (() => {
         Storage.upsert({ examineeId, academicAnswers: answers, academicScore: result, academicSubmittedAt: new Date().toISOString() });
         imported++;
       });
-      alert(`学力試験を取り込みました（${imported}名）` + (skipped ? ` / 空行スキップ ${skipped}名` : ''));
+      toast(`学力試験を取り込みました（${imported}名）` + (skipped ? ` / 空行スキップ ${skipped}名` : ''), 'success', 4000);
       renderOverview();
     });
   }
@@ -2437,7 +2446,7 @@ const App = (() => {
         Storage.upsert(payload);
         imported++;
       });
-      alert(`アンケートを取り込みました（${imported}名）`);
+      toast(`アンケートを取り込みました（${imported}名）`, 'success', 4000);
       renderOverview();
     });
   }
@@ -2555,7 +2564,7 @@ const App = (() => {
     });
     renderSessionBar();
     refreshAllViews();
-    alert(`デモ試験回「${name}」を作成し、20名のデモ受験者を投入しました。`);
+    toast(`デモ試験回「${name}」を作成し、20名投入しました`, 'success', 4000);
   }
 
   // ===== Init =====

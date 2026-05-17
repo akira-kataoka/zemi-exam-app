@@ -50,6 +50,8 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:"
 .tab{appearance:none;border:1px solid var(--border);background:transparent;color:var(--ink);padding:8px 14px;border-radius:999px;font-size:13px;cursor:pointer;transition:.15s}
 .tab:hover{background:#f1f5f9}
 .tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.tab-count{display:inline-block;margin-left:4px;padding:1px 6px;background:rgba(0,0,0,.1);border-radius:999px;font-size:10px;font-weight:700}
+.tab.active .tab-count{background:rgba(255,255,255,.25)}
 
 main{padding:24px;max-width:1280px;margin:0 auto}
 .view{display:none}
@@ -589,6 +591,11 @@ body.candidate-mode .brand .sub{display:none}
 }
 
 @media print{
-  .topbar,.toolbar,.tabs,.subtabs,.form-actions,.btn,.portal-cards,.portal-form{display:none !important}
+  .topbar,.toolbar,.tabs,.subtabs,.form-actions,.btn,.portal-cards,.portal-form,#toast-container,.modal-overlay,.session-bar,.admintabs,.adminsubtab{display:none !important}
   body{background:#fff}
+  main{padding:0;max-width:100%}
+  .profile-card,.card{box-shadow:none;break-inside:avoid;page-break-inside:avoid;border:1px solid #ccc}
+  .profile-name{font-size:24px}
+  .avatar-lg{width:80px;height:80px}
+  canvas{max-width:100% !important;height:auto !important}
 }
