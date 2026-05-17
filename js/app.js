@@ -83,6 +83,7 @@ const App = (() => {
     if (sess.phaseSchedule && !sess.phaseSchedule.application) { sess.phaseSchedule.application = {startsAt:null,endsAt:null}; changed = true; }
     // Migrate sessions created before application phase
     if (sess.phases && sess.phases.application === undefined) { sess.phases.application = true; changed = true; }
+    if (sess.applicationPasscode === undefined) { sess.applicationPasscode = ''; changed = true; }
     if (!sess.messageTemplate) {
       sess.messageTemplate = `{{name}}さん
 
@@ -1583,6 +1584,9 @@ const App = (() => {
     // Load message template
     const msgT = document.getElementById('msg-template');
     if (msgT) msgT.value = sess.messageTemplate || '';
+    // Load application passcode
+    const passInp = document.getElementById('app-passcode');
+    if (passInp) passInp.value = sess.applicationPasscode || '';
     const wrap = $('#resume-fields-list');
     if (!wrap) return;
     wrap.innerHTML = (sess.resumeExtraFields || []).map((f, idx) => `
@@ -1981,8 +1985,10 @@ const App = (() => {
     const sess = getSession();
     const base = location.href.split('?')[0].split('#')[0];
     if (candidate && candidate.password) {
-      // Per-candidate URL with personal password
       return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}&id=${encodeURIComponent(candidate.examineeId)}&pwd=${encodeURIComponent(candidate.password)}`;
+    }
+    if (phase === 'application' && sess.applicationPasscode) {
+      return `${base}?session=${encodeURIComponent(sess.id)}&phase=application&pass=${encodeURIComponent(sess.applicationPasscode)}`;
     }
     return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}`;
   }
@@ -1994,15 +2000,17 @@ const App = (() => {
     const section = document.createElement('div');
     section.className = 'card share-section';
     if (phase === 'resume') {
-      // 履歴書タブ: 受験申込URL（誰でも開ける公開URL）をQR付きで表示
+      const sess = getSession();
       const url = buildPhaseUrl('application');
+      const hasPass = !!sess.applicationPasscode;
       section.innerHTML = `
         <h3>🌐 受験申込ポータル（公開URL）</h3>
-        <p class="hint">この URL は <strong>誰でもアクセス可能</strong>な公開申込ページです。学内ポスター・SNS・告知ページに掲載してください。</p>
+        <p class="hint">${hasPass ? '🔐 <strong>合言葉付き</strong>のURLです。アクセス時に合言葉の入力が求められます。' : '⚠ 現在 <strong>合言葉なし</strong>。誰でもアクセス可能です。「🔐 受験申込の合言葉」で設定できます。'}</p>
         <div class="share-grid">
           <div class="share-card">
-            <h4>📝 受験申込フォーム</h4>
+            <h4>📝 受験申込フォーム ${hasPass ? '<span class="pin-badge">🔐 合言葉付</span>' : ''}</h4>
             <div class="share-url">${escapeHtml(url)}</div>
+            ${hasPass ? `<div class="muted" style="font-size:12px;margin-bottom:6px">合言葉: <code>${escapeHtml(sess.applicationPasscode)}</code></div>` : ''}
             <div class="share-actions">
               <button class="btn" data-copy-app>URLをコピー</button>
               <a class="btn" href="${escapeHtml(url)}" target="_blank">プレビュー</a>
@@ -2038,9 +2046,16 @@ const App = (() => {
     const sessions = Storage.loadSessions();
     const sess = sessions.find(s => s.id === sid);
     if (!sess) { alert('指定された試験回が見つかりません。'); return false; }
-    // 'application' phase is open (no auth needed) — anyone can apply
+    // 'application' phase: optional passcode (合言葉) protection
     if (phase === 'application') {
-      // pass through
+      if (sess.applicationPasscode) {
+        const passParam = params.get('pass');
+        let pass = passParam;
+        if (!pass || pass !== sess.applicationPasscode) {
+          pass = prompt('受験申込フォームへアクセスするには合言葉が必要です。\n配布された合言葉を入力してください:');
+          if (!pass || pass !== sess.applicationPasscode) { alert('合言葉が正しくありません。'); return false; }
+        }
+      }
     } else
     // Per-candidate password check (preferred). Fallback to legacy session-wide PIN.
     if (idParam && pwdParam) {
@@ -2592,6 +2607,16 @@ const App = (() => {
     });
     const msgGen = document.getElementById('msg-generate-all');
     if (msgGen) msgGen.addEventListener('click', generateAllMessages);
+    // Save passcode
+    const savePassBtn = document.getElementById('save-passcode');
+    if (savePassBtn) savePassBtn.addEventListener('click', () => {
+      const sess = getSession();
+      sess.applicationPasscode = (document.getElementById('app-passcode').value || '').trim();
+      saveSession(sess);
+      alert(sess.applicationPasscode ? `合言葉「${sess.applicationPasscode}」を設定しました。配布URLにも反映されます。` : '合言葉を解除しました（誰でもアクセス可能）。');
+      // Re-render share section to update URL
+      renderPhaseShare('resume', 'view-mgr-resume');
+    });
 
     $('#add-faculty').addEventListener('click', () => {
       const sess = getSession();

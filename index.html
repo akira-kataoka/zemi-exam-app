@@ -206,21 +206,37 @@
 
     <section class="portal-form" id="portal-application" style="display:none">
       <h3>📝 受験申込</h3>
-      <form id="form-application" autocomplete="off">
-        <p class="hint">最低限の情報をご入力ください。後日、専用URL・パスワードをお送りし、本格的な書類提出（履歴書・学力試験・アンケート）の案内をいたします。</p>
-        <div class="form-grid">
-          <label>姓<span class="req">*</span><input type="text" name="lastName" required></label>
-          <label>名<span class="req">*</span><input type="text" name="firstName" required></label>
-          <label>姓（フリガナ）<input type="text" name="lastKana"></label>
-          <label>名（フリガナ）<input type="text" name="firstKana"></label>
-          <label>メールアドレス<span class="req">*</span><input type="email" name="email" required></label>
-          <label>電話番号<span class="req">*</span><input type="tel" name="phone" required></label>
-          <label>学部<span class="req">*</span><select name="faculty" id="app-faculty" required></select></label>
-          <label>学科<select name="department" id="app-department"></select></label>
+      <p class="hint" style="margin:0 0 16px">情報をご入力ください。後日、専用URL・パスワードをお送りし、本格的な書類提出（履歴書・学力試験・アンケート）の案内をいたします。</p>
+      <form id="form-application" autocomplete="off" class="application-form">
+        <div class="app-section">
+          <div class="app-section-title">👤 お名前</div>
+          <div class="form-grid app-grid-2">
+            <label>姓<span class="req">*</span><input type="text" name="lastName" required placeholder="例: 佐藤"></label>
+            <label>名<span class="req">*</span><input type="text" name="firstName" required placeholder="例: 大輔"></label>
+            <label>姓（フリガナ）<input type="text" name="lastKana" placeholder="例: サトウ"></label>
+            <label>名（フリガナ）<input type="text" name="firstKana" placeholder="例: ダイスケ"></label>
+          </div>
         </div>
+
+        <div class="app-section">
+          <div class="app-section-title">📞 連絡先</div>
+          <div class="form-grid app-grid-2">
+            <label class="full">メールアドレス<span class="req">*</span><input type="email" name="email" required placeholder="例: applicant@example.com"></label>
+            <label class="full">電話番号<span class="req">*</span><input type="tel" name="phone" required placeholder="例: 090-1234-5678"></label>
+          </div>
+        </div>
+
+        <div class="app-section">
+          <div class="app-section-title">🏫 所属</div>
+          <div class="form-grid app-grid-2">
+            <label>学部<span class="req">*</span><select name="faculty" id="app-faculty" required></select></label>
+            <label>学科<select name="department" id="app-department"></select></label>
+          </div>
+        </div>
+
         <div class="form-actions">
           <span></span>
-          <button type="submit" class="btn primary">申込する</button>
+          <button type="submit" class="btn primary" style="padding:12px 32px;font-size:15px">申込する</button>
         </div>
       </form>
     </section>
@@ -425,6 +441,15 @@
         <button class="btn" id="reset-resume-fields">追加質問を削除</button>
       </div>
       <div id="resume-fields-list" class="q-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>🔐 受験申込の合言葉（任意）</h3>
+      <p class="hint">公開URLに合言葉を設定すると、申込フォームを開く前に入力を求められます。SNS等で告知する際の意図しない申込を防げます。空欄なら誰でもアクセス可能。</p>
+      <div class="form-grid">
+        <label>合言葉（パスコード）<input type="text" id="app-passcode" placeholder="例: zemi2026（空欄で無効化）"></label>
+      </div>
+      <button class="btn primary" id="save-passcode" style="margin-top:8px">保存</button>
     </div>
 
     <div class="card">
