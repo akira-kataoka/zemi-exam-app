@@ -145,7 +145,10 @@ const App = (() => {
     if (sess.phases && sess.phases.application === undefined) { sess.phases.application = true; changed = true; }
     if (sess.applicationPasscode === undefined) { sess.applicationPasscode = ''; changed = true; }
     if (!sess.interviewRatings) {
-      sess.interviewRatings = Stats.INTERVIEW_RATINGS.map(r => ({ ...r }));
+      const userDefault = Storage.getDefaultInterviewRatings();
+      sess.interviewRatings = (userDefault && userDefault.length > 0)
+        ? userDefault.map(r => ({ ...r }))
+        : Stats.INTERVIEW_RATINGS.map(r => ({ ...r }));
       changed = true;
     }
     if (!sess.messageTemplate) {
@@ -2160,6 +2163,12 @@ const App = (() => {
   function renderInterviewRatingsEditor(sess) {
     const wrap = document.getElementById('iv-ratings-list');
     if (!wrap) return;
+    // ユーザー独自デフォルト状態表示
+    const statusEl = document.getElementById('iv-default-status');
+    if (statusEl) {
+      const userDefault = Storage.getDefaultInterviewRatings();
+      statusEl.textContent = userDefault ? `✅ ユーザーデフォルト保存中 (${userDefault.length}項目)` : '（システム標準を使用）';
+    }
     const ratings = sess.interviewRatings || [];
     wrap.innerHTML = ratings.length === 0
       ? '<p class="muted">評価項目がありません。デフォルトに戻すか追加してください。</p>'
@@ -3284,12 +3293,29 @@ const App = (() => {
       toast('評価項目を追加しました', 'success', 1500);
     });
     document.getElementById('reset-iv-ratings')?.addEventListener('click', () => {
-      if (!confirm('評価項目をデフォルト5項目に戻しますか？\n（既に登録された面接記録の数値は残ります）')) return;
+      const userDefault = Storage.getDefaultInterviewRatings();
+      const target = userDefault ? 'ユーザー保存のデフォルト' : 'システム標準';
+      if (!confirm(`評価項目を ${target} に戻しますか？\n（既に登録された面接記録の数値は残ります）`)) return;
       const sess = ensureTests(getSession());
-      sess.interviewRatings = Stats.INTERVIEW_RATINGS.map(r => ({ ...r }));
+      sess.interviewRatings = (userDefault && userDefault.length > 0)
+        ? userDefault.map(r => ({ ...r }))
+        : Stats.INTERVIEW_RATINGS.map(r => ({ ...r }));
       saveSession(sess);
       renderInterviewRatingsEditor(sess);
-      toast('デフォルトに戻しました', 'success', 1500);
+      toast(`${target} に戻しました`, 'success', 1500);
+    });
+    document.getElementById('save-iv-as-default')?.addEventListener('click', () => {
+      const sess = ensureTests(getSession());
+      Storage.setDefaultInterviewRatings(sess.interviewRatings || []);
+      renderInterviewRatingsEditor(sess);
+      toast('現在の評価項目を次回新規試験回のデフォルトとして保存しました', 'success', 2500);
+    });
+    document.getElementById('clear-iv-default')?.addEventListener('click', () => {
+      if (!confirm('ユーザー保存のデフォルトを削除してシステム標準（5項目）に戻しますか？\n（既存試験回には影響しません）')) return;
+      Storage.setDefaultInterviewRatings(null);
+      const sess = ensureTests(getSession());
+      renderInterviewRatingsEditor(sess);
+      toast('ユーザーデフォルトを削除しました', 'success', 1500);
     });
     // Interview schedule
     ['startDate', 'days', 'dailyStart', 'dailyEnd', 'slotMinutes', 'breakStart', 'breakEnd'].forEach(k => {

@@ -31,6 +31,19 @@ const Storage = (() => {
     for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
     return out;
   }
+  // ユーザー独自デフォルト保存（面接評価項目）
+  const KEY_DEFAULT_IV_RATINGS = 'zemiSA.defaultInterviewRatings.v1';
+  function getDefaultInterviewRatings() {
+    try { return JSON.parse(localStorage.getItem(KEY_DEFAULT_IV_RATINGS)) || null; }
+    catch (e) { return null; }
+  }
+  function setDefaultInterviewRatings(ratings) {
+    if (Array.isArray(ratings) && ratings.length > 0) {
+      localStorage.setItem(KEY_DEFAULT_IV_RATINGS, JSON.stringify(ratings));
+    } else {
+      localStorage.removeItem(KEY_DEFAULT_IV_RATINGS);
+    }
+  }
   function generatePassword() {
     // 8 chars, mixed upper/lower/digits, confusable-safe
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -199,6 +212,7 @@ const Storage = (() => {
 
   return {
     load, save, loadForSession, findByExamineeId, upsert, remove, clearAll, regenerateCandidatePassword, generatePassword,
+    getDefaultInterviewRatings, setDefaultInterviewRatings,
     loadCfg, saveCfg,
     loadSessions, addSession, renameSession, setPhase, setPhaseSchedule, isPhaseOpen, isPhaseInGrace, phaseStatusText, removeSession, regeneratePin, generatePin,
     getCurrentSessionId, setCurrentSessionId, getCurrentSession,

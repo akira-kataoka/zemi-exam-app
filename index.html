@@ -423,10 +423,14 @@
     <div class="adminview" id="adminview-interview">
       <div class="card">
         <h3>📐 面接 評価項目（試験回ごと）</h3>
-        <p class="hint">面接で評価する観点を試験回ごとにカスタマイズできます。各項目は1〜5の5段階評価。</p>
+        <p class="hint">面接で評価する観点を試験回ごとにカスタマイズできます。各項目は1〜5の5段階評価。<br>
+          「📌 デフォルトとして保存」で <strong>次に作る試験回も同じ項目で始まる</strong>ようになります。</p>
         <div class="toolbar">
           <button class="btn primary" id="add-iv-rating">＋ 評価項目を追加</button>
-          <button class="btn" id="reset-iv-ratings">デフォルト5項目に戻す</button>
+          <button class="btn" id="reset-iv-ratings">デフォルトに戻す</button>
+          <span class="muted" style="margin-left:auto;font-size:11px" id="iv-default-status"></span>
+          <button class="btn" id="save-iv-as-default" title="現在の項目を次回新規試験回のデフォルトとして保存">📌 これをデフォルトに保存</button>
+          <button class="btn" id="clear-iv-default" title="ユーザーデフォルトを削除してシステム標準に戻す">🗑 ユーザーデフォルト削除</button>
         </div>
         <div id="iv-ratings-list" class="q-list"></div>
       </div>
