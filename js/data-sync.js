@@ -248,6 +248,20 @@ const DataSync = (() => {
         return ret;
       };
     }
+    // Storage.save(list) 直接呼び出し (合格チェック・面接記録編集等) も差分push
+    const origSave = Storage.save;
+    let _prevSnap = JSON.stringify(Storage.load());
+    Storage.save = function (list) {
+      const ret = origSave.call(Storage, list);
+      if (!_adminLoggedIn) return ret;
+      try {
+        const prev = JSON.parse(_prevSnap);
+        const prevById = new Map(prev.map(c => [c.id, JSON.stringify(c)]));
+        list.forEach(c => { if (prevById.get(c.id) !== JSON.stringify(c)) pushCandidate(c); });
+      } catch (e) { /* noop */ }
+      _prevSnap = JSON.stringify(list);
+      return ret;
+    };
   }
 
   function init() {
