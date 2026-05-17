@@ -11,11 +11,17 @@
 </head>
 <body>
 <header class="topbar">
-  <div class="brand">
-    <span class="logo">🎓</span>
-    <div>
-      <h1>ゼミ試験アプリケーション</h1>
-      <p class="sub">履歴書・学力試験・アンケート・面接の管理・分析</p>
+  <div class="brand-row">
+    <div class="brand">
+      <span class="logo">🎓</span>
+      <div>
+        <h1>ゼミ試験アプリケーション</h1>
+        <p class="sub">履歴書・学力試験・アンケート・面接の管理・分析</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn header-action-btn" data-view="admin" title="試験設定・問題管理・データ管理">⚙ 設定</button>
+      <button class="btn header-action-btn header-action-help" id="help-btn" title="使い方を見る">❓ 使い方</button>
     </div>
   </div>
   <div class="session-bar">
@@ -42,11 +48,8 @@
     <span class="session-meta" id="session-meta"></span>
   </div>
   <nav class="tabs">
-    <button class="tab active" data-view="overview">📊 全体確認</button>
-    <button class="tab" data-view="profile">👤 個人確認</button>
-    <span class="tabs-spacer"></span>
-    <button class="tab tab-settings" data-view="admin" title="試験設定・問題管理・データ管理">⚙ 設定</button>
-    <button class="tab tab-help" id="help-btn" title="使い方を見る">❓ 使い方</button>
+    <button class="tab active" data-view="overview">📊 全体</button>
+    <button class="tab" data-view="profile">👤 個人</button>
   </nav>
 </header>
 

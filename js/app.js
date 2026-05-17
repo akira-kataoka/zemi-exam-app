@@ -317,6 +317,7 @@ const App = (() => {
   // ===== Tabs =====
   function showView(name) {
     $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+    $$('.header-action-btn[data-view]').forEach(t => t.classList.toggle('active', t.dataset.view === name));
     $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
     saveUiState({ view: name });
     if (name === 'overview') renderOverview();
@@ -381,8 +382,8 @@ const App = (() => {
   function updateTabBadges() {
     const list = Storage.loadForSession();
     const overviewTab = document.querySelector('.tab[data-view="overview"]');
-    if (overviewTab && !overviewTab.dataset.label) overviewTab.dataset.label = overviewTab.innerHTML;
-    if (overviewTab) overviewTab.innerHTML = `${overviewTab.dataset.label} <span class="tab-count">${list.length}</span>`;
+    if (overviewTab && !overviewTab.dataset.label) overviewTab.dataset.label = overviewTab.textContent.trim();
+    if (overviewTab) overviewTab.innerHTML = `${escapeHtml(overviewTab.dataset.label)} <span class="tab-count">${list.length}</span>`;
   }
 
   function openHelpModal() {
@@ -3026,10 +3027,9 @@ const App = (() => {
     nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); } });
 
     // Tabs
-    $$('.tab').forEach(t => {
-      if (t.id === 'help-btn') return; // help button handled separately
-      t.addEventListener('click', () => showView(t.dataset.view));
-    });
+    $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
+    // Header action buttons (設定 etc.) — same as tabs
+    $$('.header-action-btn[data-view]').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
     // Help modal
     document.getElementById('help-btn').addEventListener('click', openHelpModal);
     document.getElementById('footer-help')?.addEventListener('click', openHelpModal);
