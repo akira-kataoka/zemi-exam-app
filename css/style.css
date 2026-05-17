@@ -417,6 +417,11 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 .msg-body{margin:0;padding:10px;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:"Segoe UI","Hiragino Kaku Gothic ProN",sans-serif;white-space:pre-wrap;word-break:break-all;max-height:280px;overflow:auto}
 
 /* CSV import card */
+.import-steps{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;justify-content:center;padding:14px;background:#fafafa;border-radius:8px;margin:12px 0}
+.import-step{flex:1;min-width:140px;background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px;display:flex;gap:8px;align-items:flex-start}
+.import-step-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--primary);color:#fff;border-radius:50%;font-weight:700;font-size:12px;flex-shrink:0}
+.import-step-arrow{align-self:center;color:var(--muted);font-size:18px}
+@media(max-width:760px){.import-step-arrow{transform:rotate(90deg)}.import-steps{flex-direction:column}}
 .import-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:8px}
 .import-card{background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .import-card h4{margin:0;font-size:14px;color:var(--primary-d)}
@@ -509,7 +514,11 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 .iv-scale label{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer}
 
 /* Help modal */
-.tab-help{margin-left:auto;background:#fef3c7;border-color:#fde68a;color:#92400e;font-weight:700}
+.tabs-spacer{flex:1}
+.tab-settings{background:#f1f5f9;color:var(--ink);border-color:var(--border)}
+.tab-settings:hover{background:#e2e8f0}
+.tab-settings.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tab-help{background:#fef3c7;border-color:#fde68a;color:#92400e;font-weight:700}
 .tab-help:hover{background:#fde68a}
 .tab-help.first-visit-pulse{animation:pulse-help 1.6s infinite}
 @keyframes pulse-help{

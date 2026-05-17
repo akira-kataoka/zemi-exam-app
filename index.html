@@ -44,7 +44,8 @@
   <nav class="tabs">
     <button class="tab active" data-view="overview">📊 全体確認</button>
     <button class="tab" data-view="profile">👤 個人確認</button>
-    <button class="tab" data-view="admin">⚙ 管理</button>
+    <span class="tabs-spacer"></span>
+    <button class="tab tab-settings" data-view="admin" title="試験設定・問題管理・データ管理">⚙ 設定</button>
     <button class="tab tab-help" id="help-btn" title="使い方を見る">❓ 使い方</button>
   </nav>
 </header>
@@ -606,27 +607,76 @@
   <section class="admin-content" id="view-data" data-admin="data">
     <div class="card">
       <h3>📥 紙媒体回答のCSV取り込み</h3>
-      <p class="hint">紙で回答してもらった履歴書・学力試験・アンケートを CSV ファイルとして取り込めます。まずテンプレートをダウンロードし、Excel等で入力してからアップロードしてください。</p>
+
+      <div class="import-steps">
+        <div class="import-step">
+          <span class="import-step-num">1</span>
+          <div><strong>テンプレートをダウンロード</strong><br><span class="muted">下のボタンから種類別にDL（CSV形式）</span></div>
+        </div>
+        <div class="import-step-arrow">→</div>
+        <div class="import-step">
+          <span class="import-step-num">2</span>
+          <div><strong>Excel/Numbers等で開いて入力</strong><br><span class="muted">先頭行のヘッダー行は変更せず、2行目以降に受験者データを記入</span></div>
+        </div>
+        <div class="import-step-arrow">→</div>
+        <div class="import-step">
+          <span class="import-step-num">3</span>
+          <div><strong>CSV形式で保存</strong><br><span class="muted">Excel:「ファイル → 名前を付けて保存 → CSV UTF-8」</span></div>
+        </div>
+        <div class="import-step-arrow">→</div>
+        <div class="import-step">
+          <span class="import-step-num">4</span>
+          <div><strong>📤 CSVアップロードをクリック</strong><br><span class="muted">受験番号で既存データと自動マージ</span></div>
+        </div>
+      </div>
+
       <div class="import-grid">
         <div class="import-card">
           <h4>📄 履歴書</h4>
           <p class="muted" style="font-size:11px">受験番号・氏名・連絡先・志望動機などをCSVで一括登録</p>
+          <details style="font-size:11px;margin:6px 0">
+            <summary style="cursor:pointer;color:var(--muted)">テンプレート内容を見る</summary>
+            <div style="margin-top:4px;padding:6px;background:#f8fafc;border-radius:4px;line-height:1.4">
+              列: examineeId, lastName, firstName, lastKana, firstKana, gender, birthdate, email, phone, faculty, department, grade, gpa, qualifications, club, motivation, selfPr, researchTopic<br>
+              ※サンプル1行が入っているので削除して書き換えてください
+            </div>
+          </details>
           <button class="btn" id="dl-template-resume">📥 テンプレートをDL</button>
           <label class="btn primary">📤 CSVアップロード<input type="file" id="up-csv-resume" accept=".csv,text/csv" hidden></label>
         </div>
         <div class="import-card">
           <h4>📚 学力試験</h4>
           <p class="muted" style="font-size:11px">受験番号と各問題の選択番号(1〜)を入力</p>
+          <details style="font-size:11px;margin:6px 0">
+            <summary style="cursor:pointer;color:var(--muted)">テンプレート内容を見る</summary>
+            <div style="margin-top:4px;padding:6px;background:#f8fafc;border-radius:4px;line-height:1.4">
+              1行目: # コメント（問題文と正解。参考表示・無視されます）<br>
+              2行目: <code>examineeId, q_a1, q_a2, q_a3 ...</code> ← この行は<strong>消さない</strong><br>
+              3行目以降: 受験番号と各問題の<strong>選択番号 (1〜)</strong> を入力<br>
+              ※現在の試験回の問題セットに基づいて生成されます
+            </div>
+          </details>
           <button class="btn" id="dl-template-academic">📥 テンプレートをDL</button>
           <label class="btn primary">📤 CSVアップロード<input type="file" id="up-csv-academic" accept=".csv,text/csv" hidden></label>
         </div>
         <div class="import-card">
           <h4>📋 アンケート</h4>
           <p class="muted" style="font-size:11px">受験番号と各項目の5段階評価を入力</p>
+          <details style="font-size:11px;margin:6px 0">
+            <summary style="cursor:pointer;color:var(--muted)">テンプレート内容を見る</summary>
+            <div style="margin-top:4px;padding:6px;background:#f8fafc;border-radius:4px;line-height:1.4">
+              1行目: # コメント（質問文と評価対象）<br>
+              2行目: <code>examineeId, q_s1, q_s2 ..., freeAchievement, freeAspiration</code><br>
+              3行目以降: 受験番号と各項目の <strong>1〜5の数値</strong> + 自由記述<br>
+              ※現在の試験回の項目セットに基づいて生成されます
+            </div>
+          </details>
           <button class="btn" id="dl-template-survey">📥 テンプレートをDL</button>
           <label class="btn primary">📤 CSVアップロード<input type="file" id="up-csv-survey" accept=".csv,text/csv" hidden></label>
         </div>
       </div>
+
+      <p class="hint" style="margin-top:10px">💡 <strong>同じ受験番号</strong>でアップロードすると既存データに上書きされます（追加情報を後から取り込む場合に便利）</p>
     </div>
 
     <div class="card">
