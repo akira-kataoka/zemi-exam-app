@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ゼミ選抜アナライザー</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">🎓</span>
+    <div>
+      <h1>ゼミ選抜アナライザー</h1>
+      <p class="sub">ZemiSelect Analyzer — 入試成績・アンケート総合分析</p>
+    </div>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" data-view="dashboard">ダッシュボード</button>
+    <button class="tab" data-view="candidates">受験者一覧</button>
+    <button class="tab" data-view="exam">試験を受ける</button>
+    <button class="tab" data-view="profile">個別分析</button>
+    <button class="tab" data-view="ranking">上位者</button>
+    <button class="tab" data-view="cluster">クラスター分析</button>
+    <button class="tab" data-view="settings">設定</button>
+  </nav>
+</header>
+
+<main id="app">
+  <!-- Dashboard -->
+  <section class="view active" id="view-dashboard">
+    <div class="cards">
+      <div class="card stat"><span class="k">受験者数</span><span class="v" id="stat-count">0</span></div>
+      <div class="card stat"><span class="k">平均総合点</span><span class="v" id="stat-avg">-</span></div>
+      <div class="card stat"><span class="k">最高得点</span><span class="v" id="stat-max">-</span></div>
+      <div class="card stat"><span class="k">最新提出</span><span class="v" id="stat-latest">-</span></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>得点分布</h3>
+        <canvas id="chart-distribution" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h3>科目別平均</h3>
+        <canvas id="chart-subjects" height="200"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>直近の提出履歴</h3>
+      <div id="recent-list" class="list"></div>
+    </div>
+  </section>
+
+  <!-- Candidates -->
+  <section class="view" id="view-candidates">
+    <div class="toolbar">
+      <input type="search" id="search-cand" placeholder="名前・受験番号・大学で検索">
+      <select id="sort-cand">
+        <option value="date-desc">提出日 新しい順</option>
+        <option value="date-asc">提出日 古い順</option>
+        <option value="score-desc">総合点 高い順</option>
+        <option value="score-asc">総合点 低い順</option>
+        <option value="name">名前順</option>
+      </select>
+      <button class="btn" id="export-json">JSONエクスポート</button>
+      <label class="btn">
+        JSONインポート
+        <input type="file" id="import-json" accept="application/json" hidden>
+      </label>
+    </div>
+    <table class="data-table" id="cand-table">
+      <thead>
+        <tr>
+          <th>受験番号</th><th>氏名</th><th>大学・学部</th><th>学力</th><th>アンケート</th><th>総合</th><th>提出日時</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- Exam -->
+  <section class="view" id="view-exam">
+    <div class="exam-steps">
+      <div class="step active" data-step="1">① 履歴書</div>
+      <div class="step" data-step="2">② 学力試験</div>
+      <div class="step" data-step="3">③ アンケート</div>
+      <div class="step" data-step="4">④ 確認・送信</div>
+    </div>
+
+    <form id="exam-form" autocomplete="off">
+      <!-- Step 1: Resume -->
+      <section class="exam-step active" data-step="1">
+        <h2>履歴書記入</h2>
+        <div class="form-grid">
+          <label>受験番号<span class="req">*</span><input type="text" name="examineeId" required></label>
+          <label>氏名<span class="req">*</span><input type="text" name="name" required></label>
+          <label>フリガナ<input type="text" name="kana"></label>
+          <label>生年月日<input type="date" name="birthdate"></label>
+          <label>性別
+            <select name="gender">
+              <option value="">選択しない</option>
+              <option>男性</option><option>女性</option><option>その他</option>
+            </select>
+          </label>
+          <label>メールアドレス<input type="email" name="email"></label>
+          <label>電話番号<input type="tel" name="phone"></label>
+          <label>大学名<input type="text" name="university"></label>
+          <label>学部・学科<input type="text" name="faculty"></label>
+          <label>学年<input type="text" name="grade" placeholder="例: 2年"></label>
+          <label>現在のGPA<input type="number" step="0.01" min="0" max="4" name="gpa"></label>
+          <label>取得済資格<input type="text" name="qualifications" placeholder="例: TOEIC 800, 簿記2級"></label>
+          <label class="full">志望動機<textarea name="motivation" rows="4" placeholder="このゼミを志望する理由"></textarea></label>
+          <label class="full">自己PR<textarea name="selfPr" rows="4" placeholder="あなたの強みや実績"></textarea></label>
+          <label class="full">研究したいテーマ<textarea name="researchTopic" rows="3"></textarea></label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn primary" data-go="2">次へ →</button>
+        </div>
+      </section>
+
+      <!-- Step 2: Academic test -->
+      <section class="exam-step" data-step="2">
+        <h2>学力試験</h2>
+        <p class="hint">各科目0〜100点で入力してください。実際に試験を実施する場合は、外部試験スコアや筆記試験結果をそのまま転記してください。</p>
+        <div class="form-grid">
+          <label>論理・数理 (100点)<input type="number" name="logic" min="0" max="100" required></label>
+          <label>英語 (100点)<input type="number" name="english" min="0" max="100" required></label>
+          <label>専門知識 (100点)<input type="number" name="specialty" min="0" max="100" required></label>
+          <label>統計・データ分析 (100点)<input type="number" name="statistics" min="0" max="100" required></label>
+          <label>文章作成・記述 (100点)<input type="number" name="writing" min="0" max="100" required></label>
+          <label>プレゼンテーション (100点)<input type="number" name="presentation" min="0" max="100" required></label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn" data-go="1">← 戻る</button>
+          <button type="button" class="btn primary" data-go="3">次へ →</button>
+        </div>
+      </section>
+
+      <!-- Step 3: Survey -->
+      <section class="exam-step" data-step="3">
+        <h2>アンケート</h2>
+        <p class="hint">各項目を 1（まったく当てはまらない）〜 5（非常に当てはまる）で評価してください。</p>
+        <div id="survey-items" class="survey-list"></div>
+        <h3 style="margin-top:24px">自由記述</h3>
+        <div class="form-grid">
+          <label class="full">これまでに最も力を入れた活動<textarea name="freeAchievement" rows="3"></textarea></label>
+          <label class="full">入ゼミ後に挑戦したいこと<textarea name="freeAspiration" rows="3"></textarea></label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn" data-go="2">← 戻る</button>
+          <button type="button" class="btn primary" data-go="4">次へ →</button>
+        </div>
+      </section>
+
+      <!-- Step 4: Confirm -->
+      <section class="exam-step" data-step="4">
+        <h2>確認・送信</h2>
+        <div id="confirm-area" class="confirm-area"></div>
+        <div class="form-actions">
+          <button type="button" class="btn" data-go="3">← 戻る</button>
+          <button type="submit" class="btn primary">送信する</button>
+        </div>
+      </section>
+    </form>
+  </section>
+
+  <!-- Profile -->
+  <section class="view" id="view-profile">
+    <div class="toolbar">
+      <select id="profile-select"><option value="">-- 受験者を選択 --</option></select>
+      <button class="btn" id="print-profile">印刷</button>
+    </div>
+    <div id="profile-body"></div>
+  </section>
+
+  <!-- Ranking -->
+  <section class="view" id="view-ranking">
+    <div class="toolbar">
+      <label>上位<select id="rank-n">
+        <option>5</option><option selected>10</option><option>20</option><option>50</option>
+      </select>名表示</label>
+      <label>並び順
+        <select id="rank-metric">
+          <option value="total">総合点</option>
+          <option value="academic">学力試験合計</option>
+          <option value="survey">アンケート平均</option>
+        </select>
+      </label>
+    </div>
+    <table class="data-table" id="rank-table">
+      <thead><tr><th>順位</th><th>受験番号</th><th>氏名</th><th>学力</th><th>アンケート</th><th>総合</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- Cluster -->
+  <section class="view" id="view-cluster">
+    <div class="toolbar">
+      <label>クラスター数 k =
+        <input type="number" id="k-value" value="3" min="2" max="8" style="width:60px">
+      </label>
+      <button class="btn primary" id="run-cluster">クラスター分析を実行</button>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>クラスター散布図（PCA 2次元）</h3>
+        <canvas id="chart-cluster" height="320"></canvas>
+      </div>
+      <div class="card">
+        <h3>クラスター特性（中心値）</h3>
+        <canvas id="chart-cluster-radar" height="320"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>クラスター割当一覧</h3>
+      <div id="cluster-assign-list"></div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section class="view" id="view-settings">
+    <div class="card">
+      <h3>データ管理</h3>
+      <p>すべての受験者データはブラウザのlocalStorageに保存されています。バックアップにはJSONエクスポートをご利用ください。</p>
+      <div class="form-actions">
+        <button class="btn" id="seed-demo">デモデータを投入</button>
+        <button class="btn danger" id="clear-all">全データ削除</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>採点ウェイト設定</h3>
+      <p>総合点 = 学力試験 × W1 + アンケート × W2 （合計100％）</p>
+      <div class="form-grid">
+        <label>学力試験ウェイト (%)<input type="number" id="weight-academic" min="0" max="100" value="70"></label>
+        <label>アンケートウェイト (%)<input type="number" id="weight-survey" min="0" max="100" value="30"></label>
+      </div>
+      <button class="btn primary" id="save-weights">保存</button>
+    </div>
+    <div class="card">
+      <h3>このアプリについて</h3>
+      <p><strong>ゼミ選抜アナライザー</strong> v1.0</p>
+      <p>ゼミ入試（履歴書・学力試験・アンケート）の収集と多面的分析を行うシングルページWebアプリ。データはローカル保存・公開不要・無料運用。</p>
+    </div>
+  </section>
+</main>
+
+<script src="js/storage.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/cluster.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
