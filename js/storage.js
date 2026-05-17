@@ -31,6 +31,13 @@ const Storage = (() => {
     for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
     return out;
   }
+  function generatePassword() {
+    // 8 chars, mixed upper/lower/digits, confusable-safe
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let out = '';
+    for (let i = 0; i < 8; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    return out;
+  }
   function addSession(name, phases) {
     const list = loadSessions();
     const s = {
@@ -143,18 +150,28 @@ const Storage = (() => {
     partial.sessionId = sid;
     const idx = list.findIndex(c => c.sessionId === sid && (c.examineeId || '').toLowerCase() === String(partial.examineeId || '').toLowerCase());
     if (idx >= 0) {
-      list[idx] = Object.assign({}, list[idx], partial);
+      const merged = Object.assign({}, list[idx], partial);
+      if (!merged.password) merged.password = generatePassword();
+      list[idx] = merged;
       save(list);
-      return list[idx];
+      return merged;
     } else {
       const rec = Object.assign({
         id: 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        password: generatePassword()
       }, partial);
+      if (!rec.password) rec.password = generatePassword();
       list.push(rec);
       save(list);
       return rec;
     }
+  }
+  function regenerateCandidatePassword(candId) {
+    const list = load();
+    const c = list.find(x => x.id === candId);
+    if (c) { c.password = generatePassword(); save(list); return c.password; }
+    return null;
   }
 
   function remove(id) { save(load().filter(c => c.id !== id)); }
@@ -170,7 +187,7 @@ const Storage = (() => {
   function saveCfg(cfg) { localStorage.setItem(KEY_CFG, JSON.stringify(cfg)); }
 
   return {
-    load, save, loadForSession, findByExamineeId, upsert, remove, clearAll,
+    load, save, loadForSession, findByExamineeId, upsert, remove, clearAll, regenerateCandidatePassword, generatePassword,
     loadCfg, saveCfg,
     loadSessions, addSession, renameSession, setPhase, setPhaseSchedule, isPhaseOpen, phaseStatusText, removeSession, regeneratePin, generatePin,
     getCurrentSessionId, setCurrentSessionId, getCurrentSession,

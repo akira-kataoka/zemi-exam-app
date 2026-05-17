@@ -243,6 +243,7 @@
             <label>電話番号<input type="tel" name="phone"></label>
             <label>生年月日<input type="date" name="birthdate"></label>
             <label>現在のGPA<input type="number" step="0.01" min="0" max="4" name="gpa" placeholder="例: 3.25"></label>
+            <label class="full">所属サークル・部活動<input type="text" name="club" placeholder="例: 軽音楽部、テニスサークル、〇〇研究会など（複数可）"></label>
           </div>
           <div style="margin-top:8px">
             <label class="qual-label">取得資格・スキル（複数追加可）
@@ -400,6 +401,22 @@
         <button class="btn" id="reset-resume-fields">追加質問を削除</button>
       </div>
       <div id="resume-fields-list" class="q-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>📨 配布メッセージテンプレート</h3>
+      <p class="hint">受験者へ LINE / メール等で送るメッセージのテンプレートです。下記の差し込み変数が使えます:<br>
+        <code>{{name}}</code>=氏名 / <code>{{lastName}}</code>=姓 / <code>{{firstName}}</code>=名 / <code>{{examineeId}}</code>=受験番号 / <code>{{password}}</code>=パスワード /
+        <code>{{url_resume}}</code> <code>{{url_academic}}</code> <code>{{url_survey}}</code> = 各URL /
+        <code>{{interview_date}}</code> <code>{{interview_time}}</code> <code>{{interview_datetime}}</code> = 面接日時 /
+        <code>{{sessionName}}</code> = 試験回名
+      </p>
+      <textarea id="msg-template" rows="14" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px"></textarea>
+      <div class="form-actions" style="justify-content:flex-start;gap:10px;margin-top:10px">
+        <button class="btn" id="msg-template-reset">デフォルトに戻す</button>
+        <button class="btn primary" id="msg-generate-all">📝 全員分のメッセージを生成</button>
+      </div>
+      <div id="msg-result-area" style="margin-top:14px"></div>
     </div>
 
     <div class="card">

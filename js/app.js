@@ -70,6 +70,30 @@ const App = (() => {
     if (!sess.facultyDept) { sess.facultyDept = JSON.parse(JSON.stringify(Stats.DEFAULT_FACULTY_DEPT)); changed = true; }
     if (!sess.pin) { sess.pin = Storage.generatePin(); changed = true; }
     if (!sess.phaseSchedule) { sess.phaseSchedule = { resume:{startsAt:null,endsAt:null}, academic:{startsAt:null,endsAt:null}, survey:{startsAt:null,endsAt:null} }; changed = true; }
+    if (!sess.messageTemplate) {
+      sess.messageTemplate = `{{name}}さん
+
+ゼミ入試のご案内です。下記の専用URLから各試験にアクセスしてください。
+
+▼受験者情報
+受験番号: {{examineeId}}
+パスワード: {{password}}
+
+▼履歴書
+{{url_resume}}
+
+▼学力試験
+{{url_academic}}
+
+▼アンケート
+{{url_survey}}
+
+▼面接予定
+{{interview_datetime}}
+
+ご不明な点は事務局までお問い合わせください。`;
+      changed = true;
+    }
     if (!sess.interviewSchedule) {
       const today = new Date(); today.setDate(today.getDate() + 1);
       sess.interviewSchedule = {
@@ -871,6 +895,7 @@ const App = (() => {
           <div><dt>電話</dt><dd>${escapeHtml(c.phone || '')}</dd></div>
           <div><dt>GPA</dt><dd>${c.gpa ?? ''}</dd></div>
           <div class="full"><dt>取得資格・スキル</dt><dd>${(normalizeQualifications(c.qualifications).map(q => `<span class="qual-chip">${escapeHtml(q)}</span>`).join('') || '<span class="muted">なし</span>')}</dd></div>
+          <div class="full"><dt>サークル・部活動</dt><dd>${escapeHtml(c.club || '') || '<span class="muted">なし</span>'}</dd></div>
         </div>
         <h4 style="margin-top:14px">志望動機</h4><p>${escapeHtml(c.motivation || '')}</p>
         <h4>自己PR</h4><p>${escapeHtml(c.selfPr || '')}</p>
@@ -1104,7 +1129,7 @@ const App = (() => {
       form.reset();
       populateFacultySelects(form, cand);
       if (cand) {
-        ['examineeId', 'lastName', 'firstName', 'lastKana', 'firstKana', 'birthdate', 'gender', 'email', 'phone', 'grade', 'gpa', 'motivation', 'selfPr', 'researchTopic'].forEach(k => {
+        ['examineeId', 'lastName', 'firstName', 'lastKana', 'firstKana', 'birthdate', 'gender', 'email', 'phone', 'grade', 'gpa', 'club', 'motivation', 'selfPr', 'researchTopic'].forEach(k => {
           if (form.elements[k]) form.elements[k].value = cand[k] || '';
         });
       } else if (examineeId) {
@@ -1438,6 +1463,9 @@ const App = (() => {
   function renderResumeMgr() {
     const sess = ensureTests(getSession());
     renderFacultyDeptEditor(sess);
+    // Load message template
+    const msgT = document.getElementById('msg-template');
+    if (msgT) msgT.value = sess.messageTemplate || '';
     const wrap = $('#resume-fields-list');
     if (!wrap) return;
     wrap.innerHTML = (sess.resumeExtraFields || []).map((f, idx) => `
@@ -1694,6 +1722,97 @@ const App = (() => {
     return `${d.getMonth() + 1}/${d.getDate()}(${wd})`;
   }
 
+  // ===== Distribution message template =====
+  function fillTemplate(template, candidate, sess) {
+    const ivAt = candidate.interview?.scheduledAt || candidate.interview?.heldAt;
+    let ivDate = '', ivTime = '', ivDt = '';
+    if (ivAt) {
+      const d = new Date(ivAt);
+      const pad = n => String(n).padStart(2, '0');
+      ivDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      ivTime = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      ivDt = `${d.getMonth() + 1}/${d.getDate()} ${ivTime}`;
+    }
+    const vars = {
+      name: fullName(candidate),
+      lastName: candidate.lastName || '',
+      firstName: candidate.firstName || '',
+      examineeId: candidate.examineeId || '',
+      password: candidate.password || '',
+      url_resume: buildPhaseUrl('resume', candidate),
+      url_academic: buildPhaseUrl('academic', candidate),
+      url_survey: buildPhaseUrl('survey', candidate),
+      interview_date: ivDate || '（未定）',
+      interview_time: ivTime || '（未定）',
+      interview_datetime: ivDt || '（未定）',
+      sessionName: sess.name || ''
+    };
+    return template.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? '{{' + k + '}}');
+  }
+
+  function generateAllMessages() {
+    const sess = ensureTests(getSession());
+    const template = document.getElementById('msg-template').value;
+    sess.messageTemplate = template;
+    saveSession(sess);
+    const list = Storage.loadForSession();
+    if (list.length === 0) { alert('受験者がいません。先に履歴書を登録するか、デモデータを投入してください。'); return; }
+    const area = document.getElementById('msg-result-area');
+    area.innerHTML = `
+      <div class="msg-result-head">
+        <strong>${list.length}名のメッセージを生成しました</strong>
+        <button class="btn" id="msg-copy-all">📋 全員分をまとめてコピー</button>
+      </div>
+      <div class="msg-list">
+        ${list.map(c => {
+          const text = fillTemplate(template, c, sess);
+          return `<div class="msg-item">
+            <div class="msg-item-head">
+              <strong>${escapeHtml(fullName(c))}</strong> <span class="muted">(${escapeHtml(c.examineeId || '')}) ・ パスワード: <code>${escapeHtml(c.password || '')}</code></span>
+              <button class="btn btn-sm" data-msg-id="${c.id}">📋 コピー</button>
+            </div>
+            <pre class="msg-body" data-msg-body="${c.id}">${escapeHtml(text)}</pre>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+    area.querySelectorAll('[data-msg-id]').forEach(b => {
+      b.addEventListener('click', () => {
+        const txt = area.querySelector(`[data-msg-body="${b.dataset.msgId}"]`).textContent;
+        navigator.clipboard.writeText(txt).then(() => {
+          b.textContent = '✅ コピー済';
+          setTimeout(() => { b.textContent = '📋 コピー'; }, 1500);
+        });
+      });
+    });
+    document.getElementById('msg-copy-all').addEventListener('click', () => {
+      const allTexts = list.map(c => `=== ${fullName(c)} (${c.examineeId}) ===\n${fillTemplate(template, c, sess)}`).join('\n\n---\n\n');
+      navigator.clipboard.writeText(allTexts).then(() => alert('全員分をコピーしました'));
+    });
+  }
+
+  const DEFAULT_MSG_TEMPLATE = `{{name}}さん
+
+ゼミ入試のご案内です。下記の専用URLから各試験にアクセスしてください。
+
+▼受験者情報
+受験番号: {{examineeId}}
+パスワード: {{password}}
+
+▼履歴書
+{{url_resume}}
+
+▼学力試験
+{{url_academic}}
+
+▼アンケート
+{{url_survey}}
+
+▼面接予定
+{{interview_datetime}}
+
+ご不明な点は事務局までお問い合わせください。`;
+
   function renderFacultyDeptEditor(sess) {
     const wrap = $('#faculty-dept-list');
     if (!wrap) return;
@@ -1740,67 +1859,27 @@ const App = (() => {
     if (idx >= 0) { list[idx] = sess; localStorage.setItem('zemiSA.sessions.v1', JSON.stringify(list)); }
   }
 
-  // ===== Share URLs + QR =====
-  function buildPhaseUrl(phase) {
+  // ===== Share URLs =====
+  function buildPhaseUrl(phase, candidate) {
     const sess = getSession();
     const base = location.href.split('?')[0].split('#')[0];
-    // 履歴書のみPIN不要、学力試験/アンケートはPIN付与
-    const needPin = phase !== 'resume';
-    const pinPart = needPin && sess.pin ? `&pin=${encodeURIComponent(sess.pin)}` : '';
-    return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}${pinPart}`;
+    if (candidate && candidate.password) {
+      // Per-candidate URL with personal password
+      return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}&id=${encodeURIComponent(candidate.examineeId)}&pwd=${encodeURIComponent(candidate.password)}`;
+    }
+    return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}`;
   }
-  // Render share URL + QR (+ PIN for academic/survey) for a single phase inside the specified container
   function renderPhaseShare(phase, containerId) {
-    const sess = ensureTests(getSession());
     const container = document.getElementById(containerId);
     if (!container) return;
     const exist = container.querySelector('.share-section');
     if (exist) exist.remove();
-    const url = buildPhaseUrl(phase);
-    const needPin = phase !== 'resume';
     const section = document.createElement('div');
     section.className = 'card share-section';
     section.innerHTML = `
-      <h3>🔗 受験者配布用URL / QRコード — ${PHASE_LABEL[phase]}</h3>
-      ${needPin ? `
-        <div class="pin-row">
-          <div>
-            <div class="pin-label">🔐 アクセスPIN</div>
-            <div class="pin-value">${escapeHtml(sess.pin)}</div>
-            <div class="pin-hint">${PHASE_LABEL[phase]}のURLにこのPINが含まれます。流出時は再発行してください（学力試験・アンケート共通）。</div>
-          </div>
-          <button class="btn" data-regenerate-pin>🔄 PINを再発行</button>
-        </div>
-      ` : ''}
-      <div class="share-grid">
-        <div class="share-card">
-          <h4>${PHASE_LABEL[phase]}${needPin ? ' <span class="pin-badge">🔐 PIN付</span>' : ''}</h4>
-          <div class="share-url">${escapeHtml(url)}</div>
-          <div class="share-actions">
-            <button class="btn" data-copy>URLをコピー</button>
-            <a class="btn" href="${escapeHtml(url)}" target="_blank">プレビュー</a>
-          </div>
-          <div class="qr-area"></div>
-        </div>
-      </div>
+      <p class="hint" style="margin:0">🔗 受験者ごとのアクセスURL・パスワード・配布用メッセージは <strong>管理 → 履歴書</strong> タブの「📨 配布メッセージ」セクションで生成・コピーできます。</p>
     `;
-    container.appendChild(section);
-    const qr = qrcode(0, 'M');
-    qr.addData(url);
-    qr.make();
-    section.querySelector('.qr-area').innerHTML = qr.createImgTag(4, 8);
-    section.querySelector('[data-copy]').addEventListener('click', () => {
-      navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました'));
-    });
-    const regen = section.querySelector('[data-regenerate-pin]');
-    if (regen) regen.addEventListener('click', () => {
-      if (!confirm('PINを再発行すると、既に配布したURLは無効になります。続行しますか？')) return;
-      Storage.regeneratePin(sess.id);
-      // Re-render all share blocks since PIN is shared
-      renderPhaseShare('resume', 'view-mgr-resume');
-      renderPhaseShare('academic', 'view-mgr-academic');
-      renderPhaseShare('survey', 'view-mgr-survey');
-    });
+    container.insertBefore(section, container.firstChild);
   }
 
   // ===== URL routing (candidate mode) =====
@@ -1810,16 +1889,24 @@ const App = (() => {
     const phase = params.get('phase');
     const idParam = params.get('id');
     const pinParam = params.get('pin');
+    const pwdParam = params.get('pwd');
     if (!sid || !phase) return false;
     const sessions = Storage.loadSessions();
     const sess = sessions.find(s => s.id === sid);
     if (!sess) { alert('指定された試験回が見つかりません。'); return false; }
-    // PIN check for academic/survey
-    if ((phase === 'academic' || phase === 'survey') && sess.pin) {
+    // Per-candidate password check (preferred). Fallback to legacy session-wide PIN.
+    if (idParam && pwdParam) {
+      const cand = Storage.findByExamineeId(sid, idParam);
+      if (!cand || cand.password !== pwdParam) {
+        alert('受験番号またはパスワードが正しくありません。');
+        return false;
+      }
+    } else if ((phase === 'academic' || phase === 'survey') && sess.pin && !pwdParam) {
+      // Backward compat: session PIN
       let pin = pinParam;
       if (!pin || pin !== sess.pin) {
-        pin = prompt(`この試験を受けるにはアクセスPINが必要です（${PHASE_LABEL[phase]}）。配布されたPINを入力してください:`);
-        if (!pin || pin !== sess.pin) { alert('PINが正しくありません。'); return false; }
+        pin = prompt(`この試験を受けるにはアクセス情報が必要です（${PHASE_LABEL[phase]}）。配布されたPIN/パスワードを入力してください:`);
+        if (!pin || pin !== sess.pin) { alert('認証に失敗しました。'); return false; }
       }
     }
     Storage.setCurrentSessionId(sid);
@@ -1936,13 +2023,13 @@ const App = (() => {
       'examineeId', 'lastName', 'firstName', 'lastKana', 'firstKana',
       'gender', 'birthdate', 'email', 'phone',
       'faculty', 'department', 'grade',
-      'gpa', 'qualifications', 'motivation', 'selfPr', 'researchTopic'
+      'gpa', 'qualifications', 'club', 'motivation', 'selfPr', 'researchTopic'
     ];
     const sample = [
       'Z2026001', '佐藤', '太郎', 'サトウ', 'タロウ',
       '男性', '2003-05-15', 'sato@example.com', '090-1234-5678',
       '商学部', '商学科', '2年',
-      '3.45', 'TOEIC 800、簿記2級',
+      '3.45', 'TOEIC 800、簿記2級', '軽音楽部',
       '統計とマーケティングを学びたいため志望します。',
       '学園祭実行委員でリーダーシップを発揮しました。',
       '消費者行動の購買データ分析'
@@ -2118,6 +2205,7 @@ const App = (() => {
         grade: ['1年', '2年', '3年', '4年'][i % 4],
         gpa: Number((2.0 + Math.random() * 2).toFixed(2)),
         qualifications: i % 3 === 0 ? ['TOEIC 750', '簿記2級'] : (i % 4 === 0 ? ['Python', 'Excel VBA'] : []),
+        club: ['軽音楽部', 'テニスサークル', 'ボランティアサークル', 'バスケットボール部', '〇〇研究会', '映画研究部'][i % 6],
         motivation: 'データ分析を通じて社会課題を解決したいと考えています。',
         selfPr: 'チームでの企画運営経験があり、議論をまとめるのが得意です。',
         researchTopic: '消費者行動と購買データの関係',
@@ -2322,6 +2410,26 @@ const App = (() => {
       if (!confirm('現在の項目を破棄してデフォルトに戻しますか？')) return;
       const sess = getSession(); sess.surveyTest = { questions: Stats.DEFAULT_SURVEY_QUESTIONS.map(q => ({ ...q })) }; saveSession(sess); renderSurveyMgr();
     });
+    // Message template
+    const msgTextarea = document.getElementById('msg-template');
+    if (msgTextarea) {
+      msgTextarea.addEventListener('change', () => {
+        const sess = getSession();
+        sess.messageTemplate = msgTextarea.value;
+        saveSession(sess);
+      });
+    }
+    const msgReset = document.getElementById('msg-template-reset');
+    if (msgReset) msgReset.addEventListener('click', () => {
+      if (!confirm('テンプレートをデフォルトに戻しますか？')) return;
+      const sess = getSession();
+      sess.messageTemplate = DEFAULT_MSG_TEMPLATE;
+      saveSession(sess);
+      document.getElementById('msg-template').value = DEFAULT_MSG_TEMPLATE;
+    });
+    const msgGen = document.getElementById('msg-generate-all');
+    if (msgGen) msgGen.addEventListener('click', generateAllMessages);
+
     $('#add-faculty').addEventListener('click', () => {
       const sess = getSession();
       const name = prompt('追加する学部名を入力してください', '新学部');
