@@ -190,7 +190,7 @@ const App = (() => {
     if (changed) {
       const list = Storage.loadSessions();
       const idx = list.findIndex(s => s.id === sess.id);
-      if (idx >= 0) { list[idx] = sess; localStorage.setItem('zemiSA.sessions.v1', JSON.stringify(list)); }
+      if (idx >= 0) { list[idx] = sess; Storage.saveSessions(list); }
     }
     return sess;
   }
