@@ -134,6 +134,7 @@ const Stats = (() => {
   function hasAcademic(c) { return !!(c && c.academicSubmittedAt); }
   function hasSurvey(c)   { return !!(c && c.surveySubmittedAt); }
 
+  // デフォルトの面接評価項目（試験回ごとにカスタマイズ可）
   const INTERVIEW_RATINGS = [
     { key: 'communication', label: 'コミュニケーション' },
     { key: 'motivation',    label: '志望度・熱意' },
@@ -141,6 +142,13 @@ const Stats = (() => {
     { key: 'knowledge',     label: '専門性・知識' },
     { key: 'fit',           label: '適性・人柄' }
   ];
+  // 試験回のカスタム評価項目を取得（未設定ならデフォルトを返す）
+  function getInterviewRatings(session) {
+    if (session?.interviewRatings && Array.isArray(session.interviewRatings) && session.interviewRatings.length > 0) {
+      return session.interviewRatings;
+    }
+    return INTERVIEW_RATINGS;
+  }
 
   // Get interview records as array (backward-compat for legacy single-record format)
   function interviewRecords(c) {

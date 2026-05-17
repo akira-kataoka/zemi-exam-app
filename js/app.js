@@ -1192,17 +1192,42 @@ const App = (() => {
     window.removeEventListener('scroll', window._profileScrollSpy);
     window._profileScrollSpy = updateActiveLink;
     window.addEventListener('scroll', window._profileScrollSpy);
-    // Interview radar (avg across all records if multi)
+    // Interview radar — show each interviewer + average overlay
     if (Stats.hasInterview(c)) {
       const ivCtx = document.getElementById('profile-radar-interview');
       const catAvgs = Stats.interviewCategoryAvgs(c);
+      const recs = Stats.interviewRecords(c);
+      const recColors = ['#06b6d4', '#f59e0b', '#ec4899', '#84cc16', '#ef4444'];
+      const datasets = [];
+      // 各面接官の個別評価（複数の場合のみ）
+      if (recs.length > 1) {
+        recs.forEach((r, i) => {
+          datasets.push({
+            label: r.interviewer || `面接官${i + 1}`,
+            data: Stats.INTERVIEW_RATINGS.map(k => Number(r.ratings?.[k.key]) || 0),
+            backgroundColor: 'transparent',
+            borderColor: recColors[i % recColors.length],
+            borderDash: [4, 3],
+            borderWidth: 1.5,
+            pointRadius: 3,
+            pointBackgroundColor: recColors[i % recColors.length]
+          });
+        });
+      }
+      // 平均（メイン強調）
+      datasets.push({
+        label: recs.length > 1 ? `★平均 (${recs.length}人)` : '評価',
+        data: Stats.INTERVIEW_RATINGS.map(r => catAvgs[r.key] || 0),
+        backgroundColor: 'rgba(139,92,246,.25)',
+        borderColor: '#8b5cf6',
+        borderWidth: 2.5,
+        pointRadius: 5,
+        pointBackgroundColor: '#8b5cf6'
+      });
       if (ivCtx) new Chart(ivCtx, {
         type: 'radar',
-        data: {
-          labels: Stats.INTERVIEW_RATINGS.map(r => r.label),
-          datasets: [{ label: `面接評価平均 (${Stats.interviewCount(c)}人)`, data: Stats.INTERVIEW_RATINGS.map(r => catAvgs[r.key] || 0), backgroundColor: 'rgba(139,92,246,.2)', borderColor: '#8b5cf6', pointBackgroundColor: '#8b5cf6' }]
-        },
-        options: { responsive: true, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
+        data: { labels: Stats.INTERVIEW_RATINGS.map(r => r.label), datasets },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
       });
     }
     document.getElementById('profile-pass').addEventListener('change', e => {
