@@ -1,62 +1,144 @@
-// Subject / survey definitions and score computations
-const ACADEMIC_KEYS = [
-  { key: 'logic',        label: '論理・数理' },
-  { key: 'english',      label: '英語' },
-  { key: 'specialty',    label: '専門知識' },
-  { key: 'statistics',   label: '統計・データ' },
-  { key: 'writing',      label: '文章作成' },
-  { key: 'presentation', label: 'プレゼン' }
+// Default test banks + scoring utilities. Sessions carry their own banks via session.academicTest / session.surveyTest.
+
+const DEFAULT_ACADEMIC_CATEGORIES = ['論理・数理', '英語', '専門知識', '統計・データ', '文章作成', 'プレゼン'];
+
+// 12 sample multiple-choice questions across 6 categories (auto-scoring)
+const DEFAULT_ACADEMIC_QUESTIONS = [
+  { id: 'q_a1', category: '論理・数理', points: 10,
+    text: '次の数列の?に当てはまる数は？  2, 4, 8, 16, ?',
+    choices: ['20', '24', '32', '48'], correctIndex: 2 },
+  { id: 'q_a2', category: '論理・数理', points: 10,
+    text: '「すべてのAはBである」が真のとき、必ず真と言えるのは？',
+    choices: ['すべてのBはAである', 'AでないものはBでない', 'BでないものはAでない', 'AはBではない'], correctIndex: 2 },
+  { id: 'q_a3', category: '英語', points: 10,
+    text: 'Choose the correct word: "She has been working here ___ 2010."',
+    choices: ['since', 'for', 'from', 'during'], correctIndex: 0 },
+  { id: 'q_a4', category: '英語', points: 10,
+    text: '"ubiquitous" の意味として最も近いのは？',
+    choices: ['希少な', '遍在する', '一時的な', '巨大な'], correctIndex: 1 },
+  { id: 'q_a5', category: '専門知識', points: 10,
+    text: '経済学における「機会費用」とは？',
+    choices: ['購入時に実際に支払う金額', '選択しなかった選択肢から得られたはずの利益', '生産にかかる総コスト', '需要と供給の差額'], correctIndex: 1 },
+  { id: 'q_a6', category: '専門知識', points: 10,
+    text: 'マーケティングの4Pに含まれないのは？',
+    choices: ['Product', 'Price', 'People', 'Promotion'], correctIndex: 2 },
+  { id: 'q_a7', category: '統計・データ', points: 10,
+    text: '標本平均と母平均の差を扱う仮説検定で最も基本的なものは？',
+    choices: ['t検定', 'カイ二乗検定', '回帰分析', 'クラスター分析'], correctIndex: 0 },
+  { id: 'q_a8', category: '統計・データ', points: 10,
+    text: '次の値の中央値を求めよ: 3, 7, 8, 12, 15',
+    choices: ['7', '8', '9', '12'], correctIndex: 1 },
+  { id: 'q_a9', category: '文章作成', points: 10,
+    text: '次のうち、論理的な文章として最も適切な接続詞は？「気温が下がった。___厚着をした。」',
+    choices: ['しかし', 'そこで', 'ところが', 'なお'], correctIndex: 1 },
+  { id: 'q_a10', category: '文章作成', points: 10,
+    text: '次の文の誤りを正すと？「彼の主張は事実と違くて、説得力がない。」',
+    choices: ['違って', '違いて', '違く', '違うで'], correctIndex: 0 },
+  { id: 'q_a11', category: 'プレゼン', points: 10,
+    text: 'プレゼン冒頭で最も重要なのは？',
+    choices: ['詳細データの提示', '聞き手の関心を引く問題提起', '全資料の配布', 'すべての結論を述べる'], correctIndex: 1 },
+  { id: 'q_a12', category: 'プレゼン', points: 10,
+    text: '聞き手に行動を促す結びとして適切でないのは？',
+    choices: ['具体的な次のアクションを提示する', '結論を1文で再確認する', '質問を受け付ける', '冗長な謝辞を長く述べる'], correctIndex: 3 }
 ];
 
-const SURVEY_ITEMS = [
-  { key: 'sv_motivation',    label: '研究テーマへの強い興味・動機がある' },
-  { key: 'sv_curiosity',     label: '知らないことを学ぶのが好き' },
-  { key: 'sv_persistence',   label: '困難な課題にも粘り強く取り組める' },
-  { key: 'sv_collab',        label: 'チームで議論し協働するのが得意' },
-  { key: 'sv_leadership',    label: 'リーダーシップを発揮した経験がある' },
-  { key: 'sv_logic',         label: '論理的に考え、整理して伝えるのが得意' },
-  { key: 'sv_creativity',    label: '新しいアイデアを生み出すのが得意' },
-  { key: 'sv_data',          label: '数値やデータに基づいて判断するタイプ' },
-  { key: 'sv_planning',      label: '計画的にスケジュール管理ができる' },
-  { key: 'sv_communication', label: '人前で話すこと・発表が得意' }
+const DEFAULT_FACULTY_DEPT = [
+  { name: '経済学部', departments: ['経済学科', '国際経済学科'] },
+  { name: '商学部',   departments: ['商学科', '会計学科', 'マーケティング学科'] },
+  { name: '経営学部', departments: ['経営学科', '経営戦略学科'] },
+  { name: '情報学部', departments: ['情報科学科', 'データサイエンス学科'] },
+  { name: '社会学部', departments: ['社会学科', 'メディア社会学科'] },
+  { name: '法学部',   departments: ['法律学科', '政治学科'] }
+];
+
+const DEFAULT_SURVEY_QUESTIONS = [
+  { id: 'q_s1',  text: '研究テーマへの強い興味・動機がある' },
+  { id: 'q_s2',  text: '知らないことを学ぶのが好き' },
+  { id: 'q_s3',  text: '困難な課題にも粘り強く取り組める' },
+  { id: 'q_s4',  text: 'チームで議論し協働するのが得意' },
+  { id: 'q_s5',  text: 'リーダーシップを発揮した経験がある' },
+  { id: 'q_s6',  text: '論理的に考え、整理して伝えるのが得意' },
+  { id: 'q_s7',  text: '新しいアイデアを生み出すのが得意' },
+  { id: 'q_s8',  text: '数値やデータに基づいて判断するタイプ' },
+  { id: 'q_s9',  text: '計画的にスケジュール管理ができる' },
+  { id: 'q_s10', text: '人前で話すこと・発表が得意' }
 ];
 
 const Stats = (() => {
-  function academicTotal(c) {
-    return ACADEMIC_KEYS.reduce((s, k) => s + (Number(c[k.key]) || 0), 0);
-  }
-  function academicAvg(c) { return academicTotal(c) / ACADEMIC_KEYS.length; }
 
-  function surveyAvg(c) {
-    const vals = SURVEY_ITEMS.map(it => Number(c[it.key]) || 0).filter(v => v > 0);
+  // Academic auto-scoring
+  function scoreAcademic(candidate, academicTest) {
+    if (!academicTest || !academicTest.questions || !candidate.academicAnswers) {
+      return { total: 0, max: 0, percent: 0, perCategory: {} };
+    }
+    let total = 0, max = 0;
+    const cat = {};
+    academicTest.questions.forEach(q => {
+      max += q.points;
+      const a = candidate.academicAnswers[q.id];
+      const correct = (a !== undefined && Number(a) === q.correctIndex);
+      const got = correct ? q.points : 0;
+      total += got;
+      const c = q.category || 'その他';
+      if (!cat[c]) cat[c] = { got: 0, max: 0 };
+      cat[c].got += got;
+      cat[c].max += q.points;
+    });
+    const percent = max ? (total / max) * 100 : 0;
+    const perCategory = {};
+    Object.keys(cat).forEach(k => { perCategory[k] = cat[k].max ? (cat[k].got / cat[k].max) * 100 : 0; });
+    return { total, max, percent, perCategory };
+  }
+
+  function surveyAvg(candidate, surveyTest) {
+    if (!surveyTest || !surveyTest.questions || !candidate.surveyAnswers) return 0;
+    const vals = surveyTest.questions.map(q => Number(candidate.surveyAnswers[q.id]) || 0).filter(v => v > 0);
     if (vals.length === 0) return 0;
     return vals.reduce((a, b) => a + b, 0) / vals.length;
   }
-  // Survey average is 1-5, convert to 0-100 scale for total score
-  function surveyScore100(c) { return (surveyAvg(c) / 5) * 100; }
+  function surveyScore100(c, st) { return (surveyAvg(c, st) / 5) * 100; }
 
-  function totalScore(c, cfg) {
+  function totalScore(candidate, session, cfg) {
+    const ac = scoreAcademic(candidate, session?.academicTest);
+    const sv = surveyScore100(candidate, session?.surveyTest);
     const wA = (cfg?.weightAcademic ?? 70) / 100;
     const wS = (cfg?.weightSurvey ?? 30) / 100;
-    return academicAvg(c) * wA + surveyScore100(c) * wS;
+    return ac.percent * wA + sv * wS;
   }
 
-  function radarData(c) {
-    return ACADEMIC_KEYS.map(k => Number(c[k.key]) || 0);
+  function radarData(candidate, session) {
+    const { perCategory } = scoreAcademic(candidate, session?.academicTest);
+    const cats = session?.academicTest?.questions?.length
+      ? [...new Set(session.academicTest.questions.map(q => q.category || 'その他'))]
+      : DEFAULT_ACADEMIC_CATEGORIES;
+    return { labels: cats, data: cats.map(c => perCategory[c] || 0) };
   }
-  function surveyVector(c) {
-    return SURVEY_ITEMS.map(it => Number(c[it.key]) || 0);
+
+  function surveyVector(candidate, session) {
+    const qs = session?.surveyTest?.questions || [];
+    return qs.map(q => Number(candidate.surveyAnswers?.[q.id]) || 0);
   }
-  function featureVector(c) {
-    // For clustering: academic (normalized 0-1) + survey (normalized 0-1)
-    const a = ACADEMIC_KEYS.map(k => (Number(c[k.key]) || 0) / 100);
-    const s = SURVEY_ITEMS.map(it => (Number(c[it.key]) || 0) / 5);
+
+  function featureVector(candidate, session) {
+    // Cluster feature: per-category academic % (0-1) + per-question survey (0-1)
+    const { perCategory } = scoreAcademic(candidate, session?.academicTest);
+    const cats = session?.academicTest?.questions?.length
+      ? [...new Set(session.academicTest.questions.map(q => q.category || 'その他'))]
+      : DEFAULT_ACADEMIC_CATEGORIES;
+    const a = cats.map(c => (perCategory[c] || 0) / 100);
+    const s = (session?.surveyTest?.questions || []).map(q => (Number(candidate.surveyAnswers?.[q.id]) || 0) / 5);
     return a.concat(s);
   }
 
+  // Per-phase completion
+  function hasResume(c) { return !!(c && (c.lastName || c.firstName || c.name)); }
+  function hasAcademic(c) { return !!(c && c.academicSubmittedAt); }
+  function hasSurvey(c)   { return !!(c && c.surveySubmittedAt); }
+
   return {
-    academicTotal, academicAvg, surveyAvg, surveyScore100,
-    totalScore, radarData, surveyVector, featureVector,
-    ACADEMIC_KEYS, SURVEY_ITEMS
+    scoreAcademic, surveyAvg, surveyScore100, totalScore,
+    radarData, surveyVector, featureVector,
+    hasResume, hasAcademic, hasSurvey,
+    DEFAULT_ACADEMIC_CATEGORIES, DEFAULT_ACADEMIC_QUESTIONS, DEFAULT_SURVEY_QUESTIONS, DEFAULT_FACULTY_DEPT
   };
 })();

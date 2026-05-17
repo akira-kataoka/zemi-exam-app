@@ -1,301 +1,440 @@
 // =========================================================
-// ゼミ選抜アナライザー  App controller
+// ゼミ選抜アナライザー v2.0
 // =========================================================
 const App = (() => {
 
   let cfg = Storage.loadCfg();
   const charts = {};
+  const PHASE_LABEL = { resume: '履歴書', academic: '学力試験', survey: 'アンケート' };
 
-  // ---------- View switching ----------
+  // ===== Helpers =====
+  function $(s, root = document) { return root.querySelector(s); }
+  function $$(s, root = document) { return Array.from(root.querySelectorAll(s)); }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function fullName(c) {
+    if (c.lastName || c.firstName) return [(c.lastName || ''), (c.firstName || '')].join(' ').trim();
+    return c.name || '';
+  }
+  function fullKana(c) {
+    if (c.lastKana || c.firstKana) return [(c.lastKana || ''), (c.firstKana || '')].join(' ').trim();
+    return c.kana || '';
+  }
+  function getSession() { return Storage.getCurrentSession(); }
+  function ensureTests(sess) {
+    // Initialize default tests if missing (idempotent)
+    let changed = false;
+    if (!sess.academicTest || !Array.isArray(sess.academicTest.questions)) {
+      sess.academicTest = { questions: DEFAULT_ACADEMIC_QUESTIONS.map(q => ({ ...q })) };
+      changed = true;
+    }
+    if (!sess.surveyTest || !Array.isArray(sess.surveyTest.questions)) {
+      sess.surveyTest = { questions: DEFAULT_SURVEY_QUESTIONS.map(q => ({ ...q })) };
+      changed = true;
+    }
+    if (!sess.resumeExtraFields) { sess.resumeExtraFields = []; changed = true; }
+    if (!sess.facultyDept) { sess.facultyDept = JSON.parse(JSON.stringify(Stats.DEFAULT_FACULTY_DEPT)); changed = true; }
+    if (changed) {
+      const list = Storage.loadSessions();
+      const idx = list.findIndex(s => s.id === sess.id);
+      if (idx >= 0) { list[idx] = sess; localStorage.setItem('zemiSA.sessions.v1', JSON.stringify(list)); }
+    }
+    return sess;
+  }
+
+  // ===== Session bar =====
+  function renderSessionBar() {
+    const sess = ensureTests(getSession());
+    const sessions = Storage.loadSessions();
+    const sel = $('#session-select');
+    sel.innerHTML = sessions.map(s => `<option value="${s.id}" ${s.id === sess.id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+    const list = Storage.loadForSession();
+    $('#session-meta').textContent = `${list.length}名 / 作成 ${formatDate(sess.createdAt)}`;
+    ['resume', 'academic', 'survey'].forEach(p => {
+      const el = document.querySelector(`[data-phase-state="${p}"]`);
+      const open = !!sess.phases?.[p];
+      el.textContent = open ? '受付中' : '停止';
+      el.parentElement.classList.toggle('open', open);
+      el.parentElement.classList.toggle('closed', !open);
+    });
+    // sync toggle checkboxes (if admin view rendered)
+    $$('[data-phase-toggle]').forEach(cb => { cb.checked = !!sess.phases?.[cb.dataset.phaseToggle]; });
+  }
+  function onSessionChange(e) {
+    Storage.setCurrentSessionId(e.target.value);
+    ensureTests(getSession());
+    renderSessionBar();
+    refreshAllViews();
+  }
+  function onAddSession() {
+    const name = prompt('新しい試験回の名前を入力してください', `${new Date().getFullYear()}年度入試`);
+    if (!name) return;
+    const s = Storage.addSession(name);
+    Storage.setCurrentSessionId(s.id);
+    ensureTests(getSession());
+    renderSessionBar();
+    refreshAllViews();
+  }
+  function onRenameSession() {
+    const cur = getSession();
+    const name = prompt('試験回の名前', cur.name);
+    if (!name || name === cur.name) return;
+    Storage.renameSession(cur.id, name);
+    renderSessionBar();
+  }
+  function onDeleteSession() {
+    const cur = getSession();
+    const cnt = Storage.loadForSession(cur.id).length;
+    if (!confirm(`試験回「${cur.name}」を削除します（受験者${cnt}名のデータも一緒に削除されます）。よろしいですか？`)) return;
+    Storage.removeSession(cur.id);
+    ensureTests(getSession());
+    renderSessionBar();
+    refreshAllViews();
+  }
+  function refreshAllViews() {
+    renderOverview();
+    refreshProfileSelect();
+    renderAcademicMgr();
+    renderSurveyMgr();
+    renderResumeMgr();
+  }
+
+  // ===== Tabs =====
   function showView(name) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
-    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
-    if (name === 'dashboard') renderDashboard();
-    if (name === 'candidates') renderCandidates();
+    $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+    $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+    if (name === 'overview') renderOverview();
     if (name === 'profile') refreshProfileSelect();
-    if (name === 'ranking') renderRanking();
-    if (name === 'cluster') {/* on-demand */}
-    if (name === 'exam') goExamStep(1);
+    if (name === 'portal')   renderPortal();
+    if (name === 'mgr-academic') renderAcademicMgr();
+    if (name === 'mgr-survey')   renderSurveyMgr();
+    if (name === 'mgr-resume')   renderResumeMgr();
+    if (name === 'data') loadCfgUi();
+  }
+  function showSubview(name) {
+    $$('.subtab').forEach(t => t.classList.toggle('active', t.dataset.subview === name));
+    $$('.subview').forEach(v => v.classList.toggle('active', v.id === 'sub-' + name));
+    if (name === 'chart')   renderChartView();
+    if (name === 'rank')    renderRanking();
+    if (name === 'cluster') { /* on-demand */ }
+    if (name === 'list')    renderCandidateList();
   }
 
-  // ---------- Survey rendering ----------
-  function buildSurveyItems() {
-    const wrap = document.getElementById('survey-items');
-    wrap.innerHTML = '';
-    SURVEY_ITEMS.forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'survey-item';
-      row.innerHTML = `
-        <div class="q">${item.label}</div>
-        <div class="scale">
-          ${[1, 2, 3, 4, 5].map(v => `
-            <label><input type="radio" name="${item.key}" value="${v}" required>${v}</label>
-          `).join('')}
-        </div>
-      `;
-      wrap.appendChild(row);
-    });
+  // ===== Overview =====
+  function renderOverview() {
+    const sess = ensureTests(getSession());
+    const list = Storage.loadForSession();
+    $('#stat-count').textContent = list.length;
+    $('#stat-resume').textContent   = list.filter(c => Stats.hasResume(c)).length;
+    $('#stat-academic').textContent = list.filter(c => Stats.hasAcademic(c)).length;
+    $('#stat-survey').textContent   = list.filter(c => Stats.hasSurvey(c)).length;
+    const totals = list.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).map(c => Stats.totalScore(c, sess, cfg));
+    $('#stat-avg').textContent = totals.length ? (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1) : '-';
+    $('#stat-max').textContent = totals.length ? Math.max(...totals).toFixed(1) : '-';
+    $('#stat-passed').textContent = list.filter(c => c.passed).length;
+    renderCandidateList();
+    renderChartView();
+    renderRanking();
   }
 
-  // ---------- Exam wizard ----------
-  function goExamStep(n) {
-    document.querySelectorAll('.exam-steps .step').forEach(s => {
-      s.classList.remove('active', 'done');
-      const num = Number(s.dataset.step);
-      if (num === n) s.classList.add('active');
-      else if (num < n) s.classList.add('done');
-    });
-    document.querySelectorAll('.exam-step').forEach(s => {
-      s.classList.toggle('active', Number(s.dataset.step) === n);
-    });
-    if (n === 4) renderConfirm();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function validateStep(n) {
-    const section = document.querySelector(`.exam-step[data-step="${n}"]`);
-    const required = section.querySelectorAll('[required]');
-    for (const el of required) {
-      if (!el.value || (el.type === 'radio' && !section.querySelector(`input[name="${el.name}"]:checked`))) {
-        el.focus();
-        alert('未入力の項目があります。');
-        return false;
-      }
-    }
-    return true;
-  }
-
-  function gatherForm() {
-    const form = document.getElementById('exam-form');
-    const fd = new FormData(form);
-    const obj = {};
-    for (const [k, v] of fd.entries()) obj[k] = v;
-    return obj;
-  }
-
-  function renderConfirm() {
-    const data = gatherForm();
-    const area = document.getElementById('confirm-area');
-    const acadRows = ACADEMIC_KEYS.map(k => `<dt>${k.label}</dt><dd>${data[k.key] || '-'} / 100</dd>`).join('');
-    const survRows = SURVEY_ITEMS.map(it => `<dt>${it.label}</dt><dd>${data[it.key] || '-'} / 5</dd>`).join('');
-    area.innerHTML = `
-      <div class="confirm-block">
-        <h4>履歴書</h4>
-        <dl>
-          <dt>受験番号</dt><dd>${escapeHtml(data.examineeId || '')}</dd>
-          <dt>氏名</dt><dd>${escapeHtml(data.name || '')}（${escapeHtml(data.kana || '')}）</dd>
-          <dt>大学・学部</dt><dd>${escapeHtml(data.university || '')} ${escapeHtml(data.faculty || '')} ${escapeHtml(data.grade || '')}</dd>
-          <dt>GPA</dt><dd>${escapeHtml(data.gpa || '')}</dd>
-          <dt>資格</dt><dd>${escapeHtml(data.qualifications || '')}</dd>
-          <dt>志望動機</dt><dd>${escapeHtml(data.motivation || '')}</dd>
-          <dt>自己PR</dt><dd>${escapeHtml(data.selfPr || '')}</dd>
-        </dl>
-      </div>
-      <div class="confirm-block">
-        <h4>学力試験</h4><dl>${acadRows}</dl>
-      </div>
-      <div class="confirm-block">
-        <h4>アンケート</h4><dl>${survRows}</dl>
-      </div>
-      <div class="confirm-block">
-        <h4>自由記述</h4>
-        <dl>
-          <dt>力を入れた活動</dt><dd>${escapeHtml(data.freeAchievement || '')}</dd>
-          <dt>挑戦したいこと</dt><dd>${escapeHtml(data.freeAspiration || '')}</dd>
-        </dl>
-      </div>
-    `;
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    if (!validateStep(1) || !validateStep(2) || !validateStep(3)) return;
-    const data = gatherForm();
-    // coerce numerics
-    ACADEMIC_KEYS.forEach(k => data[k.key] = Number(data[k.key]));
-    SURVEY_ITEMS.forEach(it => data[it.key] = Number(data[it.key]));
-    data.gpa = data.gpa ? Number(data.gpa) : null;
-    Storage.add(data);
-    alert('提出が完了しました。');
-    document.getElementById('exam-form').reset();
-    showView('candidates');
-  }
-
-  // ---------- Dashboard ----------
-  function renderDashboard() {
-    const list = Storage.load();
-    document.getElementById('stat-count').textContent = list.length;
-    if (list.length === 0) {
-      document.getElementById('stat-avg').textContent = '-';
-      document.getElementById('stat-max').textContent = '-';
-      document.getElementById('stat-latest').textContent = '-';
-      document.getElementById('recent-list').innerHTML = '<div class="row">まだデータがありません。</div>';
-      renderDistribution([]); renderSubjectAvg([]);
-      return;
-    }
-    const totals = list.map(c => Stats.totalScore(c, cfg));
-    const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
-    const max = Math.max(...totals);
-    const latest = list.reduce((a, b) => new Date(a.submittedAt) > new Date(b.submittedAt) ? a : b);
-    document.getElementById('stat-avg').textContent = avg.toFixed(1);
-    document.getElementById('stat-max').textContent = max.toFixed(1);
-    document.getElementById('stat-latest').textContent = formatDate(latest.submittedAt);
-
-    const recent = [...list].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).slice(0, 5);
-    document.getElementById('recent-list').innerHTML = recent.map(c => `
-      <div class="row">
-        <div><strong>${escapeHtml(c.name)}</strong> <span class="meta">${escapeHtml(c.examineeId)} ・ ${escapeHtml(c.university || '')}</span></div>
-        <div class="meta">${formatDate(c.submittedAt)} ・ 総合 <strong>${Stats.totalScore(c, cfg).toFixed(1)}</strong></div>
-      </div>
-    `).join('');
-
-    renderDistribution(totals);
-    renderSubjectAvg(list);
-  }
-
-  function renderDistribution(totals) {
-    const ctx = document.getElementById('chart-distribution');
-    if (!ctx) return;
-    const bins = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    const labels = ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80-90', '90-100'];
-    totals.forEach(t => { const i = Math.min(9, Math.floor(t / 10)); bins[i]++; });
-    if (charts.dist) charts.dist.destroy();
-    charts.dist = new Chart(ctx, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: '受験者数', data: bins, backgroundColor: '#2563eb' }] },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-    });
-  }
-
-  function renderSubjectAvg(list) {
-    const ctx = document.getElementById('chart-subjects');
-    if (!ctx) return;
-    const labels = ACADEMIC_KEYS.map(k => k.label);
-    const avgs = ACADEMIC_KEYS.map(k => list.length ? list.reduce((s, c) => s + (Number(c[k.key]) || 0), 0) / list.length : 0);
-    if (charts.subj) charts.subj.destroy();
-    charts.subj = new Chart(ctx, {
-      type: 'radar',
-      data: { labels, datasets: [{ label: '平均点', data: avgs, backgroundColor: 'rgba(16,185,129,.2)', borderColor: '#10b981', pointBackgroundColor: '#10b981' }] },
-      options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
-    });
-  }
-
-  // ---------- Candidates list ----------
-  function renderCandidates() {
-    const tbody = document.querySelector('#cand-table tbody');
-    const q = document.getElementById('search-cand').value.trim().toLowerCase();
-    const sort = document.getElementById('sort-cand').value;
-    let list = Storage.load();
+  function renderCandidateList() {
+    const sess = getSession();
+    const tbody = $('#cand-table tbody');
+    const q = ($('#search-cand').value || '').trim().toLowerCase();
+    const sort = $('#sort-cand').value;
+    let list = Storage.loadForSession();
     if (q) list = list.filter(c =>
-      (c.name || '').toLowerCase().includes(q) ||
+      fullName(c).toLowerCase().includes(q) ||
       (c.examineeId || '').toLowerCase().includes(q) ||
       (c.university || '').toLowerCase().includes(q)
     );
-    const enriched = list.map(c => ({
-      c,
-      academic: Stats.academicAvg(c),
-      survey: Stats.surveyAvg(c),
-      total: Stats.totalScore(c, cfg)
-    }));
+    const enriched = list.map(c => {
+      const ac = Stats.scoreAcademic(c, sess.academicTest);
+      const sv = Stats.surveyAvg(c, sess.surveyTest);
+      const total = Stats.totalScore(c, sess, cfg);
+      const lastUpdate = [c.resumeSubmittedAt, c.academicSubmittedAt, c.surveySubmittedAt, c.createdAt].filter(Boolean).sort().pop();
+      return { c, ac, sv, total, lastUpdate };
+    });
     switch (sort) {
-      case 'date-asc':   enriched.sort((a, b) => new Date(a.c.submittedAt) - new Date(b.c.submittedAt)); break;
+      case 'date-asc':   enriched.sort((a, b) => new Date(a.lastUpdate) - new Date(b.lastUpdate)); break;
       case 'score-desc': enriched.sort((a, b) => b.total - a.total); break;
       case 'score-asc':  enriched.sort((a, b) => a.total - b.total); break;
-      case 'name':       enriched.sort((a, b) => (a.c.name || '').localeCompare(b.c.name || '', 'ja')); break;
-      default:           enriched.sort((a, b) => new Date(b.c.submittedAt) - new Date(a.c.submittedAt));
+      case 'name':       enriched.sort((a, b) => fullName(a.c).localeCompare(fullName(b.c), 'ja')); break;
+      default:           enriched.sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate));
     }
-    tbody.innerHTML = enriched.map(({ c, academic, survey, total }) => `
-      <tr data-id="${c.id}">
+    tbody.innerHTML = enriched.map(({ c, ac, sv, total, lastUpdate }) => `
+      <tr data-id="${c.id}" class="${c.passed ? 'row-passed' : ''}">
+        <td><input type="checkbox" class="pass-check" data-id="${c.id}" ${c.passed ? 'checked' : ''} title="合格チェック"></td>
         <td>${escapeHtml(c.examineeId || '')}</td>
-        <td>${escapeHtml(c.name || '')}</td>
-        <td>${escapeHtml((c.university || '') + ' ' + (c.faculty || ''))}</td>
-        <td class="num">${academic.toFixed(1)}</td>
-        <td class="num">${survey.toFixed(2)}</td>
-        <td class="num"><strong>${total.toFixed(1)}</strong></td>
-        <td>${formatDate(c.submittedAt)}</td>
+        <td>${escapeHtml(fullName(c))}</td>
+        <td>${escapeHtml((c.faculty || '') + ' ' + (c.department || ''))}</td>
+        <td>${Stats.hasResume(c) ? '✅' : '—'}</td>
+        <td class="num">${Stats.hasAcademic(c) ? ac.percent.toFixed(1) + '%' : '—'}</td>
+        <td class="num">${Stats.hasSurvey(c) ? sv.toFixed(2) : '—'}</td>
+        <td class="num"><strong>${(Stats.hasAcademic(c) || Stats.hasSurvey(c)) ? total.toFixed(1) : '—'}</strong></td>
+        <td>${formatDate(lastUpdate)}</td>
         <td class="row-actions">
           <button class="btn" data-act="view">詳細</button>
           <button class="btn danger" data-act="del">削除</button>
         </td>
       </tr>
-    `).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">データがありません。</td></tr>`;
+    `).join('') || `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">受験者データがありません。</td></tr>`;
+    tbody.querySelectorAll('.pass-check').forEach(cb => {
+      cb.addEventListener('click', e => e.stopPropagation());
+      cb.addEventListener('change', e => {
+        const list = Storage.load();
+        const rec = list.find(x => x.id === cb.dataset.id);
+        if (rec) { rec.passed = cb.checked; Storage.save(list); renderOverview(); }
+      });
+    });
     tbody.querySelectorAll('tr[data-id]').forEach(tr => {
       tr.querySelector('[data-act="view"]')?.addEventListener('click', e => {
         e.stopPropagation();
-        document.getElementById('profile-select').value = tr.dataset.id;
+        $('#profile-select').value = tr.dataset.id;
         showView('profile');
         renderProfile(tr.dataset.id);
       });
       tr.querySelector('[data-act="del"]')?.addEventListener('click', e => {
         e.stopPropagation();
-        if (confirm('この受験者データを削除しますか？')) {
-          Storage.remove(tr.dataset.id);
-          renderCandidates();
-        }
+        if (confirm('この受験者データを削除しますか？')) { Storage.remove(tr.dataset.id); renderOverview(); }
       });
-      tr.addEventListener('click', () => {
-        document.getElementById('profile-select').value = tr.dataset.id;
+      tr.addEventListener('click', e => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+        $('#profile-select').value = tr.dataset.id;
         showView('profile');
         renderProfile(tr.dataset.id);
       });
     });
   }
 
-  // ---------- Profile ----------
-  function refreshProfileSelect() {
-    const sel = document.getElementById('profile-select');
-    const current = sel.value;
-    const list = Storage.load();
-    sel.innerHTML = '<option value="">-- 受験者を選択 --</option>' +
-      list.map(c => `<option value="${c.id}">${escapeHtml(c.examineeId || '')} ${escapeHtml(c.name || '')}</option>`).join('');
-    if (current && list.find(c => c.id === current)) {
-      sel.value = current;
-      renderProfile(current);
-    } else {
-      document.getElementById('profile-body').innerHTML = '<div class="card" style="text-align:center;color:var(--muted)">上のドロップダウンから受験者を選択してください。</div>';
+  function renderChartView() {
+    const sess = getSession();
+    const list = Storage.loadForSession();
+    const totals = list.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).map(c => Stats.totalScore(c, sess, cfg));
+    // distribution
+    const dctx = $('#chart-distribution'); if (dctx) {
+      const bins = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      const labels = ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80-90', '90-100'];
+      totals.forEach(t => bins[Math.min(9, Math.floor(t / 10))]++);
+      if (charts.dist) charts.dist.destroy();
+      charts.dist = new Chart(dctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: '受験者数', data: bins, backgroundColor: '#2563eb' }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+      });
+    }
+    // subjects radar
+    const sctx = $('#chart-subjects'); if (sctx) {
+      const cats = sess.academicTest?.questions?.length
+        ? [...new Set(sess.academicTest.questions.map(q => q.category || 'その他'))]
+        : Stats.DEFAULT_ACADEMIC_CATEGORIES;
+      const avgs = cats.map(cat => {
+        const vals = list.filter(c => Stats.hasAcademic(c)).map(c => Stats.scoreAcademic(c, sess.academicTest).perCategory[cat] || 0);
+        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      });
+      if (charts.subj) charts.subj.destroy();
+      charts.subj = new Chart(sctx, {
+        type: 'radar',
+        data: { labels: cats, datasets: [{ label: '平均(%)', data: avgs, backgroundColor: 'rgba(16,185,129,.2)', borderColor: '#10b981', pointBackgroundColor: '#10b981' }] },
+        options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
+      });
+    }
+    // recent list
+    const wrap = $('#recent-list'); if (wrap) {
+      const recent = [...list].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
+      wrap.innerHTML = recent.length
+        ? recent.map(c => `<div class="row"><div><strong>${escapeHtml(fullName(c))}</strong> <span class="meta">${escapeHtml(c.examineeId || '')} ・ ${escapeHtml(c.university || '')}</span></div><div class="meta">${formatDate(c.createdAt)}</div></div>`).join('')
+        : '<div class="row">まだデータがありません。</div>';
     }
   }
 
+  // ===== Ranking =====
+  function renderRanking() {
+    const sess = getSession();
+    const n = Number($('#rank-n').value);
+    const metric = $('#rank-metric').value;
+    const list = Storage.loadForSession().map(c => {
+      const ac = Stats.scoreAcademic(c, sess.academicTest);
+      const sv = Stats.surveyAvg(c, sess.surveyTest);
+      const total = Stats.totalScore(c, sess, cfg);
+      return { c, ac, sv, total };
+    });
+    let key;
+    if (metric === 'academic') key = x => x.ac.percent;
+    else if (metric === 'survey') key = x => x.sv;
+    else key = x => x.total;
+    list.sort((a, b) => key(b) - key(a));
+    const top = list.slice(0, n);
+    const tbody = $('#rank-table tbody');
+    tbody.innerHTML = top.map((x, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${escapeHtml(x.c.examineeId || '')}</td>
+        <td>${escapeHtml(fullName(x.c))}</td>
+        <td class="num">${Stats.hasAcademic(x.c) ? x.ac.percent.toFixed(1) + '%' : '—'}</td>
+        <td class="num">${Stats.hasSurvey(x.c) ? x.sv.toFixed(2) : '—'}</td>
+        <td class="num"><strong>${x.total.toFixed(1)}</strong></td>
+      </tr>
+    `).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">データがありません。</td></tr>`;
+  }
+
+  // ===== Cluster =====
+  function runCluster() {
+    const sess = getSession();
+    const k = Math.max(2, Math.min(8, Number($('#k-value').value) || 3));
+    const list = Storage.loadForSession().filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c));
+    if (list.length < k) { alert(`分析対象が ${k} 人未満です（${list.length}名）。受験者を追加してください。`); return; }
+    const vectors = list.map(c => Stats.featureVector(c, sess));
+    const { assignments, centroids } = Cluster.kmeans(vectors, k);
+    const { points } = Cluster.pca2(vectors);
+
+    const palette = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+
+    if (charts.cluster) charts.cluster.destroy();
+    const datasets = [];
+    for (let c = 0; c < k; c++) {
+      const pts = points.map((p, i) => ({ x: p[0], y: p[1], _idx: i }))
+                        .filter((_, i) => assignments[i] === c);
+      datasets.push({ label: `クラスター ${c + 1} (${pts.length}名)`, data: pts, backgroundColor: palette[c % palette.length], pointRadius: 6, pointHoverRadius: 9 });
+    }
+    charts.cluster = new Chart($('#chart-cluster'), {
+      type: 'scatter',
+      data: { datasets },
+      options: {
+        responsive: true,
+        plugins: { tooltip: { callbacks: { label: ctx => { const c = list[ctx.raw._idx]; return `${fullName(c)} (${c.examineeId})`; } } } },
+        scales: { x: { title: { display: true, text: 'PC1' } }, y: { title: { display: true, text: 'PC2' } } }
+      }
+    });
+
+    const cats = sess.academicTest?.questions?.length
+      ? [...new Set(sess.academicTest.questions.map(q => q.category || 'その他'))]
+      : Stats.DEFAULT_ACADEMIC_CATEGORIES;
+    if (charts.clusterRadar) charts.clusterRadar.destroy();
+    const radarDS = centroids.map((centroid, i) => ({
+      label: `クラスター ${i + 1}`,
+      data: centroid.slice(0, cats.length).map(v => v * 100),
+      backgroundColor: palette[i % palette.length] + '33',
+      borderColor: palette[i % palette.length],
+      pointBackgroundColor: palette[i % palette.length]
+    }));
+    charts.clusterRadar = new Chart($('#chart-cluster-radar'), {
+      type: 'radar',
+      data: { labels: cats, datasets: radarDS },
+      options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
+    });
+
+    // ===== Cluster characterization: which attributes make each cluster distinctive =====
+    const surveyQs = sess.surveyTest?.questions || [];
+    const featLabels = cats.concat(surveyQs.map(q => q.text));
+    // overall mean per feature
+    const overallMean = featLabels.map((_, fi) => vectors.reduce((s, v) => s + v[fi], 0) / vectors.length);
+    let html = '';
+    for (let ci = 0; ci < k; ci++) {
+      const members = list.filter((_, i) => assignments[ci === assignments[i]]);  // placeholder; recomputed below
+    }
+    const characterizations = [];
+    for (let ci = 0; ci < k; ci++) {
+      const members = list.filter((_, i) => assignments[i] === ci);
+      // diff per feature
+      const diffs = featLabels.map((label, fi) => ({
+        label,
+        isAcademic: fi < cats.length,
+        diff: centroids[ci][fi] - overallMean[fi],
+        absDiff: Math.abs(centroids[ci][fi] - overallMean[fi]),
+        centroidVal: centroids[ci][fi]
+      }));
+      const sortedHi = [...diffs].sort((a, b) => b.diff - a.diff).slice(0, 3);
+      const sortedLo = [...diffs].sort((a, b) => a.diff - b.diff).slice(0, 2);
+      const fmtVal = (d) => d.isAcademic ? `${(d.centroidVal * 100).toFixed(0)}%` : `${(d.centroidVal * 5).toFixed(1)}/5`;
+      // Auto label
+      const labelParts = [];
+      if (sortedHi[0]) labelParts.push(sortedHi[0].label + 'が高い');
+      if (sortedLo[0] && sortedLo[0].diff < -0.05) labelParts.push(sortedLo[0].label + 'が低い');
+      const autoLabel = labelParts.join(' / ') || 'バランス型';
+      characterizations.push({ ci, members, sortedHi, sortedLo, autoLabel, fmtVal });
+    }
+    let charHtml = '<div class="cluster-grid">';
+    characterizations.forEach(({ ci, members, sortedHi, sortedLo, autoLabel, fmtVal }) => {
+      charHtml += `<div class="cluster-card" style="border-top:6px solid ${palette[ci % palette.length]}">
+        <h4 style="color:${palette[ci % palette.length]};margin:0 0 8px">クラスター ${ci + 1} <small style="color:var(--muted);font-weight:normal">(${members.length}名)</small></h4>
+        <div class="cluster-label">${escapeHtml(autoLabel)}</div>
+        <div class="cluster-traits">
+          <div class="trait-block">
+            <div class="trait-title">▲ 強み（平均より高い）</div>
+            ${sortedHi.map(d => `<div class="trait-row"><span class="trait-name">${escapeHtml(d.label)}</span><span class="trait-val up">${fmtVal(d)}</span></div>`).join('')}
+          </div>
+          <div class="trait-block">
+            <div class="trait-title">▼ 弱み（平均より低い）</div>
+            ${sortedLo.map(d => `<div class="trait-row"><span class="trait-name">${escapeHtml(d.label)}</span><span class="trait-val down">${fmtVal(d)}</span></div>`).join('')}
+          </div>
+        </div>
+        <div class="cluster-members">
+          <div class="trait-title">メンバー (${members.length}名)</div>
+          <div>${members.map(m => `<span class="cluster-chip" style="background:${palette[ci % palette.length]}">${escapeHtml(fullName(m))} (${escapeHtml(m.examineeId || '')})${m.passed ? ' ✅' : ''}</span>`).join('')}</div>
+        </div>
+        <div class="cluster-hint">💡 多様性確保: このグループから ${Math.max(1, Math.ceil(members.length / 5))} 名程度を採用すると、グループ全体としてバランスがとれます。</div>
+      </div>`;
+    });
+    charHtml += '</div>';
+    $('#cluster-assign-list').innerHTML = charHtml;
+  }
+
+  // ===== Profile =====
+  function refreshProfileSelect() {
+    const sel = $('#profile-select');
+    const current = sel.value;
+    const list = Storage.loadForSession();
+    sel.innerHTML = '<option value="">-- 受験者を選択 --</option>' +
+      list.map(c => `<option value="${c.id}">${escapeHtml(c.examineeId || '')} ${escapeHtml(fullName(c))}</option>`).join('');
+    if (current && list.find(c => c.id === current)) { sel.value = current; renderProfile(current); }
+    else { $('#profile-body').innerHTML = '<div class="card" style="text-align:center;color:var(--muted)">上のドロップダウンから受験者を選択してください。</div>'; }
+  }
+
   function renderProfile(id) {
-    const c = Storage.load().find(x => x.id === id);
-    const body = document.getElementById('profile-body');
+    const sess = getSession();
+    const c = Storage.loadForSession().find(x => x.id === id);
+    const body = $('#profile-body');
     if (!c) { body.innerHTML = ''; return; }
-    const academic = Stats.academicAvg(c);
-    const survey = Stats.surveyAvg(c);
-    const total = Stats.totalScore(c, cfg);
+    const ac = Stats.scoreAcademic(c, sess.academicTest);
+    const sv = Stats.surveyAvg(c, sess.surveyTest);
+    const total = Stats.totalScore(c, sess, cfg);
+    const radar = Stats.radarData(c, sess);
 
     body.innerHTML = `
       <div class="profile-card">
         <div class="profile-head">
           <div>
-            <div class="profile-name">${escapeHtml(c.name || '')}</div>
-            <div class="profile-meta">${escapeHtml(c.kana || '')}</div>
-            <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${escapeHtml(c.university || '')} ${escapeHtml(c.faculty || '')} ${escapeHtml(c.grade || '')}</div>
-            <div class="profile-meta">提出: ${formatDate(c.submittedAt)}</div>
+            <div class="profile-name">${escapeHtml(fullName(c))}</div>
+            <div class="profile-meta">${escapeHtml(fullKana(c))}</div>
+            <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
+            <div style="margin-top:10px"><label class="pass-toggle"><input type="checkbox" id="profile-pass" ${c.passed ? 'checked' : ''}> <span>🏆 この受験者を合格にする</span></label></div>
+            <div class="profile-meta">履歴書: ${c.resumeSubmittedAt ? formatDate(c.resumeSubmittedAt) : '未'} / 学力: ${c.academicSubmittedAt ? formatDate(c.academicSubmittedAt) : '未'} / アンケート: ${c.surveySubmittedAt ? formatDate(c.surveySubmittedAt) : '未'}</div>
           </div>
           <div>
             <div class="score-badges">
               <span class="score-badge">総合 ${total.toFixed(1)}</span>
-              <span class="score-badge alt">学力平均 ${academic.toFixed(1)}</span>
-              <span class="score-badge warn">アンケート ${survey.toFixed(2)}/5</span>
+              <span class="score-badge alt">学力 ${ac.percent.toFixed(1)}% (${ac.total}/${ac.max})</span>
+              <span class="score-badge warn">アンケート ${sv.toFixed(2)}/5</span>
             </div>
           </div>
         </div>
       </div>
 
       <div class="grid-2">
-        <div class="profile-card">
-          <h3>学力試験レーダー</h3>
-          <canvas id="profile-radar-academic" height="280"></canvas>
-        </div>
-        <div class="profile-card">
-          <h3>アンケート傾向</h3>
-          <canvas id="profile-radar-survey" height="280"></canvas>
-        </div>
+        <div class="profile-card"><h3>学力試験レーダー（カテゴリ別正答率%）</h3><canvas id="profile-radar-academic" height="280"></canvas></div>
+        <div class="profile-card"><h3>アンケート傾向</h3><canvas id="profile-radar-survey" height="280"></canvas></div>
       </div>
 
       <div class="profile-card">
-        <h3>履歴書情報</h3>
+        <h3>📄 履歴書情報</h3>
         <div class="form-grid">
           <div><dt>生年月日</dt><dd>${escapeHtml(c.birthdate || '')}</dd></div>
           <div><dt>性別</dt><dd>${escapeHtml(c.gender || '')}</dd></div>
@@ -307,172 +446,502 @@ const App = (() => {
         <h4 style="margin-top:14px">志望動機</h4><p>${escapeHtml(c.motivation || '')}</p>
         <h4>自己PR</h4><p>${escapeHtml(c.selfPr || '')}</p>
         <h4>研究したいテーマ</h4><p>${escapeHtml(c.researchTopic || '')}</p>
+        ${(sess.resumeExtraFields || []).map(f => `<h4>${escapeHtml(f.label)}</h4><p>${escapeHtml(c.extra?.[f.id] || '')}</p>`).join('')}
       </div>
 
       <div class="profile-card">
-        <h3>自由記述</h3>
+        <h3>📚 学力試験 回答内訳</h3>
+        ${Stats.hasAcademic(c) ? renderAcademicReview(c, sess) : '<p class="muted">未受験</p>'}
+      </div>
+
+      <div class="profile-card">
+        <h3>📋 アンケート 自由記述</h3>
         <h4>力を入れた活動</h4><p>${escapeHtml(c.freeAchievement || '')}</p>
         <h4>挑戦したいこと</h4><p>${escapeHtml(c.freeAspiration || '')}</p>
       </div>
     `;
 
-    // Radar charts
-    new Chart(document.getElementById('profile-radar-academic'), {
+    document.getElementById('profile-pass').addEventListener('change', e => {
+      const list = Storage.load();
+      const rec = list.find(x => x.id === c.id);
+      if (rec) { rec.passed = e.target.checked; Storage.save(list); renderOverview(); }
+    });
+
+    new Chart($('#profile-radar-academic'), {
       type: 'radar',
-      data: {
-        labels: ACADEMIC_KEYS.map(k => k.label),
-        datasets: [{
-          label: c.name,
-          data: ACADEMIC_KEYS.map(k => Number(c[k.key]) || 0),
-          backgroundColor: 'rgba(37,99,235,.2)',
-          borderColor: '#2563eb',
-          pointBackgroundColor: '#2563eb'
-        }]
-      },
+      data: { labels: radar.labels, datasets: [{ label: fullName(c), data: radar.data, backgroundColor: 'rgba(37,99,235,.2)', borderColor: '#2563eb', pointBackgroundColor: '#2563eb' }] },
       options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
     });
-    new Chart(document.getElementById('profile-radar-survey'), {
+    new Chart($('#profile-radar-survey'), {
       type: 'radar',
       data: {
-        labels: SURVEY_ITEMS.map(it => it.label.length > 10 ? it.label.slice(0, 10) + '…' : it.label),
-        datasets: [{
-          label: 'アンケート',
-          data: SURVEY_ITEMS.map(it => Number(c[it.key]) || 0),
-          backgroundColor: 'rgba(245,158,11,.2)',
-          borderColor: '#f59e0b',
-          pointBackgroundColor: '#f59e0b'
-        }]
+        labels: (sess.surveyTest?.questions || []).map(q => q.text.length > 12 ? q.text.slice(0, 12) + '…' : q.text),
+        datasets: [{ label: 'アンケート', data: Stats.surveyVector(c, sess), backgroundColor: 'rgba(245,158,11,.2)', borderColor: '#f59e0b', pointBackgroundColor: '#f59e0b' }]
       },
       options: { responsive: true, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
     });
   }
 
-  // ---------- Ranking ----------
-  function renderRanking() {
-    const n = Number(document.getElementById('rank-n').value);
-    const metric = document.getElementById('rank-metric').value;
-    const list = Storage.load().map(c => {
-      const academic = Stats.academicAvg(c);
-      const survey = Stats.surveyAvg(c);
-      const total = Stats.totalScore(c, cfg);
-      return { c, academic, survey, total };
-    });
-    let key;
-    if (metric === 'academic') key = x => x.academic;
-    else if (metric === 'survey') key = x => x.survey;
-    else key = x => x.total;
-    list.sort((a, b) => key(b) - key(a));
-    const top = list.slice(0, n);
-    const tbody = document.querySelector('#rank-table tbody');
-    tbody.innerHTML = top.map((x, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${escapeHtml(x.c.examineeId || '')}</td>
-        <td>${escapeHtml(x.c.name || '')}</td>
-        <td class="num">${x.academic.toFixed(1)}</td>
-        <td class="num">${x.survey.toFixed(2)}</td>
-        <td class="num"><strong>${x.total.toFixed(1)}</strong></td>
-      </tr>
-    `).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">データがありません。</td></tr>`;
+  function renderAcademicReview(c, sess) {
+    return `<table class="data-table"><thead><tr><th>#</th><th>問題</th><th>回答</th><th>正解</th><th>得点</th></tr></thead><tbody>` +
+      sess.academicTest.questions.map((q, i) => {
+        const a = c.academicAnswers?.[q.id];
+        const correct = a !== undefined && Number(a) === q.correctIndex;
+        return `<tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(q.text)}</td>
+          <td>${a !== undefined ? escapeHtml(q.choices[a]) : '—'}</td>
+          <td>${escapeHtml(q.choices[q.correctIndex])}</td>
+          <td class="num">${correct ? q.points : 0}/${q.points}</td>
+        </tr>`;
+      }).join('') + `</tbody></table>`;
   }
 
-  // ---------- Cluster ----------
-  function runCluster() {
-    const k = Math.max(2, Math.min(8, Number(document.getElementById('k-value').value) || 3));
-    const list = Storage.load();
-    if (list.length < k) { alert(`受験者が ${k} 人未満のためクラスター分析できません。`); return; }
-    const vectors = list.map(c => Stats.featureVector(c));
-    const { assignments, centroids } = Cluster.kmeans(vectors, k);
-    const { points } = Cluster.pca2(vectors);
+  // ===== Portal =====
+  function renderPortal() {
+    const sess = ensureTests(getSession());
+    const portalCards = $('#portal-cards');
+    const idInput = $('#portal-examinee-id');
+    const examineeId = (idInput.value || '').trim();
+    const cand = examineeId ? Storage.findByExamineeId(sess.id, examineeId) : null;
+    $('#portal-status').textContent = examineeId ? (cand ? `登録あり: ${fullName(cand)}` : '新規受験者として登録できます') : '受験番号を入力してください';
 
-    const palette = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
-
-    // Scatter
-    const ctx = document.getElementById('chart-cluster');
-    if (charts.cluster) charts.cluster.destroy();
-    const datasets = [];
-    for (let c = 0; c < k; c++) {
-      const ptsForK = points.map((p, i) => ({ x: p[0], y: p[1], _idx: i }))
-                            .filter((_, i) => assignments[i] === c);
-      datasets.push({
-        label: `クラスター ${c + 1} (${ptsForK.length}名)`,
-        data: ptsForK,
-        backgroundColor: palette[c % palette.length],
-        pointRadius: 6,
-        pointHoverRadius: 9
+    const phases = [
+      { key: 'resume',   icon: '📄', title: '履歴書記入', done: cand && Stats.hasResume(cand), doneAt: cand?.resumeSubmittedAt },
+      { key: 'academic', icon: '📚', title: '学力試験',   done: cand && Stats.hasAcademic(cand), doneAt: cand?.academicSubmittedAt, requiresResume: true },
+      { key: 'survey',   icon: '📋', title: 'アンケート', done: cand && Stats.hasSurvey(cand), doneAt: cand?.surveySubmittedAt, requiresResume: true }
+    ];
+    portalCards.innerHTML = phases.map(p => {
+      const open = !!sess.phases?.[p.key];
+      const blocked = p.requiresResume && !(cand && Stats.hasResume(cand)) && p.key !== 'resume';
+      const status = !open ? '受付停止中' : p.done ? '提出済' : blocked ? '履歴書を先に提出してください' : '受付中';
+      const cls = !open ? 'closed' : p.done ? 'done' : blocked ? 'blocked' : 'open';
+      const clickable = open && !blocked && (p.key === 'resume' || examineeId);
+      return `<div class="portal-card ${cls}" data-phase="${p.key}" ${clickable ? '' : 'data-disabled="1"'}>
+        <div class="pc-icon">${p.icon}</div>
+        <div class="pc-title">${p.title}</div>
+        <div class="pc-status">${status}</div>
+        ${p.doneAt ? `<div class="pc-meta">${formatDate(p.doneAt)}</div>` : ''}
+      </div>`;
+    }).join('');
+    portalCards.querySelectorAll('.portal-card').forEach(el => {
+      el.addEventListener('click', () => {
+        if (el.dataset.disabled) return;
+        openPortalForm(el.dataset.phase);
       });
-    }
-    charts.cluster = new Chart(ctx, {
-      type: 'scatter',
-      data: { datasets },
-      options: {
-        responsive: true,
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const p = ctx.raw;
-                const c = list[p._idx];
-                return `${c.name} (${c.examineeId})`;
-              }
-            }
-          }
-        },
-        scales: { x: { title: { display: true, text: 'PC1' } }, y: { title: { display: true, text: 'PC2' } } }
+    });
+  }
+
+  function openPortalForm(phase) {
+    const sess = ensureTests(getSession());
+    ['portal-resume', 'portal-academic', 'portal-survey'].forEach(id => $('#' + id).style.display = 'none');
+    const idInput = $('#portal-examinee-id');
+    const examineeId = (idInput.value || '').trim();
+    const cand = Storage.findByExamineeId(sess.id, examineeId);
+
+    if (phase === 'resume') {
+      $('#portal-resume').style.display = 'block';
+      const form = $('#form-resume');
+      form.reset();
+      // Populate faculty/department selects from session config
+      populateFacultySelects(form, cand);
+      if (cand) {
+        ['examineeId', 'lastName', 'firstName', 'lastKana', 'firstKana', 'birthdate', 'gender', 'email', 'phone', 'grade', 'gpa', 'qualifications', 'motivation', 'selfPr', 'researchTopic'].forEach(k => {
+          if (form.elements[k]) form.elements[k].value = cand[k] || '';
+        });
+      } else if (examineeId) {
+        form.elements.examineeId.value = examineeId;
       }
-    });
-
-    // Centroid radar (academic dims only - first 6 features)
-    const ctxR = document.getElementById('chart-cluster-radar');
-    if (charts.clusterRadar) charts.clusterRadar.destroy();
-    const radarDatasets = centroids.map((c, i) => ({
-      label: `クラスター ${i + 1}`,
-      data: c.slice(0, ACADEMIC_KEYS.length).map(v => v * 100), // un-normalize
-      backgroundColor: palette[i % palette.length] + '33',
-      borderColor: palette[i % palette.length],
-      pointBackgroundColor: palette[i % palette.length]
-    }));
-    charts.clusterRadar = new Chart(ctxR, {
-      type: 'radar',
-      data: { labels: ACADEMIC_KEYS.map(k => k.label), datasets: radarDatasets },
-      options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
-    });
-
-    // Assignment list
-    const assignWrap = document.getElementById('cluster-assign-list');
-    let html = '';
-    for (let c = 0; c < k; c++) {
-      const members = list.filter((_, i) => assignments[i] === c);
-      html += `<div style="margin-bottom:14px"><strong style="color:${palette[c % palette.length]}">クラスター ${c + 1}</strong>（${members.length}名）<br>`;
-      members.forEach(m => {
-        html += `<span class="cluster-chip" style="background:${palette[c % palette.length]}">${escapeHtml(m.name)} (${escapeHtml(m.examineeId || '')})</span>`;
+      // Build extra fields
+      const extraWrap = $('#form-resume-custom');
+      extraWrap.innerHTML = '';
+      (sess.resumeExtraFields || []).forEach(f => {
+        const lbl = document.createElement('label');
+        lbl.className = 'full';
+        lbl.innerHTML = `${escapeHtml(f.label)}${f.type === 'textarea' ? `<textarea data-extra-id="${f.id}" rows="3"></textarea>` : `<input type="text" data-extra-id="${f.id}">`}`;
+        const inp = lbl.querySelector('[data-extra-id]');
+        if (cand?.extra?.[f.id]) inp.value = cand.extra[f.id];
+        extraWrap.appendChild(lbl);
       });
-      html += '</div>';
+      $('#portal-resume').scrollIntoView({ behavior: 'smooth' });
     }
-    assignWrap.innerHTML = html;
+    if (phase === 'academic') {
+      if (!cand) { alert('まず履歴書を提出してください。'); return; }
+      $('#portal-academic').style.display = 'block';
+      $('#form-academic').elements.examineeId.value = cand.examineeId;
+      const wrap = $('#academic-questions');
+      wrap.innerHTML = sess.academicTest.questions.map((q, i) => `
+        <div class="exam-q">
+          <div class="exam-q-head"><span class="q-num">問${i + 1}</span> <span class="q-cat">${escapeHtml(q.category || '')}</span> <span class="q-pt">${q.points}点</span></div>
+          <div class="exam-q-text">${escapeHtml(q.text)}</div>
+          <div class="exam-q-choices">
+            ${q.choices.map((ch, j) => `<label class="choice"><input type="radio" name="ans_${q.id}" value="${j}" required>${escapeHtml(ch)}</label>`).join('')}
+          </div>
+        </div>
+      `).join('');
+      $('#portal-academic').scrollIntoView({ behavior: 'smooth' });
+    }
+    if (phase === 'survey') {
+      if (!cand) { alert('まず履歴書を提出してください。'); return; }
+      $('#portal-survey').style.display = 'block';
+      $('#form-survey').elements.examineeId.value = cand.examineeId;
+      $('#form-survey-id-display').value = cand.examineeId;
+      const wrap = $('#survey-questions');
+      wrap.innerHTML = sess.surveyTest.questions.map(q => `
+        <div class="survey-item">
+          <div class="q">${escapeHtml(q.text)}</div>
+          <div class="scale">
+            ${[1, 2, 3, 4, 5].map(v => `<label><input type="radio" name="sv_${q.id}" value="${v}" required>${v}</label>`).join('')}
+          </div>
+        </div>
+      `).join('');
+      $('#portal-survey').scrollIntoView({ behavior: 'smooth' });
+    }
   }
 
-  // ---------- Settings ----------
+  function populateFacultySelects(form, cand) {
+    const sess = getSession();
+    const fSel = form.querySelector('select[name="faculty"]');
+    const dSel = form.querySelector('select[name="department"]');
+    if (!fSel || !dSel) return;
+    fSel.innerHTML = '<option value="">-- 学部を選択 --</option>' +
+      (sess.facultyDept || []).map(f => `<option value="${escapeHtml(f.name)}" ${cand?.faculty === f.name ? 'selected' : ''}>${escapeHtml(f.name)}</option>`).join('');
+    function updateDepartments() {
+      const facultyName = fSel.value;
+      const faculty = (sess.facultyDept || []).find(f => f.name === facultyName);
+      const depts = faculty?.departments || [];
+      dSel.innerHTML = '<option value="">-- 学科を選択 --</option>' +
+        depts.map(d => `<option value="${escapeHtml(d)}" ${cand?.department === d ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
+    }
+    updateDepartments();
+    fSel.addEventListener('change', updateDepartments);
+  }
+
+  function submitResume(e) {
+    e.preventDefault();
+    const sess = ensureTests(getSession());
+    if (!sess.phases.resume) { alert('履歴書の受付は停止中です。'); return; }
+    const form = e.target;
+    const fd = new FormData(form);
+    const data = {};
+    fd.forEach((v, k) => data[k] = v);
+    data.gpa = data.gpa ? Number(data.gpa) : null;
+    data.resumeSubmittedAt = new Date().toISOString();
+    // extras
+    data.extra = Object.assign({}, Storage.findByExamineeId(sess.id, data.examineeId)?.extra || {});
+    form.querySelectorAll('[data-extra-id]').forEach(inp => { data.extra[inp.dataset.extraId] = inp.value; });
+    Storage.upsert(data);
+    alert('履歴書を提出しました。');
+    $('#portal-resume').style.display = 'none';
+    renderPortal();
+    renderOverview();
+  }
+
+  function submitAcademic(e) {
+    e.preventDefault();
+    const sess = ensureTests(getSession());
+    if (!sess.phases.academic) { alert('学力試験の受付は停止中です。'); return; }
+    const form = e.target;
+    const examineeId = form.elements.examineeId.value;
+    const answers = {};
+    sess.academicTest.questions.forEach(q => {
+      const sel = form.querySelector(`input[name="ans_${q.id}"]:checked`);
+      if (sel) answers[q.id] = Number(sel.value);
+    });
+    const result = Stats.scoreAcademic({ academicAnswers: answers }, sess.academicTest);
+    Storage.upsert({ examineeId, academicAnswers: answers, academicScore: result, academicSubmittedAt: new Date().toISOString() });
+    alert(`学力試験を提出しました。\n自動採点結果: ${result.total} / ${result.max} (${result.percent.toFixed(1)}%)`);
+    $('#portal-academic').style.display = 'none';
+    renderPortal();
+    renderOverview();
+  }
+
+  function submitSurvey(e) {
+    e.preventDefault();
+    const sess = ensureTests(getSession());
+    if (!sess.phases.survey) { alert('アンケートの受付は停止中です。'); return; }
+    const form = e.target;
+    const examineeId = form.elements.examineeId.value;
+    const answers = {};
+    sess.surveyTest.questions.forEach(q => {
+      const sel = form.querySelector(`input[name="sv_${q.id}"]:checked`);
+      if (sel) answers[q.id] = Number(sel.value);
+    });
+    Storage.upsert({
+      examineeId, surveyAnswers: answers,
+      freeAchievement: form.elements.freeAchievement.value,
+      freeAspiration: form.elements.freeAspiration.value,
+      surveySubmittedAt: new Date().toISOString()
+    });
+    alert('アンケートを提出しました。');
+    $('#portal-survey').style.display = 'none';
+    renderPortal();
+    renderOverview();
+  }
+
+  // ===== Question editors =====
+  function renderAcademicMgr() {
+    const sess = ensureTests(getSession());
+    const wrap = $('#academic-q-list');
+    if (!wrap) return;
+    $('#academic-q-count').textContent = `現在 ${sess.academicTest.questions.length} 問 / 合計 ${sess.academicTest.questions.reduce((s, q) => s + (q.points || 0), 0)} 点`;
+    wrap.innerHTML = sess.academicTest.questions.map((q, idx) => `
+      <div class="q-edit-card" data-idx="${idx}">
+        <div class="q-edit-head">
+          <span class="q-edit-num">問${idx + 1}</span>
+          <input class="q-edit-cat" type="text" value="${escapeHtml(q.category || '')}" placeholder="カテゴリ" data-field="category">
+          <input class="q-edit-pt" type="number" value="${q.points}" min="1" placeholder="配点" data-field="points">
+          <button class="btn danger" data-act="del-academic">削除</button>
+        </div>
+        <textarea data-field="text" rows="2" placeholder="問題文">${escapeHtml(q.text)}</textarea>
+        <div class="q-edit-choices">
+          ${q.choices.map((c, j) => `
+            <div class="q-choice">
+              <input type="radio" name="correct_${idx}" ${q.correctIndex === j ? 'checked' : ''} data-correct="${j}">
+              <input type="text" value="${escapeHtml(c)}" data-choice="${j}" placeholder="選択肢">
+              <button class="btn" data-act="del-choice-academic" data-choice-idx="${j}">×</button>
+            </div>
+          `).join('')}
+        </div>
+        <div class="q-edit-actions">
+          <button class="btn" data-act="add-choice-academic">＋選択肢を追加</button>
+        </div>
+      </div>
+    `).join('') || '<p class="muted">問題がありません。「問題を追加」ボタンから作成してください。</p>';
+    wireAcademicEditor();
+  }
+  function wireAcademicEditor() {
+    const sess = getSession();
+    const wrap = $('#academic-q-list');
+    wrap.querySelectorAll('.q-edit-card').forEach(card => {
+      const idx = Number(card.dataset.idx);
+      const q = sess.academicTest.questions[idx];
+      card.querySelectorAll('[data-field]').forEach(inp => {
+        inp.addEventListener('change', () => {
+          q[inp.dataset.field] = inp.dataset.field === 'points' ? Number(inp.value) || 0 : inp.value;
+          saveSession(sess);
+        });
+      });
+      card.querySelectorAll('[data-choice]').forEach(inp => {
+        inp.addEventListener('change', () => {
+          q.choices[Number(inp.dataset.choice)] = inp.value;
+          saveSession(sess);
+        });
+      });
+      card.querySelectorAll('[data-correct]').forEach(rb => {
+        rb.addEventListener('change', () => { if (rb.checked) { q.correctIndex = Number(rb.dataset.correct); saveSession(sess); } });
+      });
+      card.querySelector('[data-act="del-academic"]')?.addEventListener('click', () => {
+        if (!confirm('この問題を削除しますか？')) return;
+        sess.academicTest.questions.splice(idx, 1); saveSession(sess); renderAcademicMgr();
+      });
+      card.querySelector('[data-act="add-choice-academic"]')?.addEventListener('click', () => {
+        q.choices.push(''); saveSession(sess); renderAcademicMgr();
+      });
+      card.querySelectorAll('[data-act="del-choice-academic"]').forEach(b => {
+        b.addEventListener('click', () => {
+          const j = Number(b.dataset.choiceIdx);
+          if (q.choices.length <= 2) { alert('選択肢は最低2つ必要です。'); return; }
+          q.choices.splice(j, 1);
+          if (q.correctIndex >= q.choices.length) q.correctIndex = 0;
+          saveSession(sess); renderAcademicMgr();
+        });
+      });
+    });
+  }
+
+  function renderSurveyMgr() {
+    const sess = ensureTests(getSession());
+    const wrap = $('#survey-q-list');
+    if (!wrap) return;
+    $('#survey-q-count').textContent = `現在 ${sess.surveyTest.questions.length} 項目`;
+    wrap.innerHTML = sess.surveyTest.questions.map((q, idx) => `
+      <div class="q-edit-card" data-idx="${idx}">
+        <div class="q-edit-head">
+          <span class="q-edit-num">項目${idx + 1}</span>
+          <button class="btn danger" data-act="del-survey">削除</button>
+        </div>
+        <textarea data-field="text" rows="2" placeholder="質問文">${escapeHtml(q.text)}</textarea>
+      </div>
+    `).join('') || '<p class="muted">項目がありません。</p>';
+    wrap.querySelectorAll('.q-edit-card').forEach(card => {
+      const idx = Number(card.dataset.idx);
+      const q = sess.surveyTest.questions[idx];
+      card.querySelector('[data-field="text"]').addEventListener('change', e => { q.text = e.target.value; saveSession(sess); });
+      card.querySelector('[data-act="del-survey"]').addEventListener('click', () => {
+        if (!confirm('この項目を削除しますか？')) return;
+        sess.surveyTest.questions.splice(idx, 1); saveSession(sess); renderSurveyMgr();
+      });
+    });
+  }
+
+  function renderResumeMgr() {
+    const sess = ensureTests(getSession());
+    renderFacultyDeptEditor(sess);
+    const wrap = $('#resume-fields-list');
+    if (!wrap) return;
+    wrap.innerHTML = (sess.resumeExtraFields || []).map((f, idx) => `
+      <div class="q-edit-card" data-idx="${idx}">
+        <div class="q-edit-head">
+          <span class="q-edit-num">追加${idx + 1}</span>
+          <select data-field="type">
+            <option value="text" ${f.type === 'text' ? 'selected' : ''}>1行テキスト</option>
+            <option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>複数行テキスト</option>
+          </select>
+          <button class="btn danger" data-act="del-extra">削除</button>
+        </div>
+        <input type="text" data-field="label" value="${escapeHtml(f.label)}" placeholder="質問ラベル">
+      </div>
+    `).join('') || '<p class="muted">標準フィールド（受験番号・氏名・大学・GPA・志望動機など）のみが表示されています。必要に応じて追加質問を加えてください。</p>';
+    wrap.querySelectorAll('.q-edit-card').forEach(card => {
+      const idx = Number(card.dataset.idx);
+      const f = sess.resumeExtraFields[idx];
+      card.querySelectorAll('[data-field]').forEach(inp => inp.addEventListener('change', () => { f[inp.dataset.field] = inp.value; saveSession(sess); }));
+      card.querySelector('[data-act="del-extra"]').addEventListener('click', () => {
+        if (!confirm('この追加質問を削除しますか？')) return;
+        sess.resumeExtraFields.splice(idx, 1); saveSession(sess); renderResumeMgr();
+      });
+    });
+    renderShareUrls();
+  }
+
+  function renderFacultyDeptEditor(sess) {
+    const wrap = $('#faculty-dept-list');
+    if (!wrap) return;
+    wrap.innerHTML = (sess.facultyDept || []).map((f, idx) => `
+      <div class="q-edit-card" data-idx="${idx}">
+        <div class="q-edit-head">
+          <span class="q-edit-num">学部${idx + 1}</span>
+          <input type="text" data-faculty-name value="${escapeHtml(f.name)}" placeholder="学部名（例: 経済学部）">
+          <button class="btn danger" data-act="del-faculty">学部を削除</button>
+        </div>
+        <div class="dept-list">
+          <div class="dept-label">学科:</div>
+          ${(f.departments || []).map((d, j) => `
+            <div class="dept-row">
+              <input type="text" data-dept="${j}" value="${escapeHtml(d)}" placeholder="学科名">
+              <button class="btn" data-act="del-dept" data-dept-idx="${j}">×</button>
+            </div>
+          `).join('')}
+          <button class="btn" data-act="add-dept">＋ 学科を追加</button>
+        </div>
+      </div>
+    `).join('') || '<p class="muted">学部が登録されていません。</p>';
+    wrap.querySelectorAll('.q-edit-card').forEach(card => {
+      const idx = Number(card.dataset.idx);
+      const f = sess.facultyDept[idx];
+      card.querySelector('[data-faculty-name]').addEventListener('change', e => { f.name = e.target.value; saveSession(sess); });
+      card.querySelectorAll('[data-dept]').forEach(inp => inp.addEventListener('change', () => { f.departments[Number(inp.dataset.dept)] = inp.value; saveSession(sess); }));
+      card.querySelector('[data-act="del-faculty"]').addEventListener('click', () => {
+        if (!confirm(`「${f.name}」を削除しますか？`)) return;
+        sess.facultyDept.splice(idx, 1); saveSession(sess); renderFacultyDeptEditor(sess);
+      });
+      card.querySelector('[data-act="add-dept"]').addEventListener('click', () => {
+        f.departments.push('新しい学科'); saveSession(sess); renderFacultyDeptEditor(sess);
+      });
+      card.querySelectorAll('[data-act="del-dept"]').forEach(b => b.addEventListener('click', () => {
+        f.departments.splice(Number(b.dataset.deptIdx), 1); saveSession(sess); renderFacultyDeptEditor(sess);
+      }));
+    });
+  }
+
+  function saveSession(sess) {
+    const list = Storage.loadSessions();
+    const idx = list.findIndex(s => s.id === sess.id);
+    if (idx >= 0) { list[idx] = sess; localStorage.setItem('zemiSA.sessions.v1', JSON.stringify(list)); }
+  }
+
+  // ===== Share URLs + QR =====
+  function buildPhaseUrl(phase) {
+    const sess = getSession();
+    const base = location.href.split('?')[0].split('#')[0];
+    return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}`;
+  }
+  function renderShareUrls() {
+    const exist = $('#share-urls-section');
+    if (exist) exist.remove();
+    const wrap = document.createElement('div');
+    wrap.id = 'share-urls-section';
+    wrap.className = 'card';
+    wrap.innerHTML = `
+      <h3>🔗 受験者配布用URL / QRコード</h3>
+      <p class="hint">下記URLまたはQRコードを受験者に配布してください。リンクをクリックすると受験者モードで該当の試験画面が直接開きます。</p>
+      <div class="share-grid">
+        ${['resume', 'academic', 'survey'].map(p => `
+          <div class="share-card">
+            <h4>${PHASE_LABEL[p]}</h4>
+            <div class="share-url" id="share-url-${p}">${escapeHtml(buildPhaseUrl(p))}</div>
+            <div class="share-actions">
+              <button class="btn" data-copy="${p}">URLをコピー</button>
+              <a class="btn" href="${escapeHtml(buildPhaseUrl(p))}" target="_blank">プレビュー</a>
+            </div>
+            <div class="qr-area" id="qr-${p}"></div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    $('#view-mgr-resume').appendChild(wrap);
+    ['resume', 'academic', 'survey'].forEach(p => {
+      const url = buildPhaseUrl(p);
+      const qr = qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      $('#qr-' + p).innerHTML = qr.createImgTag(4, 8);
+      wrap.querySelector(`[data-copy="${p}"]`).addEventListener('click', () => {
+        navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました'));
+      });
+    });
+  }
+
+  // ===== URL routing (candidate mode) =====
+  function handleUrlMode() {
+    const params = new URLSearchParams(location.search);
+    const sid = params.get('session');
+    const phase = params.get('phase');
+    const idParam = params.get('id');
+    if (!sid || !phase) return false;
+    const sessions = Storage.loadSessions();
+    if (!sessions.find(s => s.id === sid)) { alert('指定された試験回が見つかりません。'); return false; }
+    Storage.setCurrentSessionId(sid);
+    document.body.classList.add('candidate-mode');
+    // Hide admin chrome
+    $('.session-bar').style.display = 'none';
+    $('.tabs').style.display = 'none';
+    $$('.view').forEach(v => v.classList.remove('active'));
+    $('#view-portal').classList.add('active');
+    renderSessionBar();
+    renderPortal();
+    if (idParam) {
+      $('#portal-examinee-id').value = idParam;
+      renderPortal();
+    }
+    setTimeout(() => openPortalForm(phase), 50);
+    return true;
+  }
+
+  // ===== Settings (data tab) =====
   function loadCfgUi() {
-    document.getElementById('weight-academic').value = cfg.weightAcademic;
-    document.getElementById('weight-survey').value = cfg.weightSurvey;
+    $('#weight-academic').value = cfg.weightAcademic;
+    $('#weight-survey').value = cfg.weightSurvey;
   }
   function saveWeights() {
-    const a = Number(document.getElementById('weight-academic').value);
-    const s = Number(document.getElementById('weight-survey').value);
+    const a = Number($('#weight-academic').value);
+    const s = Number($('#weight-survey').value);
     if (a + s !== 100) { alert('合計が100％になるよう設定してください。'); return; }
     cfg.weightAcademic = a; cfg.weightSurvey = s;
     Storage.saveCfg(cfg);
     alert('保存しました。');
+    renderOverview();
   }
 
-  // ---------- Import / Export ----------
   function exportJson() {
-    const data = JSON.stringify(Storage.load(), null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
+    const sess = getSession();
+    const list = Storage.loadForSession();
+    const payload = { session: sess, candidates: list, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `zemi-candidates-${new Date().toISOString().slice(0, 10)}.json`;
+    a.href = url; a.download = `zemi-${sess.name}-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -480,118 +949,200 @@ const App = (() => {
     const r = new FileReader();
     r.onload = () => {
       try {
-        const arr = JSON.parse(r.result);
-        if (!Array.isArray(arr)) throw new Error('不正な形式');
-        if (!confirm(`${arr.length}件のデータを取り込みます。既存に追加されます。よろしいですか？`)) return;
-        const existing = Storage.load();
-        Storage.save(existing.concat(arr));
+        const obj = JSON.parse(r.result);
+        const arr = Array.isArray(obj) ? obj : (obj.candidates || []);
+        if (!arr.length) throw new Error('候補データがありません');
+        if (!confirm(`${arr.length}件のデータをこの試験回に取り込みます。よろしいですか？`)) return;
+        arr.forEach(c => { delete c.id; Storage.upsert(c); });
         alert('取り込みました。');
-        renderCandidates();
+        renderOverview();
       } catch (e) { alert('JSON読み込みに失敗しました: ' + e.message); }
     };
     r.readAsText(file);
   }
 
-  // ---------- Demo data ----------
+  // ===== Demo =====
   function seedDemo() {
-    if (Storage.load().length > 0 && !confirm('既存データに追加します。続行しますか？')) return;
-    const universities = ['東都大学', '関西商科大学', '北辰大学', '南海工科大学', '中央経済大学'];
-    const faculties = ['経済学部', '商学部', '情報学部', '社会学部', '法学部'];
+    const name = `デモデータ ${new Date().toISOString().slice(0, 10)}`;
+    const sess = Storage.addSession(name, { resume: true, academic: true, survey: true });
+    Storage.setCurrentSessionId(sess.id);
+    ensureTests(getSession());
+    const live = getSession();
+
+    const facDeptList = live.facultyDept || Stats.DEFAULT_FACULTY_DEPT;
     const names = [
-      ['佐藤 大輔', 'サトウ ダイスケ'], ['田中 美咲', 'タナカ ミサキ'], ['鈴木 健', 'スズキ ケン'],
-      ['高橋 優子', 'タカハシ ユウコ'], ['伊藤 翔', 'イトウ ショウ'], ['渡辺 葵', 'ワタナベ アオイ'],
-      ['山本 直樹', 'ヤマモト ナオキ'], ['中村 さくら', 'ナカムラ サクラ'], ['小林 蓮', 'コバヤシ レン'],
-      ['加藤 結衣', 'カトウ ユイ'], ['吉田 颯太', 'ヨシダ ソウタ'], ['山田 凛', 'ヤマダ リン'],
-      ['佐々木 陽', 'ササキ ヨウ'], ['松本 美月', 'マツモト ミヅキ'], ['井上 拓海', 'イノウエ タクミ'],
-      ['木村 莉子', 'キムラ リコ'], ['林 大和', 'ハヤシ ヤマト'], ['清水 紗良', 'シミズ サラ'],
-      ['山崎 蒼', 'ヤマザキ ソウ'], ['森 結菜', 'モリ ユウナ']
+      ['佐藤', '大輔', 'サトウ', 'ダイスケ'], ['田中', '美咲', 'タナカ', 'ミサキ'], ['鈴木', '健', 'スズキ', 'ケン'],
+      ['高橋', '優子', 'タカハシ', 'ユウコ'], ['伊藤', '翔', 'イトウ', 'ショウ'], ['渡辺', '葵', 'ワタナベ', 'アオイ'],
+      ['山本', '直樹', 'ヤマモト', 'ナオキ'], ['中村', 'さくら', 'ナカムラ', 'サクラ'], ['小林', '蓮', 'コバヤシ', 'レン'],
+      ['加藤', '結衣', 'カトウ', 'ユイ'], ['吉田', '颯太', 'ヨシダ', 'ソウタ'], ['山田', '凛', 'ヤマダ', 'リン'],
+      ['佐々木', '陽', 'ササキ', 'ヨウ'], ['松本', '美月', 'マツモト', 'ミヅキ'], ['井上', '拓海', 'イノウエ', 'タクミ'],
+      ['木村', '莉子', 'キムラ', 'リコ'], ['林', '大和', 'ハヤシ', 'ヤマト'], ['清水', '紗良', 'シミズ', 'サラ'],
+      ['山崎', '蒼', 'ヤマザキ', 'ソウ'], ['森', '結菜', 'モリ', 'ユウナ']
     ];
+    // candidate behavior profiles for richer clusters
     const profiles = [
-      { logic: 90, english: 85, specialty: 80, statistics: 88, writing: 75, presentation: 82, sv: [5, 5, 4, 4, 4, 5, 4, 5, 4, 4] }, // 学力高型
-      { logic: 60, english: 65, specialty: 70, statistics: 60, writing: 80, presentation: 88, sv: [5, 5, 5, 5, 5, 3, 5, 3, 4, 5] }, // コミュ型
-      { logic: 78, english: 72, specialty: 75, statistics: 80, writing: 78, presentation: 75, sv: [4, 4, 4, 4, 4, 4, 4, 4, 4, 4] }, // バランス
-      { logic: 95, english: 60, specialty: 90, statistics: 92, writing: 50, presentation: 55, sv: [3, 4, 3, 2, 2, 5, 3, 5, 3, 2] }  // 理論型
+      // high academic, high survey
+      { acAcc: 0.85, sv: 4.3 },
+      // mid academic, very high survey (people skills)
+      { acAcc: 0.55, sv: 4.7 },
+      // balanced
+      { acAcc: 0.70, sv: 3.8 },
+      // very high academic, low survey
+      { acAcc: 0.92, sv: 2.8 }
     ];
     names.forEach((n, i) => {
       const p = profiles[i % profiles.length];
-      const jitter = () => Math.round((Math.random() - 0.5) * 16);
+      // resume
+      const fac = facDeptList[i % facDeptList.length];
+      const dept = fac.departments[(i * 3) % fac.departments.length];
       const cand = {
-        examineeId: 'Z' + String(2025001 + i),
-        name: n[0], kana: n[1],
+        examineeId: 'Z' + String(2026001 + i),
+        lastName: n[0], firstName: n[1], lastKana: n[2], firstKana: n[3],
         birthdate: `200${3 + (i % 5)}-0${1 + (i % 9)}-1${i % 9}`,
         gender: i % 2 ? '女性' : '男性',
         email: `applicant${i + 1}@example.com`, phone: `090-${1000 + i}-${1000 + i}`,
-        university: universities[i % universities.length],
-        faculty: faculties[i % faculties.length],
+        faculty: fac.name,
+        department: dept,
         grade: '2年',
-        gpa: (2.0 + Math.random() * 2).toFixed(2),
+        gpa: Number((2.0 + Math.random() * 2).toFixed(2)),
         qualifications: i % 3 === 0 ? 'TOEIC 750' : '',
         motivation: 'データ分析を通じて社会課題を解決したいと考えています。',
         selfPr: 'チームでの企画運営経験があり、議論をまとめるのが得意です。',
         researchTopic: '消費者行動と購買データの関係',
-        logic: clamp(p.logic + jitter()),
-        english: clamp(p.english + jitter()),
-        specialty: clamp(p.specialty + jitter()),
-        statistics: clamp(p.statistics + jitter()),
-        writing: clamp(p.writing + jitter()),
-        presentation: clamp(p.presentation + jitter()),
-        freeAchievement: '学園祭実行委員として広報を担当しました。',
-        freeAspiration: '実データを用いたゼミ研究プロジェクトに挑戦したい。'
+        resumeSubmittedAt: new Date().toISOString()
       };
-      SURVEY_ITEMS.forEach((it, k) => { cand[it.key] = clampSv(p.sv[k] + (Math.random() > 0.7 ? (Math.random() > 0.5 ? 1 : -1) : 0)); });
-      Storage.add(cand);
+      // academic answers
+      const answers = {};
+      live.academicTest.questions.forEach(q => {
+        const correct = Math.random() < p.acAcc;
+        answers[q.id] = correct ? q.correctIndex : (q.correctIndex + 1 + Math.floor(Math.random() * (q.choices.length - 1))) % q.choices.length;
+      });
+      const score = Stats.scoreAcademic({ academicAnswers: answers }, live.academicTest);
+      cand.academicAnswers = answers;
+      cand.academicScore = score;
+      cand.academicSubmittedAt = new Date().toISOString();
+      // survey
+      const sa = {};
+      live.surveyTest.questions.forEach(q => {
+        const v = Math.round(p.sv + (Math.random() - 0.5) * 1.4);
+        sa[q.id] = Math.max(1, Math.min(5, v));
+      });
+      cand.surveyAnswers = sa;
+      cand.freeAchievement = '学園祭実行委員として広報を担当しました。';
+      cand.freeAspiration = '実データを用いたゼミ研究プロジェクトに挑戦したい。';
+      cand.surveySubmittedAt = new Date().toISOString();
+
+      Storage.upsert(cand);
     });
-    alert('デモデータ20件を投入しました。');
-    renderDashboard();
-  }
-  function clamp(v) { return Math.max(0, Math.min(100, v)); }
-  function clampSv(v) { return Math.max(1, Math.min(5, v)); }
-
-  // ---------- Helpers ----------
-  function escapeHtml(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-  function formatDate(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    renderSessionBar();
+    refreshAllViews();
+    alert(`デモ試験回「${name}」を作成し、20名のデモ受験者を投入しました。`);
   }
 
-  // ---------- Init ----------
+  // ===== Init =====
   function init() {
-    buildSurveyItems();
-    loadCfgUi();
-    showView('dashboard');
+    ensureTests(getSession());
 
-    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
-    document.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => {
-      const target = Number(btn.dataset.go);
-      const current = Number(document.querySelector('.exam-step.active').dataset.step);
-      if (target > current && !validateStep(current)) return;
-      goExamStep(target);
+    // URL候補者モード判定
+    if (handleUrlMode()) return;
+
+    renderSessionBar();
+    showView('overview');
+
+    // Session bar
+    $('#session-select').addEventListener('change', onSessionChange);
+    $('#session-add').addEventListener('click', onAddSession);
+    $('#session-rename').addEventListener('click', onRenameSession);
+    $('#session-delete').addEventListener('click', onDeleteSession);
+
+    // Tabs
+    $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
+    $$('.subtab').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
+
+    // Overview controls
+    $('#search-cand').addEventListener('input', renderCandidateList);
+    $('#sort-cand').addEventListener('change', renderCandidateList);
+    $('#rank-n').addEventListener('change', renderRanking);
+    $('#rank-metric').addEventListener('change', renderRanking);
+    $('#run-cluster').addEventListener('click', runCluster);
+
+    // Profile
+    $('#profile-select').addEventListener('change', e => renderProfile(e.target.value));
+    $('#print-profile').addEventListener('click', () => window.print());
+
+    // Portal
+    $('#portal-load').addEventListener('click', renderPortal);
+    $('#portal-examinee-id').addEventListener('change', renderPortal);
+    $('#form-resume').addEventListener('submit', submitResume);
+    $('#form-academic').addEventListener('submit', submitAcademic);
+    $('#form-survey').addEventListener('submit', submitSurvey);
+    $$('[data-cancel]').forEach(b => b.addEventListener('click', () => {
+      $$('.portal-form').forEach(f => f.style.display = 'none');
     }));
-    document.getElementById('exam-form').addEventListener('submit', handleSubmit);
-    document.getElementById('search-cand').addEventListener('input', renderCandidates);
-    document.getElementById('sort-cand').addEventListener('change', renderCandidates);
-    document.getElementById('export-json').addEventListener('click', exportJson);
-    document.getElementById('import-json').addEventListener('change', e => {
-      if (e.target.files[0]) importJson(e.target.files[0]);
+
+    // Question editors
+    $('#add-academic-q').addEventListener('click', () => {
+      const sess = getSession();
+      sess.academicTest.questions.push({ id: 'q_' + Date.now().toString(36), category: '', text: '新しい問題', choices: ['選択肢1', '選択肢2', '選択肢3', '選択肢4'], correctIndex: 0, points: 10 });
+      saveSession(sess); renderAcademicMgr();
     });
-    document.getElementById('profile-select').addEventListener('change', e => renderProfile(e.target.value));
-    document.getElementById('print-profile').addEventListener('click', () => window.print());
-    document.getElementById('rank-n').addEventListener('change', renderRanking);
-    document.getElementById('rank-metric').addEventListener('change', renderRanking);
-    document.getElementById('run-cluster').addEventListener('click', runCluster);
-    document.getElementById('save-weights').addEventListener('click', () => { saveWeights(); renderDashboard(); });
-    document.getElementById('seed-demo').addEventListener('click', seedDemo);
-    document.getElementById('clear-all').addEventListener('click', () => {
-      if (confirm('本当に全データを削除しますか？この操作は取り消せません。')) {
-        Storage.clearAll();
-        renderDashboard();
-        alert('削除しました。');
-      }
+    $('#reset-academic-default').addEventListener('click', () => {
+      if (!confirm('現在の問題を破棄してデフォルト問題に戻しますか？')) return;
+      const sess = getSession(); sess.academicTest = { questions: Stats.DEFAULT_ACADEMIC_QUESTIONS.map(q => ({ ...q })) }; saveSession(sess); renderAcademicMgr();
     });
+    $('#add-survey-q').addEventListener('click', () => {
+      const sess = getSession();
+      sess.surveyTest.questions.push({ id: 'q_' + Date.now().toString(36), text: '新しい項目' });
+      saveSession(sess); renderSurveyMgr();
+    });
+    $('#reset-survey-default').addEventListener('click', () => {
+      if (!confirm('現在の項目を破棄してデフォルトに戻しますか？')) return;
+      const sess = getSession(); sess.surveyTest = { questions: Stats.DEFAULT_SURVEY_QUESTIONS.map(q => ({ ...q })) }; saveSession(sess); renderSurveyMgr();
+    });
+    $('#add-faculty').addEventListener('click', () => {
+      const sess = getSession();
+      const name = prompt('追加する学部名を入力してください', '新学部');
+      if (!name) return;
+      sess.facultyDept.push({ name, departments: ['新学科'] });
+      saveSession(sess); renderFacultyDeptEditor(sess);
+    });
+    $('#reset-faculty').addEventListener('click', () => {
+      if (!confirm('学部・学科をデフォルトに戻しますか？')) return;
+      const sess = getSession();
+      sess.facultyDept = JSON.parse(JSON.stringify(Stats.DEFAULT_FACULTY_DEPT));
+      saveSession(sess); renderFacultyDeptEditor(sess);
+    });
+    $('#add-resume-field').addEventListener('click', () => {
+      const sess = getSession();
+      const label = prompt('追加質問のラベルを入力してください', '追加質問');
+      if (!label) return;
+      sess.resumeExtraFields.push({ id: 'rx_' + Date.now().toString(36), label, type: 'textarea' });
+      saveSession(sess); renderResumeMgr();
+    });
+    $('#reset-resume-fields').addEventListener('click', () => {
+      if (!confirm('追加質問をすべて削除しますか？')) return;
+      const sess = getSession(); sess.resumeExtraFields = []; saveSession(sess); renderResumeMgr();
+    });
+
+    // Phase toggles
+    $$('[data-phase-toggle]').forEach(cb => cb.addEventListener('change', () => {
+      Storage.setPhase(Storage.getCurrentSessionId(), cb.dataset.phaseToggle, cb.checked);
+      renderSessionBar();
+      renderPortal();
+      renderShareUrls();
+    }));
+
+    // Data tab
+    $('#export-json').addEventListener('click', exportJson);
+    $('#import-json').addEventListener('change', e => { if (e.target.files[0]) importJson(e.target.files[0]); });
+    $('#save-weights').addEventListener('click', saveWeights);
+    $('#seed-demo').addEventListener('click', seedDemo);
+    $('#clear-all').addEventListener('click', () => {
+      if (!confirm('この試験回の全受験者データを削除しますか？（試験回自体は残ります）')) return;
+      Storage.clearAll(); renderOverview(); alert('削除しました。');
+    });
+
+    loadCfgUi();
   }
 
   return { init };

@@ -3,235 +3,287 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ゼミ選抜アナライザー</title>
+<title>ゼミ試験アプリケーション</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 </head>
 <body>
 <header class="topbar">
   <div class="brand">
     <span class="logo">🎓</span>
     <div>
-      <h1>ゼミ選抜アナライザー</h1>
-      <p class="sub">ZemiSelect Analyzer — 入試成績・アンケート総合分析</p>
+      <h1>ゼミ試験アプリケーション</h1>
+      <p class="sub">履歴書・学力試験・アンケートの受付と多面的分析</p>
     </div>
   </div>
+  <div class="session-bar">
+    <label class="session-label">🗂 試験回:
+      <select id="session-select"></select>
+    </label>
+    <button class="btn" id="session-add">＋新規試験回</button>
+    <button class="btn" id="session-rename">名称変更</button>
+    <button class="btn danger" id="session-delete">この試験回を削除</button>
+    <span class="phase-status">受付:
+      <span class="phase-pill" data-phase="resume">履歴書: <span data-phase-state="resume">-</span></span>
+      <span class="phase-pill" data-phase="academic">学力試験: <span data-phase-state="academic">-</span></span>
+      <span class="phase-pill" data-phase="survey">アンケート: <span data-phase-state="survey">-</span></span>
+    </span>
+    <span class="session-meta" id="session-meta"></span>
+  </div>
   <nav class="tabs">
-    <button class="tab active" data-view="dashboard">ダッシュボード</button>
-    <button class="tab" data-view="candidates">受験者一覧</button>
-    <button class="tab" data-view="exam">試験を受ける</button>
-    <button class="tab" data-view="profile">個別分析</button>
-    <button class="tab" data-view="ranking">上位者</button>
-    <button class="tab" data-view="cluster">クラスター分析</button>
-    <button class="tab" data-view="settings">設定</button>
+    <button class="tab active" data-view="overview">📊 全体確認</button>
+    <button class="tab" data-view="profile">👤 個人確認</button>
+    <button class="tab" data-view="portal">📝 受験ポータル</button>
+    <button class="tab" data-view="mgr-academic">📚 試験管理</button>
+    <button class="tab" data-view="mgr-survey">📋 アンケート管理</button>
+    <button class="tab" data-view="mgr-resume">📄 履歴書設定</button>
+    <button class="tab" data-view="data">💾 データ</button>
   </nav>
 </header>
 
 <main id="app">
-  <!-- Dashboard -->
-  <section class="view active" id="view-dashboard">
+
+  <!-- ===== Overview ===== -->
+  <section class="view active" id="view-overview">
     <div class="cards">
       <div class="card stat"><span class="k">受験者数</span><span class="v" id="stat-count">0</span></div>
+      <div class="card stat"><span class="k">履歴書提出</span><span class="v" id="stat-resume">-</span></div>
+      <div class="card stat"><span class="k">学力試験完了</span><span class="v" id="stat-academic">-</span></div>
+      <div class="card stat"><span class="k">アンケート完了</span><span class="v" id="stat-survey">-</span></div>
       <div class="card stat"><span class="k">平均総合点</span><span class="v" id="stat-avg">-</span></div>
       <div class="card stat"><span class="k">最高得点</span><span class="v" id="stat-max">-</span></div>
-      <div class="card stat"><span class="k">最新提出</span><span class="v" id="stat-latest">-</span></div>
+      <div class="card stat"><span class="k">✅ 合格者</span><span class="v" id="stat-passed">-</span></div>
     </div>
-    <div class="grid-2">
-      <div class="card">
-        <h3>得点分布</h3>
-        <canvas id="chart-distribution" height="200"></canvas>
+
+    <div class="subtabs">
+      <button class="subtab active" data-subview="list">受験者一覧</button>
+      <button class="subtab" data-subview="chart">統計チャート</button>
+      <button class="subtab" data-subview="rank">上位者ランキング</button>
+      <button class="subtab" data-subview="cluster">クラスター分析</button>
+    </div>
+
+    <!-- Sub: list -->
+    <section class="subview active" id="sub-list">
+      <div class="toolbar">
+        <input type="search" id="search-cand" placeholder="名前・受験番号・大学で検索">
+        <select id="sort-cand">
+          <option value="date-desc">最終更新 新しい順</option>
+          <option value="date-asc">最終更新 古い順</option>
+          <option value="score-desc">総合点 高い順</option>
+          <option value="score-asc">総合点 低い順</option>
+          <option value="name">名前順</option>
+        </select>
       </div>
-      <div class="card">
-        <h3>科目別平均</h3>
-        <canvas id="chart-subjects" height="200"></canvas>
+      <table class="data-table" id="cand-table">
+        <thead><tr>
+          <th>合格</th><th>受験番号</th><th>氏名</th><th>学部・学科</th>
+          <th>履歴書</th><th>学力</th><th>アンケート</th>
+          <th>総合</th><th>最終更新</th><th>操作</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Sub: chart -->
+    <section class="subview" id="sub-chart">
+      <div class="grid-2">
+        <div class="card"><h3>得点分布</h3><canvas id="chart-distribution" height="200"></canvas></div>
+        <div class="card"><h3>科目別平均</h3><canvas id="chart-subjects" height="200"></canvas></div>
       </div>
-    </div>
-    <div class="card">
-      <h3>直近の提出履歴</h3>
-      <div id="recent-list" class="list"></div>
-    </div>
+      <div class="card"><h3>直近の提出履歴</h3><div id="recent-list" class="list"></div></div>
+    </section>
+
+    <!-- Sub: rank -->
+    <section class="subview" id="sub-rank">
+      <div class="toolbar">
+        <label>上位<select id="rank-n"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>名表示</label>
+        <label>並び順
+          <select id="rank-metric">
+            <option value="total">総合点</option>
+            <option value="academic">学力試験</option>
+            <option value="survey">アンケート平均</option>
+          </select>
+        </label>
+      </div>
+      <table class="data-table" id="rank-table">
+        <thead><tr><th>順位</th><th>受験番号</th><th>氏名</th><th>学力(%)</th><th>アンケート</th><th>総合</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Sub: cluster -->
+    <section class="subview" id="sub-cluster">
+      <div class="toolbar">
+        <label>クラスター数 k = <input type="number" id="k-value" value="3" min="2" max="8" style="width:60px"></label>
+        <button class="btn primary" id="run-cluster">クラスター分析を実行</button>
+      </div>
+      <div class="grid-2">
+        <div class="card"><h3>クラスター散布図（PCA 2次元）</h3><canvas id="chart-cluster" height="320"></canvas></div>
+        <div class="card"><h3>クラスター特性（中心値）</h3><canvas id="chart-cluster-radar" height="320"></canvas></div>
+      </div>
+      <div class="card"><h3>クラスター割当一覧</h3><div id="cluster-assign-list"></div></div>
+    </section>
   </section>
 
-  <!-- Candidates -->
-  <section class="view" id="view-candidates">
+  <!-- ===== Profile ===== -->
+  <section class="view" id="view-profile">
     <div class="toolbar">
-      <input type="search" id="search-cand" placeholder="名前・受験番号・大学で検索">
-      <select id="sort-cand">
-        <option value="date-desc">提出日 新しい順</option>
-        <option value="date-asc">提出日 古い順</option>
-        <option value="score-desc">総合点 高い順</option>
-        <option value="score-asc">総合点 低い順</option>
-        <option value="name">名前順</option>
-      </select>
-      <button class="btn" id="export-json">JSONエクスポート</button>
-      <label class="btn">
-        JSONインポート
-        <input type="file" id="import-json" accept="application/json" hidden>
-      </label>
+      <select id="profile-select"><option value="">-- 受験者を選択 --</option></select>
+      <button class="btn" id="print-profile">🖨 印刷</button>
     </div>
-    <table class="data-table" id="cand-table">
-      <thead>
-        <tr>
-          <th>受験番号</th><th>氏名</th><th>大学・学部</th><th>学力</th><th>アンケート</th><th>総合</th><th>提出日時</th><th>操作</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div id="profile-body"></div>
   </section>
 
-  <!-- Exam -->
-  <section class="view" id="view-exam">
-    <div class="exam-steps">
-      <div class="step active" data-step="1">① 履歴書</div>
-      <div class="step" data-step="2">② 学力試験</div>
-      <div class="step" data-step="3">③ アンケート</div>
-      <div class="step" data-step="4">④ 確認・送信</div>
+  <!-- ===== Portal ===== -->
+  <section class="view" id="view-portal">
+    <div class="card portal-intro">
+      <h2>📝 受験ポータル</h2>
+      <p>受験番号を入力すると、現在受付中の試験に回答できます。各試験は管理者が個別に解放しています。</p>
+      <div class="portal-id-row">
+        <label>受験番号
+          <input type="text" id="portal-examinee-id" placeholder="例: Z2026001">
+        </label>
+        <button class="btn primary" id="portal-load">読込</button>
+        <span id="portal-status" class="portal-status"></span>
+      </div>
     </div>
 
-    <form id="exam-form" autocomplete="off">
-      <!-- Step 1: Resume -->
-      <section class="exam-step active" data-step="1">
-        <h2>履歴書記入</h2>
+    <div class="portal-cards" id="portal-cards"></div>
+
+    <section class="portal-form" id="portal-resume" style="display:none">
+      <h3>📄 履歴書記入</h3>
+      <form id="form-resume" autocomplete="off">
         <div class="form-grid">
           <label>受験番号<span class="req">*</span><input type="text" name="examineeId" required></label>
-          <label>氏名<span class="req">*</span><input type="text" name="name" required></label>
-          <label>フリガナ<input type="text" name="kana"></label>
+          <label>姓<span class="req">*</span><input type="text" name="lastName" required></label>
+          <label>名<span class="req">*</span><input type="text" name="firstName" required></label>
+          <label>姓（フリガナ）<input type="text" name="lastKana"></label>
+          <label>名（フリガナ）<input type="text" name="firstKana"></label>
           <label>生年月日<input type="date" name="birthdate"></label>
-          <label>性別
-            <select name="gender">
-              <option value="">選択しない</option>
-              <option>男性</option><option>女性</option><option>その他</option>
-            </select>
-          </label>
+          <label>性別<select name="gender"><option value="">選択しない</option><option>男性</option><option>女性</option><option>その他</option></select></label>
           <label>メールアドレス<input type="email" name="email"></label>
           <label>電話番号<input type="tel" name="phone"></label>
-          <label>大学名<input type="text" name="university"></label>
-          <label>学部・学科<input type="text" name="faculty"></label>
+          <label>学部<span class="req">*</span><select name="faculty" id="resume-faculty" required></select></label>
+          <label>学科<select name="department" id="resume-department"></select></label>
           <label>学年<input type="text" name="grade" placeholder="例: 2年"></label>
           <label>現在のGPA<input type="number" step="0.01" min="0" max="4" name="gpa"></label>
-          <label>取得済資格<input type="text" name="qualifications" placeholder="例: TOEIC 800, 簿記2級"></label>
-          <label class="full">志望動機<textarea name="motivation" rows="4" placeholder="このゼミを志望する理由"></textarea></label>
-          <label class="full">自己PR<textarea name="selfPr" rows="4" placeholder="あなたの強みや実績"></textarea></label>
+          <label>取得済資格<input type="text" name="qualifications"></label>
+          <label class="full">志望動機<textarea name="motivation" rows="4"></textarea></label>
+          <label class="full">自己PR<textarea name="selfPr" rows="4"></textarea></label>
           <label class="full">研究したいテーマ<textarea name="researchTopic" rows="3"></textarea></label>
         </div>
-        <div class="form-actions">
-          <button type="button" class="btn primary" data-go="2">次へ →</button>
-        </div>
-      </section>
+        <div id="form-resume-custom" class="form-grid"></div>
+        <div class="form-actions"><button type="button" class="btn" data-cancel>キャンセル</button><button type="submit" class="btn primary">履歴書を提出</button></div>
+      </form>
+    </section>
 
-      <!-- Step 2: Academic test -->
-      <section class="exam-step" data-step="2">
-        <h2>学力試験</h2>
-        <p class="hint">各科目0〜100点で入力してください。実際に試験を実施する場合は、外部試験スコアや筆記試験結果をそのまま転記してください。</p>
+    <section class="portal-form" id="portal-academic" style="display:none">
+      <h3>📚 学力試験（自動採点）</h3>
+      <form id="form-academic" autocomplete="off">
+        <p class="hint">選択肢から1つ選んでください。送信後に自動採点されます。</p>
         <div class="form-grid">
-          <label>論理・数理 (100点)<input type="number" name="logic" min="0" max="100" required></label>
-          <label>英語 (100点)<input type="number" name="english" min="0" max="100" required></label>
-          <label>専門知識 (100点)<input type="number" name="specialty" min="0" max="100" required></label>
-          <label>統計・データ分析 (100点)<input type="number" name="statistics" min="0" max="100" required></label>
-          <label>文章作成・記述 (100点)<input type="number" name="writing" min="0" max="100" required></label>
-          <label>プレゼンテーション (100点)<input type="number" name="presentation" min="0" max="100" required></label>
+          <label>受験番号<span class="req">*</span><input type="text" name="examineeId" required readonly></label>
         </div>
-        <div class="form-actions">
-          <button type="button" class="btn" data-go="1">← 戻る</button>
-          <button type="button" class="btn primary" data-go="3">次へ →</button>
-        </div>
-      </section>
+        <div id="academic-questions" class="exam-questions"></div>
+        <div class="form-actions"><button type="button" class="btn" data-cancel>キャンセル</button><button type="submit" class="btn primary">学力試験を提出</button></div>
+      </form>
+    </section>
 
-      <!-- Step 3: Survey -->
-      <section class="exam-step" data-step="3">
-        <h2>アンケート</h2>
+    <section class="portal-form" id="portal-survey" style="display:none">
+      <h3>📋 アンケート</h3>
+      <form id="form-survey" autocomplete="off">
         <p class="hint">各項目を 1（まったく当てはまらない）〜 5（非常に当てはまる）で評価してください。</p>
-        <div id="survey-items" class="survey-list"></div>
+        <input type="hidden" name="examineeId">
+        <div class="form-grid"><label>受験番号<input type="text" id="form-survey-id-display" disabled></label></div>
+        <div id="survey-questions" class="survey-list"></div>
         <h3 style="margin-top:24px">自由記述</h3>
         <div class="form-grid">
           <label class="full">これまでに最も力を入れた活動<textarea name="freeAchievement" rows="3"></textarea></label>
           <label class="full">入ゼミ後に挑戦したいこと<textarea name="freeAspiration" rows="3"></textarea></label>
         </div>
-        <div class="form-actions">
-          <button type="button" class="btn" data-go="2">← 戻る</button>
-          <button type="button" class="btn primary" data-go="4">次へ →</button>
-        </div>
-      </section>
-
-      <!-- Step 4: Confirm -->
-      <section class="exam-step" data-step="4">
-        <h2>確認・送信</h2>
-        <div id="confirm-area" class="confirm-area"></div>
-        <div class="form-actions">
-          <button type="button" class="btn" data-go="3">← 戻る</button>
-          <button type="submit" class="btn primary">送信する</button>
-        </div>
-      </section>
-    </form>
+        <div class="form-actions"><button type="button" class="btn" data-cancel>キャンセル</button><button type="submit" class="btn primary">アンケートを提出</button></div>
+      </form>
+    </section>
   </section>
 
-  <!-- Profile -->
-  <section class="view" id="view-profile">
-    <div class="toolbar">
-      <select id="profile-select"><option value="">-- 受験者を選択 --</option></select>
-      <button class="btn" id="print-profile">印刷</button>
-    </div>
-    <div id="profile-body"></div>
-  </section>
-
-  <!-- Ranking -->
-  <section class="view" id="view-ranking">
-    <div class="toolbar">
-      <label>上位<select id="rank-n">
-        <option>5</option><option selected>10</option><option>20</option><option>50</option>
-      </select>名表示</label>
-      <label>並び順
-        <select id="rank-metric">
-          <option value="total">総合点</option>
-          <option value="academic">学力試験合計</option>
-          <option value="survey">アンケート平均</option>
-        </select>
-      </label>
-    </div>
-    <table class="data-table" id="rank-table">
-      <thead><tr><th>順位</th><th>受験番号</th><th>氏名</th><th>学力</th><th>アンケート</th><th>総合</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- Cluster -->
-  <section class="view" id="view-cluster">
-    <div class="toolbar">
-      <label>クラスター数 k =
-        <input type="number" id="k-value" value="3" min="2" max="8" style="width:60px">
-      </label>
-      <button class="btn primary" id="run-cluster">クラスター分析を実行</button>
-    </div>
-    <div class="grid-2">
-      <div class="card">
-        <h3>クラスター散布図（PCA 2次元）</h3>
-        <canvas id="chart-cluster" height="320"></canvas>
-      </div>
-      <div class="card">
-        <h3>クラスター特性（中心値）</h3>
-        <canvas id="chart-cluster-radar" height="320"></canvas>
-      </div>
-    </div>
+  <!-- ===== Academic test management ===== -->
+  <section class="view" id="view-mgr-academic">
     <div class="card">
-      <h3>クラスター割当一覧</h3>
-      <div id="cluster-assign-list"></div>
+      <h3>📚 学力試験 問題管理（試験回ごと）</h3>
+      <p class="hint">この試験回で出題する選択式問題を作成・編集できます。各問題はカテゴリ・配点・選択肢・正解を設定可能で、受験者の回答は自動採点されます。</p>
+      <div class="toolbar">
+        <button class="btn primary" id="add-academic-q">＋ 問題を追加</button>
+        <button class="btn" id="reset-academic-default">デフォルト問題に戻す</button>
+        <span class="muted" id="academic-q-count"></span>
+      </div>
+      <div id="academic-q-list" class="q-list"></div>
     </div>
   </section>
 
-  <!-- Settings -->
-  <section class="view" id="view-settings">
+  <!-- ===== Survey management ===== -->
+  <section class="view" id="view-mgr-survey">
     <div class="card">
-      <h3>データ管理</h3>
-      <p>すべての受験者データはブラウザのlocalStorageに保存されています。バックアップにはJSONエクスポートをご利用ください。</p>
-      <div class="form-actions">
-        <button class="btn" id="seed-demo">デモデータを投入</button>
-        <button class="btn danger" id="clear-all">全データ削除</button>
+      <h3>📋 アンケート 問題管理（試験回ごと）</h3>
+      <p class="hint">受験者に問う5段階評価の項目を作成・編集できます。</p>
+      <div class="toolbar">
+        <button class="btn primary" id="add-survey-q">＋ 項目を追加</button>
+        <button class="btn" id="reset-survey-default">デフォルト項目に戻す</button>
+        <span class="muted" id="survey-q-count"></span>
+      </div>
+      <div id="survey-q-list" class="q-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== Resume settings ===== -->
+  <section class="view" id="view-mgr-resume">
+    <div class="card">
+      <h3>🏫 学部・学科の選択肢</h3>
+      <p class="hint">受験者が履歴書で選択できる学部と、その配下の学科を設定します。</p>
+      <div class="toolbar">
+        <button class="btn primary" id="add-faculty">＋ 学部を追加</button>
+        <button class="btn" id="reset-faculty">デフォルトに戻す</button>
+      </div>
+      <div id="faculty-dept-list" class="q-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>📄 履歴書 追加質問</h3>
+      <p class="hint">標準フィールドに加えて、この試験回独自の追加質問を設定できます。</p>
+      <div class="toolbar">
+        <button class="btn primary" id="add-resume-field">＋ 追加質問を加える</button>
+        <button class="btn" id="reset-resume-fields">追加質問を削除</button>
+      </div>
+      <div id="resume-fields-list" class="q-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>🔓 受付制御</h3>
+      <p class="hint">各フェーズの受付ON/OFFを切り替えると、受験ポータルに即時反映されます。</p>
+      <div class="phase-toggles">
+        <label class="phase-toggle"><input type="checkbox" data-phase-toggle="resume"><span>履歴書 受付</span></label>
+        <label class="phase-toggle"><input type="checkbox" data-phase-toggle="academic"><span>学力試験 受付</span></label>
+        <label class="phase-toggle"><input type="checkbox" data-phase-toggle="survey"><span>アンケート 受付</span></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Data ===== -->
+  <section class="view" id="view-data">
+    <div class="card">
+      <h3>💾 データ管理</h3>
+      <p>すべての受験者データはブラウザのlocalStorageに保存されます。バックアップにはJSONエクスポートをご利用ください。</p>
+      <div class="form-actions" style="justify-content:flex-start;gap:10px">
+        <button class="btn primary" id="seed-demo">デモデータを投入</button>
+        <button class="btn" id="export-json">JSONエクスポート</button>
+        <label class="btn">JSONインポート<input type="file" id="import-json" accept="application/json" hidden></label>
+        <button class="btn danger" id="clear-all">この試験回の全データ削除</button>
       </div>
     </div>
     <div class="card">
       <h3>採点ウェイト設定</h3>
-      <p>総合点 = 学力試験 × W1 + アンケート × W2 （合計100％）</p>
+      <p>総合点 = 学力試験スコア × W1 + アンケート × W2 （合計100％）</p>
       <div class="form-grid">
         <label>学力試験ウェイト (%)<input type="number" id="weight-academic" min="0" max="100" value="70"></label>
         <label>アンケートウェイト (%)<input type="number" id="weight-survey" min="0" max="100" value="30"></label>
@@ -240,8 +292,8 @@
     </div>
     <div class="card">
       <h3>このアプリについて</h3>
-      <p><strong>ゼミ選抜アナライザー</strong> v1.0</p>
-      <p>ゼミ入試（履歴書・学力試験・アンケート）の収集と多面的分析を行うシングルページWebアプリ。データはローカル保存・公開不要・無料運用。</p>
+      <p><strong>ゼミ選抜アナライザー</strong> v2.0</p>
+      <p>履歴書／学力試験／アンケートを試験回ごとに個別解放できる管理機能、選択式問題による自動採点、レーダー／クラスター分析を含むシングルページWebアプリ。</p>
     </div>
   </section>
 </main>
