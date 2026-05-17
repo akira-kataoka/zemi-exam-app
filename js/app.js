@@ -105,6 +105,54 @@ const App = (() => {
       el.classList.toggle('s-open', Storage.isPhaseOpen(sess, el.dataset.phaseStatus));
     });
   }
+  // ===== Session picker popover (search + switch + inline edit) =====
+  function toggleSessionPopover() {
+    const pop = $('#session-popover');
+    if (pop.style.display === 'none') {
+      pop.style.display = 'block';
+      $('#session-popover-search').value = '';
+      renderSessionPopoverList();
+      setTimeout(() => $('#session-popover-search').focus(), 0);
+    } else closeSessionPopover();
+  }
+  function closeSessionPopover() { $('#session-popover').style.display = 'none'; }
+  function renderSessionPopoverList() {
+    const q = ($('#session-popover-search').value || '').trim().toLowerCase();
+    const curId = Storage.getCurrentSessionId();
+    let sessions = Storage.loadSessions();
+    if (q) sessions = sessions.filter(s => (s.name || '').toLowerCase().includes(q));
+    const wrap = $('#session-popover-list');
+    wrap.innerHTML = sessions.length ? sessions.map(s => {
+      const count = Storage.loadForSession(s.id).length;
+      const isCurrent = s.id === curId;
+      return `<div class="session-popover-item ${isCurrent ? 'current' : ''}" data-id="${s.id}">
+        <button class="sp-pick" data-pick="${s.id}" title="この試験回に切り替え">
+          ${isCurrent ? '●' : '○'}
+          <span class="sp-name">${escapeHtml(s.name)}</span>
+          <span class="sp-meta">${count}名 / ${formatDate(s.createdAt).slice(0, 10)}</span>
+        </button>
+        <button class="sp-rename icon-btn btn" data-rename="${s.id}" title="名称変更">✏</button>
+      </div>`;
+    }).join('') : '<div class="muted" style="padding:14px;text-align:center;font-size:12px">該当する試験回がありません</div>';
+    wrap.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => {
+      Storage.setCurrentSessionId(b.dataset.pick);
+      ensureTests(getSession());
+      closeSessionPopover();
+      renderSessionBar();
+      refreshAllViews();
+    }));
+    wrap.querySelectorAll('[data-rename]').forEach(b => b.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = b.dataset.rename;
+      const s = Storage.loadSessions().find(x => x.id === id);
+      const v = prompt('試験回の名前', s.name);
+      if (!v || v === s.name) return;
+      Storage.renameSession(id, v);
+      renderSessionBar();
+      renderSessionPopoverList();
+    }));
+  }
+
   function onSessionChange(e) {
     Storage.setCurrentSessionId(e.target.value);
     ensureTests(getSession());
@@ -1445,8 +1493,17 @@ const App = (() => {
 
     // Session bar
     $('#session-select').addEventListener('change', onSessionChange);
-    $('#session-add').addEventListener('click', onAddSession);
+    $('#session-popover-add').addEventListener('click', () => { closeSessionPopover(); onAddSession(); });
     $('#session-delete').addEventListener('click', onDeleteSession);
+    // Session picker popover
+    $('#session-picker-btn').addEventListener('click', e => { e.stopPropagation(); toggleSessionPopover(); });
+    $('#session-popover-search').addEventListener('input', renderSessionPopoverList);
+    document.addEventListener('click', e => {
+      const pop = $('#session-popover');
+      if (pop.style.display !== 'none' && !pop.contains(e.target) && e.target !== $('#session-picker-btn')) {
+        closeSessionPopover();
+      }
+    });
     // inline rename via name input
     const nameInput = $('#session-name-input');
     const commitRename = () => {

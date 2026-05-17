@@ -21,9 +21,18 @@
   <div class="session-bar">
     <label class="session-label">🗂 試験回:</label>
     <input type="text" id="session-name-input" class="session-name-input" title="クリックして名称を編集" placeholder="試験回の名前">
-    <select id="session-select" class="session-switch" title="別の試験回に切り替え"></select>
-    <button class="btn" id="session-add" title="新規試験回を作成">＋新規</button>
+    <div class="session-picker-wrap">
+      <button class="btn icon-btn" id="session-picker-btn" title="試験回を検索・切り替え">🔍 切替</button>
+      <div class="session-popover" id="session-popover" style="display:none">
+        <input type="search" id="session-popover-search" placeholder="試験回を検索（名前で絞り込み）">
+        <div class="session-popover-list" id="session-popover-list"></div>
+        <div class="session-popover-foot">
+          <button class="btn primary" id="session-popover-add">＋ 新規試験回</button>
+        </div>
+      </div>
+    </div>
     <button class="btn danger icon-btn" id="session-delete" title="この試験回を削除">🗑</button>
+    <select id="session-select" class="session-switch-hidden" hidden></select>
     <span class="phase-status">受付:
       <span class="phase-pill" data-phase="resume">履歴書: <span data-phase-state="resume">-</span></span>
       <span class="phase-pill" data-phase="academic">学力試験: <span data-phase-state="academic">-</span></span>
