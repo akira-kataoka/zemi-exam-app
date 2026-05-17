@@ -308,6 +308,45 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .miss-badge{display:inline-block;padding:2px 8px;background:#fee2e2;color:var(--danger);border-radius:999px;font-size:11px;font-weight:600}
 .stat-sub{font-size:13px;color:var(--danger);font-weight:normal}
 
+/* Interview schedule timeline */
+.iv-timeline-legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)}
+.iv-chip{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600}
+.iv-chip.future{background:#dbeafe;color:#1e40af}
+.iv-chip.now{background:#fef3c7;color:#92400e}
+.iv-chip.delayed{background:#fee2e2;color:#991b1b}
+.iv-chip.done{background:#dcfce7;color:#166534}
+.iv-chip.done-late{background:#fed7aa;color:#9a3412}
+
+.iv-timeline-grid{display:grid;grid-template-columns:240px repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start}
+.iv-pool-col,.iv-day-col{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;box-shadow:var(--shadow)}
+.iv-pool-col{background:#fef2f2;border-color:#fecaca}
+.iv-col-head{font-size:13px;font-weight:700;color:var(--ink);padding:6px 8px;border-bottom:2px solid var(--border);margin-bottom:8px}
+.iv-slots{display:flex;flex-direction:column;gap:6px}
+.iv-slot{display:grid;grid-template-columns:48px 1fr;gap:6px;align-items:start}
+.iv-time{font-size:12px;font-weight:600;color:var(--muted);padding-top:8px;text-align:right}
+.iv-drop-zone{min-height:48px;padding:4px;background:#fafafa;border:1px dashed var(--border);border-radius:6px;transition:.15s}
+.iv-drop-zone.iv-pool{min-height:200px;display:flex;flex-direction:column;gap:6px;background:transparent;border:none}
+.iv-drop-zone.drag-over{background:#dbeafe;border-color:var(--primary);border-style:solid}
+.iv-empty,.iv-empty-slot{color:var(--muted);font-size:11px;text-align:center;padding:8px}
+.iv-card{display:flex;align-items:center;gap:8px;padding:6px 8px;background:#fff;border:1px solid var(--border);border-radius:6px;cursor:grab;user-select:none;transition:.1s}
+.iv-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);transform:translateY(-1px)}
+.iv-card.dragging{opacity:.4}
+.iv-card-info{flex:1;min-width:0}
+.iv-card-name{font-size:12px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iv-card-meta{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.iv-status-pill{display:inline-block;padding:1px 6px;border-radius:999px;font-size:9px;font-weight:600}
+.iv-status-pill.future{background:#dbeafe;color:#1e40af}
+.iv-status-pill.now{background:#fef3c7;color:#92400e}
+.iv-status-pill.delayed{background:#fee2e2;color:#991b1b;animation:pulse-delayed 1.5s infinite}
+.iv-status-pill.done{background:#dcfce7;color:#166534}
+.iv-status-pill.done-late{background:#fed7aa;color:#9a3412}
+.iv-status-pill.unscheduled{background:#f1f5f9;color:#475569}
+.iv-card.status-delayed{border-color:var(--danger);border-width:2px;background:#fef2f2}
+.iv-card.status-now{border-color:var(--warn);border-width:2px;background:#fffbeb}
+.iv-card.status-done{background:#f0fdf4}
+.iv-card.status-done-late{background:#fff7ed}
+@keyframes pulse-delayed{0%,100%{opacity:1}50%{opacity:.6}}
+
 /* Interview section */
 .iv-summary{background:#fafafa;border-radius:8px;padding:14px;margin-top:10px}
 .iv-meta{display:flex;flex-wrap:wrap;gap:18px;border-bottom:1px solid var(--border);padding-bottom:10px}

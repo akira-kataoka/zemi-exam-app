@@ -70,6 +70,19 @@ const App = (() => {
     if (!sess.facultyDept) { sess.facultyDept = JSON.parse(JSON.stringify(Stats.DEFAULT_FACULTY_DEPT)); changed = true; }
     if (!sess.pin) { sess.pin = Storage.generatePin(); changed = true; }
     if (!sess.phaseSchedule) { sess.phaseSchedule = { resume:{startsAt:null,endsAt:null}, academic:{startsAt:null,endsAt:null}, survey:{startsAt:null,endsAt:null} }; changed = true; }
+    if (!sess.interviewSchedule) {
+      const today = new Date(); today.setDate(today.getDate() + 1);
+      sess.interviewSchedule = {
+        startDate: today.toISOString().slice(0, 10),
+        days: 1,
+        dailyStart: '09:00',
+        dailyEnd: '17:00',
+        slotMinutes: 30,
+        breakStart: '12:00',
+        breakEnd: '13:00'
+      };
+      changed = true;
+    }
     if (changed) {
       const list = Storage.loadSessions();
       const idx = list.findIndex(s => s.id === sess.id);
@@ -218,6 +231,7 @@ const App = (() => {
     if (name === 'academic') renderAcademicMgr();
     if (name === 'survey')   renderSurveyMgr();
     if (name === 'resume')   renderResumeMgr();
+    if (name === 'interview') renderInterviewMgr();
     if (name === 'data')     loadCfgUi();
   }
   function attachAdminContent() {
@@ -1385,6 +1399,235 @@ const App = (() => {
     renderPhaseShare('resume', 'view-mgr-resume');
   }
 
+  // ===== Interview schedule manager =====
+  function buildSlots(sch) {
+    const slots = [];
+    if (!sch?.startDate) return slots;
+    const days = Number(sch.days) || 1;
+    for (let d = 0; d < days; d++) {
+      const date = new Date(sch.startDate + 'T00:00:00');
+      date.setDate(date.getDate() + d);
+      const dateStr = date.toISOString().slice(0, 10);
+      const [sh, sm] = sch.dailyStart.split(':').map(Number);
+      const [eh, em] = sch.dailyEnd.split(':').map(Number);
+      const dayStart = new Date(date); dayStart.setHours(sh, sm, 0, 0);
+      const dayEnd = new Date(date); dayEnd.setHours(eh, em, 0, 0);
+      const bs = sch.breakStart ? sch.breakStart.split(':').map(Number) : null;
+      const be = sch.breakEnd ? sch.breakEnd.split(':').map(Number) : null;
+      const breakStart = bs ? new Date(date) : null; if (breakStart) breakStart.setHours(bs[0], bs[1], 0, 0);
+      const breakEnd   = be ? new Date(date) : null; if (breakEnd)   breakEnd.setHours(be[0], be[1], 0, 0);
+      const slotMs = (Number(sch.slotMinutes) || 30) * 60000;
+      for (let t = dayStart.getTime(); t + slotMs <= dayEnd.getTime() + 1; t += slotMs) {
+        // skip break range
+        if (breakStart && breakEnd && t >= breakStart.getTime() && t < breakEnd.getTime()) continue;
+        slots.push({ iso: new Date(t).toISOString(), dateStr });
+      }
+    }
+    return slots;
+  }
+
+  function interviewStatus(c, sch) {
+    if (!c.interview) return 'unscheduled';
+    const slotMs = (Number(sch?.slotMinutes) || 30) * 60000;
+    if (c.interview.heldAt) {
+      if (c.interview.scheduledAt) {
+        const lag = new Date(c.interview.heldAt) - new Date(c.interview.scheduledAt);
+        if (lag > slotMs * 1.5) return 'done-late';
+      }
+      return 'done';
+    }
+    if (!c.interview.scheduledAt) return 'unscheduled';
+    const now = Date.now();
+    const t = new Date(c.interview.scheduledAt).getTime();
+    if (now < t) return 'future';
+    if (now >= t && now < t + slotMs) return 'now';
+    return 'delayed';
+  }
+
+  const IV_STATUS_LABEL = { unscheduled: '未', future: '予定', now: '進行中', delayed: '⚠遅延中', done: '✅実施済', 'done-late': '⏰遅延で実施' };
+
+  function renderInterviewMgr() {
+    const sess = ensureTests(getSession());
+    const sch = sess.interviewSchedule;
+    $('#iv-sch-startDate').value = sch.startDate || '';
+    $('#iv-sch-days').value = sch.days || 1;
+    $('#iv-sch-dailyStart').value = sch.dailyStart || '09:00';
+    $('#iv-sch-dailyEnd').value = sch.dailyEnd || '17:00';
+    $('#iv-sch-slotMinutes').value = sch.slotMinutes || 30;
+    $('#iv-sch-breakStart').value = sch.breakStart || '';
+    $('#iv-sch-breakEnd').value = sch.breakEnd || '';
+    renderInterviewTimeline();
+  }
+
+  function getScheduleConfig() {
+    return {
+      startDate: $('#iv-sch-startDate').value,
+      days: Number($('#iv-sch-days').value) || 1,
+      dailyStart: $('#iv-sch-dailyStart').value,
+      dailyEnd: $('#iv-sch-dailyEnd').value,
+      slotMinutes: Number($('#iv-sch-slotMinutes').value) || 30,
+      breakStart: $('#iv-sch-breakStart').value || '',
+      breakEnd: $('#iv-sch-breakEnd').value || ''
+    };
+  }
+
+  function saveScheduleConfig() {
+    const sess = getSession();
+    sess.interviewSchedule = getScheduleConfig();
+    saveSession(sess);
+  }
+
+  function renderInterviewTimeline() {
+    const sess = getSession();
+    const sch = sess.interviewSchedule;
+    const slots = buildSlots(sch);
+    const list = Storage.loadForSession();
+    // group by slot
+    const bySlot = {};
+    list.forEach(c => { if (c.interview?.scheduledAt) bySlot[c.interview.scheduledAt] = c; });
+    const unscheduled = list.filter(c => !c.interview?.scheduledAt);
+
+    // group slots by day
+    const days = {};
+    slots.forEach(s => { (days[s.dateStr] = days[s.dateStr] || []).push(s); });
+
+    const wrap = $('#iv-timeline-area');
+    wrap.innerHTML = `
+      <div class="iv-timeline-grid">
+        <div class="iv-pool-col">
+          <div class="iv-col-head">📦 未スケジュール (${unscheduled.length})</div>
+          <div class="iv-drop-zone iv-pool" data-drop="pool">
+            ${unscheduled.map(c => candidateCard(c, sch)).join('') || '<div class="iv-empty">全員配置済</div>'}
+          </div>
+        </div>
+        ${Object.entries(days).map(([dateStr, daySlots]) => `
+          <div class="iv-day-col">
+            <div class="iv-col-head">📅 ${formatDateJ(dateStr)} <small>(${daySlots.length}枠)</small></div>
+            <div class="iv-slots">
+              ${daySlots.map(s => {
+                const c = bySlot[s.iso];
+                const t = s.iso;
+                const hhmm = new Date(t).toTimeString().slice(0, 5);
+                return `
+                  <div class="iv-slot">
+                    <div class="iv-time">${hhmm}</div>
+                    <div class="iv-drop-zone" data-drop="slot" data-slot-iso="${t}">
+                      ${c ? candidateCard(c, sch) : '<div class="iv-empty-slot">(空き枠)</div>'}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    wireInterviewDnD();
+  }
+
+  function candidateCard(c, sch) {
+    const status = interviewStatus(c, sch);
+    const cls = `iv-card status-${status}`;
+    return `<div class="${cls}" draggable="true" data-id="${c.id}" title="クリックで面接記録を編集">
+      ${c.photo ? `<img class="avatar-sm" src="${c.photo}" alt="">` : '<div class="avatar-sm avatar-blank">👤</div>'}
+      <div class="iv-card-info">
+        <div class="iv-card-name">${escapeHtml(fullName(c))}</div>
+        <div class="iv-card-meta">${escapeHtml(c.examineeId || '')} <span class="iv-status-pill ${status}">${IV_STATUS_LABEL[status]}</span></div>
+      </div>
+    </div>`;
+  }
+
+  function wireInterviewDnD() {
+    let draggedId = null;
+    document.querySelectorAll('.iv-card[draggable="true"]').forEach(card => {
+      card.addEventListener('dragstart', e => {
+        draggedId = card.dataset.id;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      card.addEventListener('click', e => {
+        if (e.target.closest('.iv-card')) {
+          const id = card.dataset.id;
+          openInterviewEditor(id);
+        }
+      });
+    });
+    document.querySelectorAll('.iv-drop-zone').forEach(zone => {
+      zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (!draggedId) return;
+        const targetType = zone.dataset.drop;
+        const list = Storage.load();
+        const draggedRec = list.find(x => x.id === draggedId);
+        if (!draggedRec) return;
+        if (targetType === 'pool') {
+          if (draggedRec.interview) { delete draggedRec.interview.scheduledAt; }
+        } else if (targetType === 'slot') {
+          const slotIso = zone.dataset.slotIso;
+          // If slot is occupied, swap
+          const occupant = list.find(x => x.interview?.scheduledAt === slotIso && x.id !== draggedId);
+          const prevSchedule = draggedRec.interview?.scheduledAt || null;
+          draggedRec.interview = draggedRec.interview || {};
+          draggedRec.interview.scheduledAt = slotIso;
+          if (occupant) {
+            if (prevSchedule) { occupant.interview.scheduledAt = prevSchedule; }
+            else { delete occupant.interview.scheduledAt; }
+          }
+        }
+        Storage.save(list);
+        renderInterviewTimeline();
+      });
+    });
+  }
+
+  function autoAllocateInterviews(mode = 'fill') {
+    const sess = getSession();
+    saveScheduleConfig();
+    const sch = sess.interviewSchedule;
+    const slots = buildSlots(sch).map(s => s.iso);
+    if (slots.length === 0) { alert('時間枠が0です。配置設定を確認してください。'); return; }
+    const list = Storage.load();
+    const inSession = list.filter(c => c.sessionId === sess.id);
+    if (mode === 'reallocate') {
+      // Clear all scheduled
+      inSession.forEach(c => { if (c.interview) delete c.interview.scheduledAt; });
+    }
+    // Find candidates to allocate (unscheduled, not done)
+    const targets = inSession.filter(c => !c.interview?.scheduledAt && !c.interview?.heldAt)
+      .sort((a, b) => (a.examineeId || '').localeCompare(b.examineeId || '', 'ja'));
+    // Find open slots
+    const used = new Set(inSession.filter(c => c.interview?.scheduledAt).map(c => c.interview.scheduledAt));
+    const openSlots = slots.filter(s => !used.has(s));
+    let assigned = 0;
+    targets.forEach((c, i) => {
+      if (i >= openSlots.length) return;
+      c.interview = c.interview || {};
+      c.interview.scheduledAt = openSlots[i];
+      assigned++;
+    });
+    Storage.save(list);
+    renderInterviewTimeline();
+    alert(`${assigned}名を時間枠に配置しました（残り未配置: ${Math.max(0, targets.length - assigned)}名）。`);
+  }
+
+  function clearAllSchedules() {
+    if (!confirm('全員の面接予定をクリアします（面接記録は残ります）。よろしいですか？')) return;
+    const list = Storage.load();
+    list.forEach(c => { if (c.sessionId === Storage.getCurrentSessionId() && c.interview) delete c.interview.scheduledAt; });
+    Storage.save(list);
+    renderInterviewTimeline();
+  }
+
+  function formatDateJ(yyyymmdd) {
+    const d = new Date(yyyymmdd + 'T00:00:00');
+    const wd = ['日','月','火','水','木','金','土'][d.getDay()];
+    return `${d.getMonth() + 1}/${d.getDate()}(${wd})`;
+  }
+
   function renderFacultyDeptEditor(sess) {
     const wrap = $('#faculty-dept-list');
     if (!wrap) return;
@@ -1579,6 +1822,10 @@ const App = (() => {
     Storage.setCurrentSessionId(sess.id);
     ensureTests(getSession());
     const live = getSession();
+    // demo interview schedule = today
+    live.interviewSchedule.startDate = new Date().toISOString().slice(0, 10);
+    live.interviewSchedule.days = 2;
+    saveSession(live);
 
     const facDeptList = live.facultyDept || Stats.DEFAULT_FACULTY_DEPT;
     const names = [
@@ -1644,17 +1891,28 @@ const App = (() => {
       cand.freeAchievement = '学園祭実行委員として広報を担当しました。';
       cand.freeAspiration = '実データを用いたゼミ研究プロジェクトに挑戦したい。';
       cand.surveySubmittedAt = new Date().toISOString();
-      // Interview record for ~60% of candidates
-      if (i % 5 !== 0) {
-        const base = Math.round(p.sv * 0.8 + 1);
-        const r = () => Math.max(1, Math.min(5, base + Math.round((Math.random() - 0.5) * 2)));
+      // Interview record (mix: scheduled+done / scheduled-only / unscheduled)
+      // Schedule all candidates today/tomorrow as a demo
+      const today = new Date(); today.setHours(9, 0, 0, 0);
+      const slotMs = 30 * 60000;
+      const slotIso = new Date(today.getTime() + i * slotMs + (i >= 6 ? 60 * 60000 : 0)).toISOString();
+      const base = Math.round(p.sv * 0.8 + 1);
+      const r = () => Math.max(1, Math.min(5, base + Math.round((Math.random() - 0.5) * 2)));
+      if (i < 8) {
+        // Done (some on-time, some late)
+        const lagMin = i % 4 === 0 ? 45 : 5;
         cand.interview = {
-          heldAt: new Date(Date.now() - (20 - i) * 86400000).toISOString(),
+          scheduledAt: slotIso,
+          heldAt: new Date(new Date(slotIso).getTime() + lagMin * 60000).toISOString(),
           interviewer: ['田中先生', '佐藤先生', '山本先生'][i % 3],
           ratings: { communication: r(), motivation: r(), logic: r(), knowledge: r(), fit: r() },
           notes: i % 4 === 0 ? '志望動機が明確で、研究テーマへの関心が高い。論理的に説明できる。' : '受け答えは丁寧。今後の伸びしろに期待。'
         };
+      } else if (i < 16) {
+        // Scheduled but not yet held
+        cand.interview = { scheduledAt: slotIso };
       }
+      // i >= 16: unscheduled
 
       Storage.upsert(cand);
     });
@@ -1828,6 +2086,22 @@ const App = (() => {
       if (!confirm('追加質問をすべて削除しますか？')) return;
       const sess = getSession(); sess.resumeExtraFields = []; saveSession(sess); renderResumeMgr();
     });
+
+    // Interview schedule
+    ['startDate', 'days', 'dailyStart', 'dailyEnd', 'slotMinutes', 'breakStart', 'breakEnd'].forEach(k => {
+      const el = document.getElementById('iv-sch-' + k);
+      if (el) el.addEventListener('change', () => { saveScheduleConfig(); renderInterviewTimeline(); });
+    });
+    document.getElementById('iv-sch-allocate').addEventListener('click', () => autoAllocateInterviews('fill'));
+    document.getElementById('iv-sch-reallocate').addEventListener('click', () => {
+      if (!confirm('既存スケジュールを破棄し、全員を最初から再配置します。よろしいですか？')) return;
+      autoAllocateInterviews('reallocate');
+    });
+    document.getElementById('iv-sch-clear').addEventListener('click', clearAllSchedules);
+    // Auto-refresh timeline every minute to update delay status
+    setInterval(() => {
+      if (document.querySelector('#adminview-interview.active')) renderInterviewTimeline();
+    }, 60000);
 
     // Phase toggles
     $$('[data-phase-toggle]').forEach(cb => cb.addEventListener('change', () => {
