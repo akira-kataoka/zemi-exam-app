@@ -2193,7 +2193,7 @@ const App = (() => {
       inSession.forEach(c => { if (c.interview) delete c.interview.scheduledAt; });
     }
     // Find candidates to allocate (unscheduled, not done)
-    const targets = inSession.filter(c => !c.interview?.scheduledAt && !c.interview?.heldAt)
+    const targets = inSession.filter(c => !c.interview?.scheduledAt && !Stats.hasInterview(c))
       .sort((a, b) => (a.examineeId || '').localeCompare(b.examineeId || '', 'ja'));
     // Find open slots
     const used = new Set(inSession.filter(c => c.interview?.scheduledAt).map(c => c.interview.scheduledAt));
@@ -2226,7 +2226,7 @@ const App = (() => {
 
   // ===== Distribution message template =====
   function fillTemplate(template, candidate, sess) {
-    const ivAt = candidate.interview?.scheduledAt || candidate.interview?.heldAt;
+    const ivAt = candidate.interview?.scheduledAt || (Stats.interviewRecords(candidate)[0]?.heldAt);
     let ivDate = '', ivTime = '', ivDt = '';
     if (ivAt) {
       const d = new Date(ivAt);
