@@ -453,6 +453,28 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 .iv-card.status-done-late{background:#fff7ed}
 @keyframes pulse-delayed{0%,100%{opacity:1}50%{opacity:.6}}
 
+/* Stat card name annotation */
+.stat-name{display:block;font-size:11px;color:var(--muted);font-weight:normal;margin-top:2px}
+
+/* Resume history rows */
+.history-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.hr-year{width:72px;text-align:right;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px}
+.hr-month{width:54px;text-align:right;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px}
+.hr-sep{font-size:12px;color:var(--muted)}
+.hr-content{flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px}
+.history-table{width:100%;border-collapse:collapse;margin:6px 0;font-size:13px}
+.history-table td{padding:6px 10px;border-bottom:1px dashed var(--border)}
+.history-table .history-year{width:160px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* Interview records (multi-interviewer) */
+.iv-record-card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:8px}
+.iv-record-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed var(--border)}
+.iv-record-ratings{display:flex;flex-wrap:wrap;gap:10px;font-size:12px}
+.iv-rec-rating{padding:2px 6px;background:#f8fafc;border-radius:4px}
+.iv-record-notes{margin-top:6px;padding:6px 10px;background:#fafafa;border-left:3px solid var(--primary);border-radius:4px;font-size:12px;color:var(--ink);line-height:1.5}
+.iv-record-mgr{display:flex;flex-direction:column;gap:4px}
+.iv-record-mgr-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f8fafc;border:1px solid var(--border);border-radius:6px}
+
 /* Interview section */
 .iv-summary{background:#fafafa;border-radius:8px;padding:14px;margin-top:10px}
 .iv-meta{display:flex;flex-wrap:wrap;gap:18px;border-bottom:1px solid var(--border);padding-bottom:10px}

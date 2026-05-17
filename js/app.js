@@ -86,6 +86,12 @@ const App = (() => {
     if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
     return age;
   }
+  function formatDateShort(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
   function formatRelative(iso) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -394,9 +400,16 @@ const App = (() => {
     $('#stat-academic').textContent  = `${nA} / ${N}`;
     $('#stat-survey').textContent    = `${nS} / ${N}`;
     $('#stat-interview').textContent = `${nI} / ${N}`;
-    const acScores = list.filter(c => Stats.hasAcademic(c)).map(c => Stats.scoreAcademic(c, sess.academicTest).percent);
-    $('#stat-max').textContent = acScores.length ? Math.max(...acScores).toFixed(1) + '%' : '—';
-    $('#stat-min').textContent = acScores.length ? Math.min(...acScores).toFixed(1) + '%' : '—';
+    const acEntries = list.filter(c => Stats.hasAcademic(c)).map(c => ({ c, pct: Stats.scoreAcademic(c, sess.academicTest).percent }));
+    if (acEntries.length) {
+      const maxE = acEntries.reduce((a, b) => a.pct >= b.pct ? a : b);
+      const minE = acEntries.reduce((a, b) => a.pct <= b.pct ? a : b);
+      $('#stat-max').innerHTML = `${maxE.pct.toFixed(1)}% <span class="stat-name">${escapeHtml(fullName(maxE.c))}</span>`;
+      $('#stat-min').innerHTML = `${minE.pct.toFixed(1)}% <span class="stat-name">${escapeHtml(fullName(minE.c))}</span>`;
+    } else {
+      $('#stat-max').textContent = '—';
+      $('#stat-min').textContent = '—';
+    }
     $('#stat-passed').textContent = list.filter(c => c.passed).length;
     // Update tab counters
     updateTabBadges();
@@ -410,11 +423,19 @@ const App = (() => {
   function openSubmissionModal(phase) {
     const list = Storage.loadForSession();
     const phaseLabel = PHASE_LABEL[phase] || phase;
+    // フェーズに応じた用語（面接は実施／未実施、それ以外は提出／未提出）
+    const isInterview = phase === 'interview';
+    const titleSuffix = isInterview ? '実施状況' : '提出状況';
+    const submittedTitle = isInterview ? '実施済' : '提出者';
+    const unsubmittedTitle = isInterview ? '未実施' : '未提出者';
     const hasFn   = { application: Stats.hasApplication, resume: Stats.hasResume, academic: Stats.hasAcademic, survey: Stats.hasSurvey, interview: Stats.hasInterview }[phase];
     if (!hasFn) { alert('不明なフェーズ: ' + phase); return; }
     const tsField = { application: 'applicationSubmittedAt', resume: 'resumeSubmittedAt', academic: 'academicSubmittedAt', survey: 'surveySubmittedAt', interview: '_interviewHeldAt' }[phase];
-    // Map interview timestamp for sort purposes
-    if (phase === 'interview') list.forEach(c => { c._interviewHeldAt = c.interview?.heldAt; });
+    // Map interview timestamp (latest record) for sort purposes
+    if (phase === 'interview') list.forEach(c => {
+      const recs = Stats.interviewRecords(c);
+      c._interviewHeldAt = recs.length ? recs.map(r => r.heldAt).sort().pop() : null;
+    });
     const submitted   = list.filter(c => hasFn(c));
     const unsubmitted = list.filter(c => !hasFn(c));
 
@@ -431,12 +452,12 @@ const App = (() => {
     modal.innerHTML = `
       <div class="modal-window">
         <div class="modal-head">
-          <h3 style="margin:0">📊 ${escapeHtml(phaseLabel)} 提出状況</h3>
+          <h3 style="margin:0">📊 ${escapeHtml(phaseLabel)} ${titleSuffix}</h3>
           <button class="btn modal-close" aria-label="閉じる">✕</button>
         </div>
         <div class="modal-body">
           <div class="modal-col">
-            <h4 class="modal-col-title">✅ 提出者 <span class="muted">(${submitted.length}名・新しい順)</span></h4>
+            <h4 class="modal-col-title">✅ ${submittedTitle} <span class="muted">(${submitted.length}名・新しい順)</span></h4>
             <div class="submission-list">
               ${submitted.length ? submitted.map((c, i) => `
                 <div class="submission-row" data-id="${c.id}">
@@ -446,13 +467,13 @@ const App = (() => {
                     <div class="sub-name">${escapeHtml(fullName(c))}</div>
                     <div class="sub-meta">${escapeHtml(c.examineeId || '')}${c.faculty ? ' ・ ' + escapeHtml(c.faculty) : ''}</div>
                   </div>
-                  <div class="sub-time" title="${escapeHtml(formatDate(c[tsField]))}">${formatRelative(c[tsField])}</div>
+                  <div class="sub-time">${formatDate(c[tsField])}</div>
                 </div>
-              `).join('') : '<p class="muted" style="text-align:center;padding:14px">提出者がいません</p>'}
+              `).join('') : `<p class="muted" style="text-align:center;padding:14px">${isInterview ? 'まだ実施されていません' : '提出者がいません'}</p>`}
             </div>
           </div>
           <div class="modal-col">
-            <h4 class="modal-col-title">❌ 未提出者 <span class="muted">(${unsubmitted.length}名・受験番号順)</span></h4>
+            <h4 class="modal-col-title">❌ ${unsubmittedTitle} <span class="muted">(${unsubmitted.length}名・受験番号順)</span></h4>
             <div class="submission-list">
               ${unsubmitted.length ? unsubmitted.map(c => `
                 <div class="submission-row unsubmitted" data-id="${c.id}">
@@ -463,7 +484,7 @@ const App = (() => {
                   </div>
                   <div class="sub-time"><span class="miss-badge">未</span></div>
                 </div>
-              `).join('') : '<p class="muted" style="text-align:center;padding:14px">全員提出済み</p>'}
+              `).join('') : `<p class="muted" style="text-align:center;padding:14px">${isInterview ? '全員実施済み' : '全員提出済み'}</p>`}
             </div>
           </div>
         </div>
@@ -616,12 +637,12 @@ const App = (() => {
         </td>
         <td>${escapeHtml(c.gender || '—')}</td>
         <td>${escapeHtml((c.faculty || '') + ' ' + (c.department || ''))}</td>
-        <td>${Stats.hasApplication(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.applicationSubmittedAt))}">✅<span class="cell-time">${formatRelative(c.applicationSubmittedAt)}</span></div>` : missBadge}</td>
-        <td>${Stats.hasResume(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.resumeSubmittedAt))}">✅<span class="cell-time">${formatRelative(c.resumeSubmittedAt)}</span></div>` : missBadge}</td>
-        <td class="num">${Stats.hasSurvey(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.surveySubmittedAt))}"><strong>${sv.toFixed(2)}/5.00</strong><span class="cell-time">${formatRelative(c.surveySubmittedAt)}</span></div>` : missBadge}</td>
-        <td class="num">${Stats.hasAcademic(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.academicSubmittedAt))}"><strong>${ac.percent.toFixed(1)}%</strong><span class="cell-time">${formatRelative(c.academicSubmittedAt)}</span></div>` : missBadge}</td>
-        <td class="num">${iv ? `<div class="cell-status" title="${escapeHtml(formatDate(c.interview.heldAt))}"><strong>${ivAvg.toFixed(2)}/5.00</strong><span class="cell-time">${formatRelative(c.interview.heldAt)}</span></div>` : missBadge}</td>
-        <td title="${escapeHtml(formatDate(lastUpdate))}">${formatRelative(lastUpdate)}</td>
+        <td>${Stats.hasApplication(c) ? `<div class="cell-status">✅<span class="cell-time">${formatDateShort(c.applicationSubmittedAt)}</span></div>` : missBadge}</td>
+        <td>${Stats.hasResume(c) ? `<div class="cell-status">✅<span class="cell-time">${formatDateShort(c.resumeSubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${Stats.hasSurvey(c) ? `<div class="cell-status"><strong>${sv.toFixed(2)}/5.00</strong><span class="cell-time">${formatDateShort(c.surveySubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${Stats.hasAcademic(c) ? `<div class="cell-status"><strong>${ac.percent.toFixed(1)}%</strong><span class="cell-time">${formatDateShort(c.academicSubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${iv ? `<div class="cell-status"><strong>${ivAvg.toFixed(2)}/5.00</strong><span class="cell-time">実施${Stats.interviewCount(c)}件</span></div>` : missBadge}</td>
+        <td>${formatDate(lastUpdate)}</td>
         <td class="row-actions">
           <button class="btn btn-icon" data-act="view" title="詳細を見る">👁</button>
           <button class="btn btn-icon danger" data-act="del" title="削除">🗑</button>
@@ -1091,11 +1112,11 @@ const App = (() => {
             <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${c.gender ? '🚻 ' + escapeHtml(c.gender) + ' ・ ' : ''}${calcAge(c.birthdate) != null ? `🎂 ${calcAge(c.birthdate)}歳 ・ ` : ''}${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
             <div style="margin-top:10px"><label class="pass-toggle"><input type="checkbox" id="profile-pass" ${c.passed ? 'checked' : ''}> <span>🏆 この受験者を合格にする</span></label></div>
             <div class="profile-submissions">
-              <span class="ps-item ${c.applicationSubmittedAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.applicationSubmittedAt))}">①📝 申込: ${c.applicationSubmittedAt ? formatRelative(c.applicationSubmittedAt) : '未'}</span>
-              <span class="ps-item ${c.resumeSubmittedAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.resumeSubmittedAt))}">②📄 履歴書: ${c.resumeSubmittedAt ? formatRelative(c.resumeSubmittedAt) : '未'}</span>
-              <span class="ps-item ${c.surveySubmittedAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.surveySubmittedAt))}">②📋 アンケート: ${c.surveySubmittedAt ? formatRelative(c.surveySubmittedAt) : '未'}</span>
-              <span class="ps-item ${c.academicSubmittedAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.academicSubmittedAt))}">③📚 学力: ${c.academicSubmittedAt ? formatRelative(c.academicSubmittedAt) : '未'}</span>
-              <span class="ps-item ${c.interview?.heldAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.interview?.heldAt))}">④🎤 面接: ${c.interview?.heldAt ? formatRelative(c.interview.heldAt) : '未'}</span>
+              <span class="ps-item ${c.applicationSubmittedAt ? 'ps-done' : 'ps-miss'}">①📝 申込: ${c.applicationSubmittedAt ? formatDate(c.applicationSubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.resumeSubmittedAt ? 'ps-done' : 'ps-miss'}">②📄 履歴書: ${c.resumeSubmittedAt ? formatDate(c.resumeSubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.surveySubmittedAt ? 'ps-done' : 'ps-miss'}">②📋 アンケート: ${c.surveySubmittedAt ? formatDate(c.surveySubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.academicSubmittedAt ? 'ps-done' : 'ps-miss'}">③📚 学力: ${c.academicSubmittedAt ? formatDate(c.academicSubmittedAt) : '未'}</span>
+              <span class="ps-item ${Stats.hasInterview(c) ? 'ps-done' : 'ps-miss'}">④🎤 面接: ${Stats.hasInterview(c) ? `実施済 (${Stats.interviewCount(c)}件)` : '未実施'}</span>
             </div>
           </div>
           <div>
@@ -1124,6 +1145,12 @@ const App = (() => {
           <div class="full"><dt>取得資格・スキル</dt><dd>${(normalizeQualifications(c.qualifications).map(q => `<span class="qual-chip">${escapeHtml(q)}</span>`).join('') || '<span class="muted">なし</span>')}</dd></div>
           <div class="full"><dt>サークル・部活動</dt><dd>${escapeHtml(c.club || '') || '<span class="muted">なし</span>'}</dd></div>
         </div>
+        ${(c.history && c.history.length) ? `
+          <h4 style="margin-top:14px">学歴・職歴・受賞歴</h4>
+          <table class="history-table">
+            <tbody>${c.history.map(h => `<tr><td class="history-year">${h.year || ''}${h.month ? ' 年 ' + h.month + ' 月' : (h.year ? ' 年' : '')}</td><td>${escapeHtml(h.content || '')}</td></tr>`).join('')}</tbody>
+          </table>
+        ` : ''}
         <h4 style="margin-top:14px">志望動機</h4><p>${escapeHtml(c.motivation || '')}</p>
         <h4>自己PR</h4><p>${escapeHtml(c.selfPr || '')}</p>
         <h4>研究したいテーマ</h4><p>${escapeHtml(c.researchTopic || '')}</p>
@@ -1143,8 +1170,8 @@ const App = (() => {
 
       <div class="profile-card" id="sec-interview">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-          <h3 style="margin:0">🎤 面接記録</h3>
-          <button class="btn primary" id="edit-interview">${c.interview?.heldAt ? '✏ 編集' : '＋ 面接記録を入力'}</button>
+          <h3 style="margin:0">🎤 面接記録 ${Stats.interviewCount(c) > 0 ? `<span class="muted" style="font-size:13px">(${Stats.interviewCount(c)}件)</span>` : ''}</h3>
+          <button class="btn primary" id="edit-interview">＋ 面接記録を追加</button>
         </div>
         ${renderInterviewView(c)}
       </div>
@@ -1165,15 +1192,15 @@ const App = (() => {
     window.removeEventListener('scroll', window._profileScrollSpy);
     window._profileScrollSpy = updateActiveLink;
     window.addEventListener('scroll', window._profileScrollSpy);
-    // Interview radar
-    const iv = c.interview;
-    if (iv?.heldAt) {
+    // Interview radar (avg across all records if multi)
+    if (Stats.hasInterview(c)) {
       const ivCtx = document.getElementById('profile-radar-interview');
+      const catAvgs = Stats.interviewCategoryAvgs(c);
       if (ivCtx) new Chart(ivCtx, {
         type: 'radar',
         data: {
           labels: Stats.INTERVIEW_RATINGS.map(r => r.label),
-          datasets: [{ label: '面接評価', data: Stats.INTERVIEW_RATINGS.map(r => Number(iv.ratings?.[r.key]) || 0), backgroundColor: 'rgba(139,92,246,.2)', borderColor: '#8b5cf6', pointBackgroundColor: '#8b5cf6' }]
+          datasets: [{ label: `面接評価平均 (${Stats.interviewCount(c)}人)`, data: Stats.INTERVIEW_RATINGS.map(r => catAvgs[r.key] || 0), backgroundColor: 'rgba(139,92,246,.2)', borderColor: '#8b5cf6', pointBackgroundColor: '#8b5cf6' }]
         },
         options: { responsive: true, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
       });
@@ -1200,34 +1227,59 @@ const App = (() => {
   }
 
   function renderInterviewView(c) {
-    const iv = c.interview;
-    if (!iv?.heldAt) return '<p class="muted" style="padding:10px">面接記録はまだありません。「＋ 面接記録を入力」から登録できます。</p>';
+    const recs = Stats.interviewRecords(c);
+    if (recs.length === 0) return '<p class="muted" style="padding:10px">面接記録はまだありません。「＋ 面接記録を追加」から登録できます。</p>';
     const avg = Stats.interviewAvg(c);
+    const catAvgs = Stats.interviewCategoryAvgs(c);
+    const disagree = Stats.interviewDisagreement(c);
+
+    const catRows = Stats.INTERVIEW_RATINGS.map(r => {
+      const perRec = recs.map(rec => Number(rec.ratings?.[r.key]) || 0);
+      const minV = Math.min(...perRec.filter(v => v > 0));
+      const maxV = Math.max(...perRec.filter(v => v > 0));
+      const rng = recs.length > 1 && minV !== maxV ? `<span class="muted" style="font-size:11px">（${minV}〜${maxV}）</span>` : '';
+      return `<div class="iv-rating-row"><span>${escapeHtml(r.label)}</span><strong>${(catAvgs[r.key] || 0).toFixed(2)} / 5.00</strong>${rng}</div>`;
+    }).join('');
+
     return `
       <div class="iv-summary">
         <div class="iv-meta">
-          <div><span class="iv-k">面接日時</span><span class="iv-v">${escapeHtml(formatDate(iv.heldAt))}</span></div>
-          <div><span class="iv-k">面接官</span><span class="iv-v">${escapeHtml(iv.interviewer || '—')}</span></div>
-          <div><span class="iv-k">総合評価</span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5.00</strong></span></div>
+          <div><span class="iv-k">面接実施数</span><span class="iv-v"><strong>${recs.length}件</strong></span></div>
+          <div><span class="iv-k">総合評価（${recs.length}人平均）</span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5.00</strong></span></div>
+          ${recs.length > 1 ? `<div><span class="iv-k">面接官間ばらつき</span><span class="iv-v" title="標準偏差。0に近いほど面接官の評価が一致">${disagree.toFixed(2)} ${disagree >= 0.5 ? '<span style="color:var(--warn);font-size:11px">⚠評価に差あり</span>' : ''}</span></div>` : ''}
         </div>
         <div class="grid-2" style="margin-top:10px">
           <div>
             <canvas id="profile-radar-interview" height="240"></canvas>
           </div>
           <div>
-            <h4 style="margin-top:0">評価項目</h4>
-            ${Stats.INTERVIEW_RATINGS.map(r => `<div class="iv-rating-row"><span>${escapeHtml(r.label)}</span><strong>${Number(iv.ratings?.[r.key]) || 0} / 5</strong></div>`).join('')}<!-- rating items are integer 1-5, both sides integer for consistency -->
+            <h4 style="margin-top:0">評価項目（${recs.length}人平均）</h4>
+            ${catRows}
           </div>
         </div>
-        ${iv.notes ? `<div style="margin-top:10px"><h4>所見・メモ</h4><p>${escapeHtml(iv.notes)}</p></div>` : ''}
+        <h4 style="margin-top:14px">面接記録一覧</h4>
+        ${recs.map((r, i) => `
+          <div class="iv-record-card">
+            <div class="iv-record-head">
+              <strong>面接 ${i + 1}: ${escapeHtml(r.interviewer || '（面接官未記入）')}</strong>
+              <span class="muted" style="font-size:12px">${formatDate(r.heldAt)}</span>
+            </div>
+            <div class="iv-record-ratings">
+              ${Stats.INTERVIEW_RATINGS.map(k => `<span class="iv-rec-rating"><span class="muted">${escapeHtml(k.label)}:</span> <strong>${Number(r.ratings?.[k.key]) || '—'}</strong></span>`).join('')}
+            </div>
+            ${r.notes ? `<div class="iv-record-notes">${escapeHtml(r.notes)}</div>` : ''}
+          </div>
+        `).join('')}
       </div>
     `;
   }
 
-  function openInterviewEditor(candId) {
+  function openInterviewEditor(candId, recordId) {
     const c = Storage.load().find(x => x.id === candId);
     if (!c) return;
-    const iv = c.interview || {};
+    const records = Stats.interviewRecords(c);
+    const editing = recordId ? records.find(r => r.id === recordId) : null;
+    const iv = editing || {};
     const heldAtVal = iv.heldAt ? toLocalInputValue(iv.heldAt) : toLocalInputValue(new Date().toISOString());
     const existing = document.getElementById('interview-modal');
     if (existing) existing.remove();
@@ -1235,15 +1287,34 @@ const App = (() => {
     modal.id = 'interview-modal';
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-      <div class="modal-window" style="max-width:680px">
+      <div class="modal-window" style="max-width:720px">
         <div class="modal-head">
           <h3 style="margin:0">🎤 面接記録 — ${escapeHtml(fullName(c))}</h3>
           <button class="btn modal-close">✕</button>
         </div>
         <div class="modal-body" style="display:block">
+          ${records.length > 0 && !editing ? `
+            <h4 style="margin-top:0">既存の面接記録（${records.length}件）</h4>
+            <div class="iv-record-mgr">
+              ${records.map(r => `
+                <div class="iv-record-mgr-row">
+                  <div>
+                    <strong>${escapeHtml(r.interviewer || '（未記入）')}</strong>
+                    <span class="muted" style="font-size:12px"> ・ ${formatDate(r.heldAt)}</span>
+                  </div>
+                  <div style="display:flex;gap:6px">
+                    <button class="btn btn-icon" data-edit-rec="${r.id}" title="編集">✏</button>
+                    <button class="btn btn-icon danger" data-del-rec="${r.id}" title="削除">🗑</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <hr style="margin:18px 0;border:none;border-top:1px solid var(--border)">
+          ` : ''}
+          <h4 style="margin-top:0">${editing ? '面接記録を編集' : '新規面接記録'}</h4>
           <div class="form-grid">
             <label>面接日時<input type="datetime-local" id="iv-heldAt" value="${heldAtVal}"></label>
-            <label>面接官<input type="text" id="iv-interviewer" value="${escapeHtml(iv.interviewer || '')}" placeholder="例: 山田 / 複数の場合カンマ区切り"></label>
+            <label>面接官名<input type="text" id="iv-interviewer" value="${escapeHtml(iv.interviewer || '')}" placeholder="例: 山田 太郎"></label>
           </div>
           <h4 style="margin-top:14px">評価（1〜5）</h4>
           <div class="iv-rating-grid">
@@ -1257,13 +1328,10 @@ const App = (() => {
             `).join('')}
           </div>
           <h4 style="margin-top:14px">所見・メモ</h4>
-          <textarea id="iv-notes" rows="5" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">${escapeHtml(iv.notes || '')}</textarea>
-          <div class="form-actions" style="margin-top:14px">
-            ${iv.heldAt ? '<button class="btn danger" id="iv-delete">面接記録を削除</button>' : '<span></span>'}
-            <div>
-              <button class="btn" id="iv-cancel">キャンセル</button>
-              <button class="btn primary" id="iv-save">保存</button>
-            </div>
+          <textarea id="iv-notes" rows="4" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">${escapeHtml(iv.notes || '')}</textarea>
+          <div class="form-actions" style="margin-top:14px;justify-content:flex-end">
+            <button class="btn" id="iv-cancel">キャンセル</button>
+            <button class="btn primary" id="iv-save">${editing ? '更新' : '保存'}</button>
           </div>
         </div>
       </div>
@@ -1273,6 +1341,32 @@ const App = (() => {
     modal.addEventListener('click', e => { if (e.target === modal) close(); });
     modal.querySelector('.modal-close').addEventListener('click', close);
     modal.querySelector('#iv-cancel').addEventListener('click', close);
+
+    // Edit existing record
+    modal.querySelectorAll('[data-edit-rec]').forEach(b => b.addEventListener('click', () => {
+      close();
+      openInterviewEditor(candId, b.dataset.editRec);
+    }));
+    // Delete existing record
+    modal.querySelectorAll('[data-del-rec]').forEach(b => b.addEventListener('click', () => {
+      if (!confirm('この面接記録を削除しますか？')) return;
+      const updated = Storage.load();
+      const rec = updated.find(x => x.id === candId);
+      const recs = Stats.interviewRecords(rec);
+      const idx = recs.findIndex(r => r.id === b.dataset.delRec);
+      if (idx >= 0) {
+        recs.splice(idx, 1);
+        rec.interview = rec.interview || {};
+        rec.interview.records = recs;
+        delete rec.interview.heldAt; delete rec.interview.interviewer; delete rec.interview.ratings; delete rec.interview.notes;
+        Storage.save(updated);
+        close();
+        renderProfile(candId);
+        renderOverview();
+        if (recs.length > 0) toast('面接記録を削除しました', 'success', 1500);
+      }
+    }));
+
     modal.querySelector('#iv-save').addEventListener('click', () => {
       const ratings = {};
       Stats.INTERVIEW_RATINGS.forEach(r => {
@@ -1280,29 +1374,27 @@ const App = (() => {
         ratings[r.key] = sel ? Number(sel.value) : 0;
       });
       const heldAt = localInputToIso(modal.querySelector('#iv-heldAt').value) || new Date().toISOString();
+      const interviewer = modal.querySelector('#iv-interviewer').value.trim();
+      const notes = modal.querySelector('#iv-notes').value.trim();
       const updated = Storage.load();
       const rec = updated.find(x => x.id === candId);
-      rec.interview = {
-        heldAt,
-        interviewer: modal.querySelector('#iv-interviewer').value.trim(),
-        ratings,
-        notes: modal.querySelector('#iv-notes').value.trim()
-      };
+      const existingRecs = Stats.interviewRecords(rec);
+      rec.interview = rec.interview || {};
+      // Clear legacy fields if any
+      delete rec.interview.heldAt; delete rec.interview.interviewer; delete rec.interview.ratings; delete rec.interview.notes;
+      if (editing) {
+        // update existing
+        const idx = existingRecs.findIndex(r => r.id === editing.id);
+        if (idx >= 0) existingRecs[idx] = { id: editing.id, heldAt, interviewer, ratings, notes };
+      } else {
+        existingRecs.push({ id: 'iv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 5), heldAt, interviewer, ratings, notes });
+      }
+      rec.interview.records = existingRecs;
       Storage.save(updated);
       close();
       renderProfile(candId);
       renderOverview();
-    });
-    const delBtn = modal.querySelector('#iv-delete');
-    if (delBtn) delBtn.addEventListener('click', () => {
-      if (!confirm('面接記録を削除しますか？')) return;
-      const updated = Storage.load();
-      const rec = updated.find(x => x.id === candId);
-      delete rec.interview;
-      Storage.save(updated);
-      close();
-      renderProfile(candId);
-      renderOverview();
+      toast(editing ? '面接記録を更新しました' : `面接記録を追加しました（合計${existingRecs.length}件）`, 'success', 2000);
     });
   }
 
@@ -1435,6 +1527,8 @@ const App = (() => {
       // Qualifications as tags
       const quals = normalizeQualifications(cand?.qualifications);
       renderQualTags(quals);
+      // 学歴・職歴
+      setHistoryFromCandidate(cand);
       // Build extra fields
       const extraWrap = $('#form-resume-custom');
       const extraWrapper = document.getElementById('form-resume-custom-wrap');
@@ -1501,6 +1595,50 @@ const App = (() => {
       `<text x="60" y="68" font-size="32" font-family="sans-serif" font-weight="700" fill="white" text-anchor="middle">${initial}</text>` +
       `</svg>`;
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+  }
+
+  // ===== Resume history rows (学歴・職歴) =====
+  let _currentHistory = [];
+  function renderHistoryRows() {
+    const wrap = document.getElementById('history-rows');
+    if (!wrap) return;
+    wrap.innerHTML = _currentHistory.length === 0
+      ? '<p class="muted" style="font-size:12px;margin:0 0 8px">まだ履歴がありません。下の「＋ 行を追加」から記入してください。</p>'
+      : _currentHistory.map((h, i) => `
+        <div class="history-row">
+          <input type="number" class="hr-year" min="1980" max="2100" value="${h.year || ''}" placeholder="年" data-idx="${i}" data-field="year">
+          <span class="hr-sep">年</span>
+          <input type="number" class="hr-month" min="1" max="12" value="${h.month || ''}" placeholder="月" data-idx="${i}" data-field="month">
+          <span class="hr-sep">月</span>
+          <input type="text" class="hr-content" value="${escapeHtml(h.content || '')}" placeholder="例: 〇〇高等学校 卒業 / 〇〇株式会社 入社" data-idx="${i}" data-field="content">
+          <button type="button" class="btn btn-icon danger" data-hr-del="${i}" title="削除">×</button>
+        </div>
+      `).join('');
+    wrap.querySelectorAll('[data-idx]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const idx = Number(inp.dataset.idx);
+        if (inp.dataset.field === 'content') _currentHistory[idx].content = inp.value;
+        else _currentHistory[idx][inp.dataset.field] = inp.value ? Number(inp.value) : null;
+      });
+    });
+    wrap.querySelectorAll('[data-hr-del]').forEach(b => b.addEventListener('click', () => {
+      _currentHistory.splice(Number(b.dataset.hrDel), 1);
+      renderHistoryRows();
+    }));
+  }
+  function addHistoryRow() {
+    _currentHistory.push({ year: null, month: null, content: '' });
+    renderHistoryRows();
+  }
+  function setHistoryFromCandidate(c) {
+    _currentHistory = (c?.history || []).map(h => ({ ...h }));
+    renderHistoryRows();
+  }
+  function getHistoryForSave() {
+    return _currentHistory
+      .filter(h => h.year || h.content)
+      .map(h => ({ year: h.year || null, month: h.month || null, content: (h.content || '').trim() }))
+      .sort((a, b) => (a.year || 0) - (b.year || 0) || (a.month || 0) - (b.month || 0));
   }
 
   // ===== Photo handling =====
@@ -1638,6 +1776,7 @@ const App = (() => {
     fd.forEach((v, k) => data[k] = v);
     data.gpa = data.gpa ? Number(data.gpa) : null;
     data.qualifications = _currentQuals.slice();   // array
+    data.history = getHistoryForSave();
     data.resumeSubmittedAt = new Date().toISOString();
     data.extra = Object.assign({}, Storage.findByExamineeId(sess.id, data.examineeId)?.extra || {});
     form.querySelectorAll('[data-extra-id]').forEach(inp => { data.extra[inp.dataset.extraId] = inp.value; });
@@ -2651,20 +2790,26 @@ const App = (() => {
       const base = Math.round(p.sv * 0.8 + 1);
       const r = () => Math.max(1, Math.min(5, base + Math.round((Math.random() - 0.5) * 2)));
       if (i < 8) {
-        // Done (some on-time, some late)
+        // Done — multiple interviewers (1〜3名)
         const lagMin = i % 4 === 0 ? 45 : 5;
-        cand.interview = {
-          scheduledAt: slotIso,
-          heldAt: new Date(new Date(slotIso).getTime() + lagMin * 60000).toISOString(),
-          interviewer: ['田中先生', '佐藤先生', '山本先生'][i % 3],
-          ratings: { communication: r(), motivation: r(), logic: r(), knowledge: r(), fit: r() },
-          notes: i % 4 === 0 ? '志望動機が明確で、研究テーマへの関心が高い。論理的に説明できる。' : '受け答えは丁寧。今後の伸びしろに期待。'
-        };
+        const baseHeld = new Date(new Date(slotIso).getTime() + lagMin * 60000);
+        const interviewers = ['田中先生', '佐藤先生', '山本先生'];
+        const numIv = (i % 3) + 1; // 1〜3名
+        const records = [];
+        for (let j = 0; j < numIv; j++) {
+          const r2 = () => Math.max(1, Math.min(5, Math.round(p.sv * 0.8 + 1) + Math.round((Math.random() - 0.5) * 2)));
+          records.push({
+            id: 'iv_demo_' + i + '_' + j,
+            heldAt: new Date(baseHeld.getTime() + j * 10 * 60000).toISOString(),
+            interviewer: interviewers[(i + j) % 3],
+            ratings: { communication: r2(), motivation: r2(), logic: r2(), knowledge: r2(), fit: r2() },
+            notes: j === 0 && i % 4 === 0 ? '志望動機が明確で、研究テーマへの関心が高い。論理的に説明できる。' : (j === 0 ? '受け答えは丁寧。今後の伸びしろに期待。' : '前面接の印象を補強する内容。')
+          });
+        }
+        cand.interview = { scheduledAt: slotIso, records };
       } else if (i < 16) {
-        // Scheduled but not yet held
         cand.interview = { scheduledAt: slotIso };
       }
-      // i >= 16: unscheduled
 
       Storage.upsert(cand);
     });
@@ -2861,6 +3006,7 @@ const App = (() => {
     });
     // Qualification tag input
     document.getElementById('qual-add').addEventListener('click', addQualFromInput);
+    document.getElementById('history-add')?.addEventListener('click', addHistoryRow);
     document.getElementById('qual-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); addQualFromInput(); }
     });
