@@ -339,7 +339,6 @@ const App = (() => {
     if (name === 'survey')   renderSurveyMgr();
     if (name === 'resume')   { renderResumeMgr(); showResumeview(_uiState.resumeview || 'apply'); }
     if (name === 'interview') renderInterviewMgr();
-    if (name === 'data')     loadCfgUi();
   }
   function showResumeview(name) {
     $$('.resume-subtab').forEach(t => t.classList.toggle('active', t.dataset.resumeview === name));
@@ -2638,20 +2637,6 @@ const App = (() => {
   }
 
   // ===== Settings (data tab) =====
-  function loadCfgUi() {
-    $('#weight-academic').value = cfg.weightAcademic;
-    $('#weight-survey').value = cfg.weightSurvey;
-  }
-  function saveWeights() {
-    const a = Number($('#weight-academic').value);
-    const s = Number($('#weight-survey').value);
-    if (a + s !== 100) { alert('合計が100％になるよう設定してください。'); return; }
-    cfg.weightAcademic = a; cfg.weightSurvey = s;
-    Storage.saveCfg(cfg);
-    alert('保存しました。');
-    renderOverview();
-  }
-
   function exportJson() {
     const sess = getSession();
     const list = Storage.loadForSession();
@@ -3364,7 +3349,6 @@ const App = (() => {
       Storage.clearAll(); renderOverview(); alert('削除しました。');
     });
 
-    loadCfgUi();
   }
 
   return { init };
