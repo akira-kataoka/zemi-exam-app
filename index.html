@@ -343,15 +343,27 @@
         <div class="schedule-row schedule-head">
           <div>フェーズ</div><div>手動</div><div>開始日時</div><div>終了日時</div><div>状態</div>
         </div>
-        ${['resume', 'academic', 'survey'].map(p => `
-          <div class="schedule-row" data-phase="${p}">
-            <div class="phase-name">${ {resume:'📄 履歴書', academic:'📚 学力試験', survey:'📋 アンケート'}[p] }</div>
-            <div><label class="switch"><input type="checkbox" data-phase-toggle="${p}"><span class="slider"></span></label></div>
-            <div><input type="datetime-local" data-phase-start="${p}"></div>
-            <div><input type="datetime-local" data-phase-end="${p}"></div>
-            <div class="phase-status-cell" data-phase-status="${p}">-</div>
-          </div>
-        `).join('')}
+        <div class="schedule-row" data-phase="resume">
+          <div class="phase-name">📄 履歴書</div>
+          <div><label class="switch"><input type="checkbox" data-phase-toggle="resume"><span class="slider"></span></label></div>
+          <div><input type="datetime-local" data-phase-start="resume"></div>
+          <div><input type="datetime-local" data-phase-end="resume"></div>
+          <div class="phase-status-cell" data-phase-status="resume">-</div>
+        </div>
+        <div class="schedule-row" data-phase="academic">
+          <div class="phase-name">📚 学力試験</div>
+          <div><label class="switch"><input type="checkbox" data-phase-toggle="academic"><span class="slider"></span></label></div>
+          <div><input type="datetime-local" data-phase-start="academic"></div>
+          <div><input type="datetime-local" data-phase-end="academic"></div>
+          <div class="phase-status-cell" data-phase-status="academic">-</div>
+        </div>
+        <div class="schedule-row" data-phase="survey">
+          <div class="phase-name">📋 アンケート</div>
+          <div><label class="switch"><input type="checkbox" data-phase-toggle="survey"><span class="slider"></span></label></div>
+          <div><input type="datetime-local" data-phase-start="survey"></div>
+          <div><input type="datetime-local" data-phase-end="survey"></div>
+          <div class="phase-status-cell" data-phase-status="survey">-</div>
+        </div>
       </div>
     </div>
   </section>

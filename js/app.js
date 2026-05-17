@@ -161,9 +161,9 @@ const App = (() => {
     const nA = list.filter(c => Stats.hasAcademic(c)).length;
     const nS = list.filter(c => Stats.hasSurvey(c)).length;
     $('#stat-count').textContent = N;
-    $('#stat-resume').innerHTML   = `${nR} <span class="stat-sub">/ 未 ${N - nR}</span>`;
-    $('#stat-academic').innerHTML = `${nA} <span class="stat-sub">/ 未 ${N - nA}</span>`;
-    $('#stat-survey').innerHTML   = `${nS} <span class="stat-sub">/ 未 ${N - nS}</span>`;
+    $('#stat-resume').textContent   = `${nR} / ${N}`;
+    $('#stat-academic').textContent = `${nA} / ${N}`;
+    $('#stat-survey').textContent   = `${nS} / ${N}`;
     const totals = list.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).map(c => Stats.totalScore(c, sess, cfg));
     $('#stat-avg').textContent = totals.length ? (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1) : '-';
     $('#stat-max').textContent = totals.length ? Math.max(...totals).toFixed(1) : '-';
@@ -172,6 +172,79 @@ const App = (() => {
     renderCandidateList();
     renderChartView();
     renderRanking();
+  }
+
+  // ===== Submission modal =====
+  function openSubmissionModal(phase) {
+    const list = Storage.loadForSession();
+    const phaseLabel = PHASE_LABEL[phase] || phase;
+    const hasFn   = { resume: Stats.hasResume, academic: Stats.hasAcademic, survey: Stats.hasSurvey }[phase];
+    const tsField = { resume: 'resumeSubmittedAt', academic: 'academicSubmittedAt', survey: 'surveySubmittedAt' }[phase];
+    const submitted   = list.filter(c => hasFn(c));
+    const unsubmitted = list.filter(c => !hasFn(c));
+
+    // submitted: chronological by submission time
+    submitted.sort((a, b) => new Date(b[tsField] || 0) - new Date(a[tsField] || 0));
+    // unsubmitted: by examineeId then name
+    unsubmitted.sort((a, b) => (a.examineeId || '').localeCompare(b.examineeId || '', 'ja') || fullName(a).localeCompare(fullName(b), 'ja'));
+
+    const existing = document.getElementById('submission-modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'submission-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-window">
+        <div class="modal-head">
+          <h3 style="margin:0">📊 ${escapeHtml(phaseLabel)} 提出状況</h3>
+          <button class="btn modal-close" aria-label="閉じる">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-col">
+            <h4 class="modal-col-title">✅ 提出者 <span class="muted">(${submitted.length}名・新しい順)</span></h4>
+            <div class="submission-list">
+              ${submitted.length ? submitted.map((c, i) => `
+                <div class="submission-row" data-id="${c.id}">
+                  <span class="sub-order">${i + 1}</span>
+                  ${c.photo ? `<img class="avatar-sm" src="${c.photo}" alt="">` : '<div class="avatar-sm avatar-blank">👤</div>'}
+                  <div class="sub-info">
+                    <div class="sub-name">${escapeHtml(fullName(c))}</div>
+                    <div class="sub-meta">${escapeHtml(c.examineeId || '')}${c.faculty ? ' ・ ' + escapeHtml(c.faculty) : ''}</div>
+                  </div>
+                  <div class="sub-time">${formatDate(c[tsField])}</div>
+                </div>
+              `).join('') : '<p class="muted" style="text-align:center;padding:14px">提出者がいません</p>'}
+            </div>
+          </div>
+          <div class="modal-col">
+            <h4 class="modal-col-title">❌ 未提出者 <span class="muted">(${unsubmitted.length}名・受験番号順)</span></h4>
+            <div class="submission-list">
+              ${unsubmitted.length ? unsubmitted.map(c => `
+                <div class="submission-row unsubmitted" data-id="${c.id}">
+                  ${c.photo ? `<img class="avatar-sm" src="${c.photo}" alt="">` : '<div class="avatar-sm avatar-blank">👤</div>'}
+                  <div class="sub-info">
+                    <div class="sub-name">${escapeHtml(fullName(c)) || '<span class="muted">名称未登録</span>'}</div>
+                    <div class="sub-meta">${escapeHtml(c.examineeId || '')}</div>
+                  </div>
+                  <div class="sub-time"><span class="miss-badge">未</span></div>
+                </div>
+              `).join('') : '<p class="muted" style="text-align:center;padding:14px">全員提出済み</p>'}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+    modal.querySelectorAll('.submission-row[data-id]').forEach(row => {
+      row.addEventListener('click', () => {
+        modal.remove();
+        $('#profile-select').value = row.dataset.id;
+        showView('profile');
+        renderProfile(row.dataset.id);
+      });
+    });
   }
 
   function renderEmptyStateBanner(empty) {
@@ -1395,18 +1468,9 @@ const App = (() => {
     document.getElementById('qual-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); addQualFromInput(); }
     });
-    // Dashboard quick filters
+    // Dashboard stat card → open submission modal
     document.querySelectorAll('[data-quick-filter]').forEach(el => {
-      el.addEventListener('click', () => {
-        const phase = el.dataset.quickFilter;
-        const map = { resume: 'resume', academic: 'academicStatus', survey: 'surveyStatus' };
-        _listFilters = { [map[phase]]: '0' };
-        showSubview('list');
-        document.querySelectorAll('#cand-table thead .filter-row [data-filter]').forEach(input => {
-          input.value = (input.dataset.filter === map[phase]) ? '0' : '';
-        });
-        renderCandidateList();
-      });
+      el.addEventListener('click', () => openSubmissionModal(el.dataset.quickFilter));
     });
     $('#form-academic').addEventListener('submit', submitAcademic);
     $('#form-survey').addEventListener('submit', submitSurvey);
