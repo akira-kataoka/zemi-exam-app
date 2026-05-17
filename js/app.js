@@ -56,6 +56,26 @@ const App = (() => {
     const pad = n => String(n).padStart(2, '0');
     return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
+  function formatRelative(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    const sec = Math.round(diff / 1000);
+    if (sec < 0) {
+      // future
+      const f = Math.abs(sec);
+      if (f < 3600) return `${Math.round(f / 60)}分後`;
+      if (f < 86400) return `${Math.round(f / 3600)}時間後`;
+      return `${Math.round(f / 86400)}日後`;
+    }
+    if (sec < 60) return 'たった今';
+    if (sec < 3600) return `${Math.floor(sec / 60)}分前`;
+    if (sec < 86400) return `${Math.floor(sec / 3600)}時間前`;
+    if (sec < 86400 * 7) return `${Math.floor(sec / 86400)}日前`;
+    if (sec < 86400 * 30) return `${Math.floor(sec / (86400 * 7))}週間前`;
+    if (sec < 86400 * 365) return `${Math.floor(sec / (86400 * 30))}ヶ月前`;
+    return `${Math.floor(sec / (86400 * 365))}年前`;
+  }
   function fullName(c) {
     if (c.lastName || c.firstName) return [(c.lastName || ''), (c.firstName || '')].join(' ').trim();
     return c.name || '';
@@ -269,9 +289,14 @@ const App = (() => {
     saveUiState({ adminview: name });
     if (name === 'academic') renderAcademicMgr();
     if (name === 'survey')   renderSurveyMgr();
-    if (name === 'resume')   renderResumeMgr();
+    if (name === 'resume')   { renderResumeMgr(); showResumeview(_uiState.resumeview || 'apply'); }
     if (name === 'interview') renderInterviewMgr();
     if (name === 'data')     loadCfgUi();
+  }
+  function showResumeview(name) {
+    $$('.resume-subtab').forEach(t => t.classList.toggle('active', t.dataset.resumeview === name));
+    $$('.resumeview').forEach(v => v.classList.toggle('active', v.id === 'resumeview-' + name));
+    saveUiState({ resumeview: name });
   }
   function attachAdminContent() {
     document.querySelectorAll('.admin-content').forEach(el => {
@@ -355,7 +380,7 @@ const App = (() => {
                     <div class="sub-name">${escapeHtml(fullName(c))}</div>
                     <div class="sub-meta">${escapeHtml(c.examineeId || '')}${c.faculty ? ' ・ ' + escapeHtml(c.faculty) : ''}</div>
                   </div>
-                  <div class="sub-time">${formatDate(c[tsField])}</div>
+                  <div class="sub-time" title="${escapeHtml(formatDate(c[tsField]))}">${formatRelative(c[tsField])}</div>
                 </div>
               `).join('') : '<p class="muted" style="text-align:center;padding:14px">提出者がいません</p>'}
             </div>
@@ -525,12 +550,12 @@ const App = (() => {
         </td>
         <td>${escapeHtml(c.gender || '—')}</td>
         <td>${escapeHtml((c.faculty || '') + ' ' + (c.department || ''))}</td>
-        <td>${Stats.hasApplication(c) ? `<div class="cell-status">✅<span class="cell-time">${formatDateShort(c.applicationSubmittedAt)}</span></div>` : missBadge}</td>
-        <td>${Stats.hasResume(c) ? `<div class="cell-status">✅<span class="cell-time">${formatDateShort(c.resumeSubmittedAt)}</span></div>` : missBadge}</td>
-        <td class="num">${Stats.hasSurvey(c) ? `<div class="cell-status"><strong>${sv.toFixed(2)}</strong><span class="cell-time">${formatDateShort(c.surveySubmittedAt)}</span></div>` : missBadge}</td>
-        <td class="num">${Stats.hasAcademic(c) ? `<div class="cell-status"><strong>${ac.percent.toFixed(1)}%</strong><span class="cell-time">${formatDateShort(c.academicSubmittedAt)}</span></div>` : missBadge}</td>
-        <td class="num">${iv ? `<div class="cell-status"><strong>${ivAvg.toFixed(1)}/5</strong><span class="cell-time">${formatDateShort(c.interview.heldAt)}</span></div>` : missBadge}</td>
-        <td>${formatDate(lastUpdate)}</td>
+        <td>${Stats.hasApplication(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.applicationSubmittedAt))}">✅<span class="cell-time">${formatRelative(c.applicationSubmittedAt)}</span></div>` : missBadge}</td>
+        <td>${Stats.hasResume(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.resumeSubmittedAt))}">✅<span class="cell-time">${formatRelative(c.resumeSubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${Stats.hasSurvey(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.surveySubmittedAt))}"><strong>${sv.toFixed(2)}</strong><span class="cell-time">${formatRelative(c.surveySubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${Stats.hasAcademic(c) ? `<div class="cell-status" title="${escapeHtml(formatDate(c.academicSubmittedAt))}"><strong>${ac.percent.toFixed(1)}%</strong><span class="cell-time">${formatRelative(c.academicSubmittedAt)}</span></div>` : missBadge}</td>
+        <td class="num">${iv ? `<div class="cell-status" title="${escapeHtml(formatDate(c.interview.heldAt))}"><strong>${ivAvg.toFixed(1)}/5</strong><span class="cell-time">${formatRelative(c.interview.heldAt)}</span></div>` : missBadge}</td>
+        <td title="${escapeHtml(formatDate(lastUpdate))}">${formatRelative(lastUpdate)}</td>
         <td class="row-actions">
           <button class="btn btn-icon" data-act="view" title="詳細を見る">👁</button>
           <button class="btn btn-icon danger" data-act="del" title="削除">🗑</button>
@@ -887,11 +912,11 @@ const App = (() => {
             <div class="profile-meta">受験番号: ${escapeHtml(c.examineeId || '')} ・ ${c.gender ? '🚻 ' + escapeHtml(c.gender) + ' ・ ' : ''}${calcAge(c.birthdate) != null ? `🎂 ${calcAge(c.birthdate)}歳 ・ ` : ''}${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')} ${escapeHtml(c.grade || '')}</div>
             <div style="margin-top:10px"><label class="pass-toggle"><input type="checkbox" id="profile-pass" ${c.passed ? 'checked' : ''}> <span>🏆 この受験者を合格にする</span></label></div>
             <div class="profile-submissions">
-              <span class="ps-item ${c.applicationSubmittedAt ? 'ps-done' : 'ps-miss'}">①📝 申込: ${c.applicationSubmittedAt ? formatDate(c.applicationSubmittedAt) : '未'}</span>
-              <span class="ps-item ${c.resumeSubmittedAt ? 'ps-done' : 'ps-miss'}">②📄 履歴書: ${c.resumeSubmittedAt ? formatDate(c.resumeSubmittedAt) : '未'}</span>
-              <span class="ps-item ${c.surveySubmittedAt ? 'ps-done' : 'ps-miss'}">②📋 アンケート: ${c.surveySubmittedAt ? formatDate(c.surveySubmittedAt) : '未'}</span>
-              <span class="ps-item ${c.academicSubmittedAt ? 'ps-done' : 'ps-miss'}">③📚 学力: ${c.academicSubmittedAt ? formatDate(c.academicSubmittedAt) : '未'}</span>
-              <span class="ps-item ${c.interview?.heldAt ? 'ps-done' : 'ps-miss'}">④🎤 面接: ${c.interview?.heldAt ? formatDate(c.interview.heldAt) : '未'}</span>
+              <span class="ps-item ${c.applicationSubmittedAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.applicationSubmittedAt))}">①📝 申込: ${c.applicationSubmittedAt ? formatRelative(c.applicationSubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.resumeSubmittedAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.resumeSubmittedAt))}">②📄 履歴書: ${c.resumeSubmittedAt ? formatRelative(c.resumeSubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.surveySubmittedAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.surveySubmittedAt))}">②📋 アンケート: ${c.surveySubmittedAt ? formatRelative(c.surveySubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.academicSubmittedAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.academicSubmittedAt))}">③📚 学力: ${c.academicSubmittedAt ? formatRelative(c.academicSubmittedAt) : '未'}</span>
+              <span class="ps-item ${c.interview?.heldAt ? 'ps-done' : 'ps-miss'}" title="${escapeHtml(formatDate(c.interview?.heldAt))}">④🎤 面接: ${c.interview?.heldAt ? formatRelative(c.interview.heldAt) : '未'}</span>
             </div>
           </div>
           <div>
@@ -1938,9 +1963,13 @@ const App = (() => {
     const wrap = $('#faculty-dept-list');
     if (!wrap) return;
     wrap.innerHTML = (sess.facultyDept || []).map((f, idx) => `
-      <div class="q-edit-card" data-idx="${idx}">
-        <div class="q-edit-head">
+      <details class="q-edit-card collapsible-faculty" data-idx="${idx}">
+        <summary class="fac-summary">
           <span class="q-edit-num">学部${idx + 1}</span>
+          <span class="fac-summary-name">${escapeHtml(f.name)}</span>
+          <span class="fac-summary-count">学科 ${(f.departments || []).length}</span>
+        </summary>
+        <div class="q-edit-head" style="margin-top:10px">
           <input type="text" data-faculty-name value="${escapeHtml(f.name)}" placeholder="学部名（例: 経済学部）">
           <button class="btn danger" data-act="del-faculty">学部を削除</button>
         </div>
@@ -1954,7 +1983,7 @@ const App = (() => {
           `).join('')}
           <button class="btn" data-act="add-dept">＋ 学科を追加</button>
         </div>
-      </div>
+      </details>
     `).join('') || '<p class="muted">学部が登録されていません。</p>';
     wrap.querySelectorAll('.q-edit-card').forEach(card => {
       const idx = Number(card.dataset.idx);
@@ -1993,12 +2022,17 @@ const App = (() => {
     return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}`;
   }
   function renderPhaseShare(phase, containerId) {
-    const container = document.getElementById(containerId);
+    // For 'resume' phase target the resumeview-apply sub-tab container
+    const targetId = phase === 'resume' ? 'resumeview-apply' : containerId;
+    const container = document.getElementById(targetId);
     if (!container) return;
-    const exist = container.querySelector('.share-section');
-    if (exist) exist.remove();
+    // Remove from both potential locations
+    document.querySelectorAll('.share-section').forEach(el => {
+      if (el.dataset.phase === phase) el.remove();
+    });
     const section = document.createElement('div');
     section.className = 'card share-section';
+    section.dataset.phase = phase;
     if (phase === 'resume') {
       const sess = getSession();
       const url = buildPhaseUrl('application');
@@ -2482,6 +2516,7 @@ const App = (() => {
     $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
     $$('.subtab:not(.adminsubtab)').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
     $$('.adminsubtab').forEach(t => t.addEventListener('click', () => showAdminview(t.dataset.adminview)));
+    $$('.resume-subtab').forEach(t => t.addEventListener('click', () => showResumeview(t.dataset.resumeview)));
 
     // Overview controls
     $('#search-cand').addEventListener('input', () => {

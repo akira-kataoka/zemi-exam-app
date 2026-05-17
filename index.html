@@ -211,18 +211,34 @@
         <div class="app-section">
           <div class="app-section-title">👤 お名前</div>
           <div class="form-grid app-grid-2">
-            <label>姓<span class="req">*</span><input type="text" name="lastName" required placeholder="例: 佐藤"></label>
-            <label>名<span class="req">*</span><input type="text" name="firstName" required placeholder="例: 大輔"></label>
-            <label>姓（フリガナ）<input type="text" name="lastKana" placeholder="例: サトウ"></label>
-            <label>名（フリガナ）<input type="text" name="firstKana" placeholder="例: ダイスケ"></label>
+            <div class="name-block">
+              <label>姓<span class="req">*</span>
+                <input type="text" name="lastName" required maxlength="20" pattern="^[^\s]+$" title="姓を入力してください（空白不可）" placeholder="例: 佐藤">
+              </label>
+              <label class="kana-sub">フリガナ（カタカナ）
+                <input type="text" name="lastKana" maxlength="30" pattern="^[ァ-ヶー\s]*$" title="カタカナで入力してください" placeholder="例: サトウ">
+              </label>
+            </div>
+            <div class="name-block">
+              <label>名<span class="req">*</span>
+                <input type="text" name="firstName" required maxlength="20" pattern="^[^\s]+$" title="名を入力してください（空白不可）" placeholder="例: 大輔">
+              </label>
+              <label class="kana-sub">フリガナ（カタカナ）
+                <input type="text" name="firstKana" maxlength="30" pattern="^[ァ-ヶー\s]*$" title="カタカナで入力してください" placeholder="例: ダイスケ">
+              </label>
+            </div>
           </div>
         </div>
 
         <div class="app-section">
           <div class="app-section-title">📞 連絡先</div>
           <div class="form-grid app-grid-2">
-            <label class="full">メールアドレス<span class="req">*</span><input type="email" name="email" required placeholder="例: applicant@example.com"></label>
-            <label class="full">電話番号<span class="req">*</span><input type="tel" name="phone" required placeholder="例: 090-1234-5678"></label>
+            <label class="full">メールアドレス<span class="req">*</span>
+              <input type="email" name="email" required maxlength="100" pattern="^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$" title="有効なメールアドレスを入力してください" placeholder="例: applicant@example.com">
+            </label>
+            <label class="full">電話番号<span class="req">*</span>
+              <input type="tel" name="phone" required maxlength="15" pattern="^[0-9\-+()\s]{10,15}$" title="10〜15桁の数字（ハイフン可）で入力してください" placeholder="例: 090-1234-5678">
+            </label>
           </div>
         </div>
 
@@ -259,10 +275,14 @@
               <input type="hidden" name="photo">
             </div>
             <label>受験番号<span class="req">*</span><input type="text" name="examineeId" required></label>
-            <label>姓<span class="req">*</span><input type="text" name="lastName" required></label>
-            <label>名<span class="req">*</span><input type="text" name="firstName" required></label>
-            <label>姓（フリガナ）<input type="text" name="lastKana"></label>
-            <label>名（フリガナ）<input type="text" name="firstKana"></label>
+            <div class="name-block">
+              <label>姓<span class="req">*</span><input type="text" name="lastName" required maxlength="20" pattern="^[^\s]+$" title="姓を入力してください"></label>
+              <label class="kana-sub">フリガナ<input type="text" name="lastKana" maxlength="30" pattern="^[ァ-ヶー\s]*$" title="カタカナで入力してください"></label>
+            </div>
+            <div class="name-block">
+              <label>名<span class="req">*</span><input type="text" name="firstName" required maxlength="20" pattern="^[^\s]+$" title="名を入力してください"></label>
+              <label class="kana-sub">フリガナ<input type="text" name="firstKana" maxlength="30" pattern="^[ァ-ヶー\s]*$" title="カタカナで入力してください"></label>
+            </div>
             <label>性別<select name="gender"><option value="">選択しない</option><option>男性</option><option>女性</option><option>その他</option></select></label>
             <label>学部<span class="req">*</span><select name="faculty" id="resume-faculty" required></select></label>
             <label>学科<select name="department" id="resume-department"></select></label>
@@ -279,10 +299,10 @@
         <details class="form-section collapsible" open>
           <summary class="form-section-title">📞 連絡先・学業情報 <span class="optional-mark">任意</span></summary>
           <div class="form-grid">
-            <label>メールアドレス<input type="email" name="email"></label>
-            <label>電話番号<input type="tel" name="phone"></label>
+            <label>メールアドレス<input type="email" name="email" maxlength="100" pattern="^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$" title="有効なメールアドレスを入力してください"></label>
+            <label>電話番号<input type="tel" name="phone" maxlength="15" pattern="^[0-9\-+()\s]{10,15}$" title="10〜15桁の数字（ハイフン可）"></label>
             <label>生年月日<input type="date" name="birthdate"></label>
-            <label>現在のGPA<input type="number" step="0.01" min="0" max="4" name="gpa" placeholder="例: 3.25"></label>
+            <label>現在のGPA<input type="number" step="0.01" min="0" max="4" name="gpa" placeholder="例: 3.25" title="0〜4の範囲で入力"></label>
             <label class="full">所属サークル・部活動<input type="text" name="club" placeholder="例: 軽音楽部、テニスサークル、〇〇研究会など（複数可）"></label>
           </div>
           <div style="margin-top:8px">
@@ -423,85 +443,104 @@
 
   <!-- ===== Resume settings ===== -->
   <section class="admin-content" id="view-mgr-resume" data-admin="resume">
-    <div class="card">
-      <h3>🏫 学部・学科の選択肢</h3>
-      <p class="hint">受験者が履歴書で選択できる学部と、その配下の学科を設定します。</p>
-      <div class="toolbar">
-        <button class="btn primary" id="add-faculty">＋ 学部を追加</button>
-        <button class="btn" id="reset-faculty">デフォルトに戻す</button>
-      </div>
-      <div id="faculty-dept-list" class="q-list"></div>
+    <div class="subtabs resume-subtabs">
+      <button class="subtab resume-subtab active" data-resumeview="apply">📝 受験申込URL</button>
+      <button class="subtab resume-subtab" data-resumeview="message">📨 配布メッセージ</button>
+      <button class="subtab resume-subtab" data-resumeview="form">📋 履歴書フォーム設定</button>
+      <button class="subtab resume-subtab" data-resumeview="control">🔓 受付制御</button>
     </div>
 
-    <div class="card">
-      <h3>📄 履歴書 追加質問</h3>
-      <p class="hint">標準フィールドに加えて、この試験回独自の追加質問を設定できます。</p>
-      <div class="toolbar">
-        <button class="btn primary" id="add-resume-field">＋ 追加質問を加える</button>
-        <button class="btn" id="reset-resume-fields">追加質問を削除</button>
+    <div class="resumeview active" id="resumeview-apply">
+      <!-- share-section (受験申込URL/QR) is inserted here dynamically -->
+      <div class="card">
+        <h3>🔐 受験申込の合言葉（任意）</h3>
+        <p class="hint">公開URLに合言葉を設定すると、申込フォームを開く前に入力を求められます。SNS等で告知する際の意図しない申込を防げます。空欄なら誰でもアクセス可能。</p>
+        <div class="form-grid">
+          <label>合言葉（パスコード）<input type="text" id="app-passcode" placeholder="例: zemi2026（空欄で無効化）"></label>
+        </div>
+        <button class="btn primary" id="save-passcode" style="margin-top:8px">保存</button>
       </div>
-      <div id="resume-fields-list" class="q-list"></div>
     </div>
 
-    <div class="card">
-      <h3>🔐 受験申込の合言葉（任意）</h3>
-      <p class="hint">公開URLに合言葉を設定すると、申込フォームを開く前に入力を求められます。SNS等で告知する際の意図しない申込を防げます。空欄なら誰でもアクセス可能。</p>
-      <div class="form-grid">
-        <label>合言葉（パスコード）<input type="text" id="app-passcode" placeholder="例: zemi2026（空欄で無効化）"></label>
+    <div class="resumeview" id="resumeview-message">
+      <div class="card">
+        <h3>📨 配布メッセージテンプレート</h3>
+        <details class="hint-details">
+          <summary class="hint-summary">差し込み変数一覧（クリックで展開）</summary>
+          <p class="hint" style="margin-top:8px">
+            <code>{{name}}</code>=氏名 / <code>{{lastName}}</code>=姓 / <code>{{firstName}}</code>=名 / <code>{{examineeId}}</code>=受験番号 / <code>{{password}}</code>=パスワード /
+            <code>{{url_resume}}</code> <code>{{url_academic}}</code> <code>{{url_survey}}</code> = 各URL /
+            <code>{{interview_date}}</code> <code>{{interview_time}}</code> <code>{{interview_datetime}}</code> = 面接日時 /
+            <code>{{sessionName}}</code> = 試験回名
+          </p>
+        </details>
+        <textarea id="msg-template" rows="12" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;margin-top:8px"></textarea>
+        <div class="form-actions" style="justify-content:flex-start;gap:10px;margin-top:10px">
+          <button class="btn" id="msg-template-reset">デフォルトに戻す</button>
+          <button class="btn primary" id="msg-generate-all">📝 全員分のメッセージを生成</button>
+        </div>
+        <div id="msg-result-area" style="margin-top:14px"></div>
       </div>
-      <button class="btn primary" id="save-passcode" style="margin-top:8px">保存</button>
     </div>
 
-    <div class="card">
-      <h3>📨 配布メッセージテンプレート</h3>
-      <p class="hint">受験者へ LINE / メール等で送るメッセージのテンプレートです。下記の差し込み変数が使えます:<br>
-        <code>{{name}}</code>=氏名 / <code>{{lastName}}</code>=姓 / <code>{{firstName}}</code>=名 / <code>{{examineeId}}</code>=受験番号 / <code>{{password}}</code>=パスワード /
-        <code>{{url_resume}}</code> <code>{{url_academic}}</code> <code>{{url_survey}}</code> = 各URL /
-        <code>{{interview_date}}</code> <code>{{interview_time}}</code> <code>{{interview_datetime}}</code> = 面接日時 /
-        <code>{{sessionName}}</code> = 試験回名
-      </p>
-      <textarea id="msg-template" rows="14" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px"></textarea>
-      <div class="form-actions" style="justify-content:flex-start;gap:10px;margin-top:10px">
-        <button class="btn" id="msg-template-reset">デフォルトに戻す</button>
-        <button class="btn primary" id="msg-generate-all">📝 全員分のメッセージを生成</button>
+    <div class="resumeview" id="resumeview-form">
+      <div class="card">
+        <h3>🏫 学部・学科の選択肢</h3>
+        <p class="hint">受験者が履歴書で選択できる学部と、その配下の学科を設定します。各学部をクリックで詳細展開。</p>
+        <div class="toolbar">
+          <button class="btn primary" id="add-faculty">＋ 学部を追加</button>
+          <button class="btn" id="reset-faculty">デフォルトに戻す</button>
+        </div>
+        <div id="faculty-dept-list" class="q-list"></div>
       </div>
-      <div id="msg-result-area" style="margin-top:14px"></div>
+
+      <div class="card">
+        <h3>📄 履歴書 追加質問</h3>
+        <p class="hint">標準フィールド（受験番号・氏名・大学・GPA・志望動機など）以外に、この試験回独自の追加質問を設定できます。</p>
+        <div class="toolbar">
+          <button class="btn primary" id="add-resume-field">＋ 追加質問を加える</button>
+          <button class="btn" id="reset-resume-fields">追加質問を削除</button>
+        </div>
+        <div id="resume-fields-list" class="q-list"></div>
+      </div>
     </div>
 
-    <div class="card">
-      <h3>🔓 受付制御（手動ON/OFF + 日時スケジュール）</h3>
-      <p class="hint">手動ONの上で開始/終了日時を指定すると、その期間だけ自動で受付状態になります。手動OFFはスケジュールに関わらず常に停止です。空欄なら期限なし。</p>
-      <div class="schedule-table">
-        <div class="schedule-row schedule-head">
-          <div>フェーズ</div><div>手動</div><div>開始日時</div><div>終了日時</div><div>状態</div>
-        </div>
-        <div class="schedule-row" data-phase="application">
-          <div class="phase-name">①📝 受験申込</div>
-          <div><label class="switch"><input type="checkbox" data-phase-toggle="application"><span class="slider"></span></label></div>
-          <div><input type="datetime-local" data-phase-start="application"></div>
-          <div><input type="datetime-local" data-phase-end="application"></div>
-          <div class="phase-status-cell" data-phase-status="application">-</div>
-        </div>
-        <div class="schedule-row" data-phase="resume">
-          <div class="phase-name">②📄 履歴書</div>
-          <div><label class="switch"><input type="checkbox" data-phase-toggle="resume"><span class="slider"></span></label></div>
-          <div><input type="datetime-local" data-phase-start="resume"></div>
-          <div><input type="datetime-local" data-phase-end="resume"></div>
-          <div class="phase-status-cell" data-phase-status="resume">-</div>
-        </div>
-        <div class="schedule-row" data-phase="survey">
-          <div class="phase-name">②📋 アンケート</div>
-          <div><label class="switch"><input type="checkbox" data-phase-toggle="survey"><span class="slider"></span></label></div>
-          <div><input type="datetime-local" data-phase-start="survey"></div>
-          <div><input type="datetime-local" data-phase-end="survey"></div>
-          <div class="phase-status-cell" data-phase-status="survey">-</div>
-        </div>
-        <div class="schedule-row" data-phase="academic">
-          <div class="phase-name">③📚 学力試験</div>
-          <div><label class="switch"><input type="checkbox" data-phase-toggle="academic"><span class="slider"></span></label></div>
-          <div><input type="datetime-local" data-phase-start="academic"></div>
-          <div><input type="datetime-local" data-phase-end="academic"></div>
-          <div class="phase-status-cell" data-phase-status="academic">-</div>
+    <div class="resumeview" id="resumeview-control">
+      <div class="card">
+        <h3>🔓 受付制御（手動ON/OFF + 日時スケジュール）</h3>
+        <p class="hint">手動ONの上で開始/終了日時を指定すると、その期間だけ自動で受付状態になります。手動OFFはスケジュールに関わらず常に停止です。空欄なら期限なし。</p>
+        <div class="schedule-table">
+          <div class="schedule-row schedule-head">
+            <div>フェーズ</div><div>手動</div><div>開始日時</div><div>終了日時</div><div>状態</div>
+          </div>
+          <div class="schedule-row" data-phase="application">
+            <div class="phase-name">①📝 受験申込</div>
+            <div><label class="switch"><input type="checkbox" data-phase-toggle="application"><span class="slider"></span></label></div>
+            <div><input type="datetime-local" data-phase-start="application"></div>
+            <div><input type="datetime-local" data-phase-end="application"></div>
+            <div class="phase-status-cell" data-phase-status="application">-</div>
+          </div>
+          <div class="schedule-row" data-phase="resume">
+            <div class="phase-name">②📄 履歴書</div>
+            <div><label class="switch"><input type="checkbox" data-phase-toggle="resume"><span class="slider"></span></label></div>
+            <div><input type="datetime-local" data-phase-start="resume"></div>
+            <div><input type="datetime-local" data-phase-end="resume"></div>
+            <div class="phase-status-cell" data-phase-status="resume">-</div>
+          </div>
+          <div class="schedule-row" data-phase="survey">
+            <div class="phase-name">②📋 アンケート</div>
+            <div><label class="switch"><input type="checkbox" data-phase-toggle="survey"><span class="slider"></span></label></div>
+            <div><input type="datetime-local" data-phase-start="survey"></div>
+            <div><input type="datetime-local" data-phase-end="survey"></div>
+            <div class="phase-status-cell" data-phase-status="survey">-</div>
+          </div>
+          <div class="schedule-row" data-phase="academic">
+            <div class="phase-name">③📚 学力試験</div>
+            <div><label class="switch"><input type="checkbox" data-phase-toggle="academic"><span class="slider"></span></label></div>
+            <div><input type="datetime-local" data-phase-start="academic"></div>
+            <div><input type="datetime-local" data-phase-end="academic"></div>
+            <div class="phase-status-cell" data-phase-status="academic">-</div>
+          </div>
         </div>
       </div>
     </div>
