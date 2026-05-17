@@ -418,6 +418,16 @@
     <div class="adminview" id="adminview-resume"></div>
     <div class="adminview" id="adminview-interview">
       <div class="card">
+        <h3>📐 面接 評価項目（試験回ごと）</h3>
+        <p class="hint">面接で評価する観点を試験回ごとにカスタマイズできます。各項目は1〜5の5段階評価。</p>
+        <div class="toolbar">
+          <button class="btn primary" id="add-iv-rating">＋ 評価項目を追加</button>
+          <button class="btn" id="reset-iv-ratings">デフォルト5項目に戻す</button>
+        </div>
+        <div id="iv-ratings-list" class="q-list"></div>
+      </div>
+
+      <div class="card">
         <h3>🎤 面接スケジュール 設定</h3>
         <div class="form-grid">
           <label>開始日<input type="date" id="iv-sch-startDate"></label>

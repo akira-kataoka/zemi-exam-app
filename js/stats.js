@@ -171,11 +171,12 @@ const Stats = (() => {
   function interviewScheduledAt(c) { return c?.interview?.scheduledAt || null; }
 
   // Average rating across all interviewers and all categories
-  function interviewAvg(c) {
+  function interviewAvg(c, session) {
     const recs = interviewRecords(c);
     if (recs.length === 0) return 0;
+    const ratings = getInterviewRatings(session);
     const vals = [];
-    recs.forEach(r => INTERVIEW_RATINGS.forEach(k => {
+    recs.forEach(r => ratings.forEach(k => {
       const v = Number(r.ratings?.[k.key]) || 0;
       if (v > 0) vals.push(v);
     }));
@@ -183,10 +184,11 @@ const Stats = (() => {
   }
 
   // Per-category average across interviewers
-  function interviewCategoryAvgs(c) {
+  function interviewCategoryAvgs(c, session) {
     const recs = interviewRecords(c);
+    const ratings = getInterviewRatings(session);
     const out = {};
-    INTERVIEW_RATINGS.forEach(k => {
+    ratings.forEach(k => {
       const vals = recs.map(r => Number(r.ratings?.[k.key]) || 0).filter(v => v > 0);
       out[k.key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
     });
@@ -194,11 +196,12 @@ const Stats = (() => {
   }
 
   // Inter-rater variance (standard deviation of overall avg per record) — higher = more disagreement
-  function interviewDisagreement(c) {
+  function interviewDisagreement(c, session) {
     const recs = interviewRecords(c);
     if (recs.length < 2) return 0;
+    const ratings = getInterviewRatings(session);
     const perRecAvg = recs.map(r => {
-      const vals = INTERVIEW_RATINGS.map(k => Number(r.ratings?.[k.key]) || 0).filter(v => v > 0);
+      const vals = ratings.map(k => Number(r.ratings?.[k.key]) || 0).filter(v => v > 0);
       return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
     });
     const m = perRecAvg.reduce((a, b) => a + b, 0) / perRecAvg.length;
@@ -209,7 +212,7 @@ const Stats = (() => {
   return {
     scoreAcademic, surveyAvg, surveyScore100, totalScore,
     radarData, surveyVector, featureVector,
-    hasApplication, hasResume, hasAcademic, hasSurvey, hasInterview, interviewAvg, interviewRecords, interviewCount, interviewScheduledAt, interviewCategoryAvgs, interviewDisagreement,
+    hasApplication, hasResume, hasAcademic, hasSurvey, hasInterview, interviewAvg, interviewRecords, interviewCount, interviewScheduledAt, interviewCategoryAvgs, interviewDisagreement, getInterviewRatings,
     DEFAULT_ACADEMIC_CATEGORIES, DEFAULT_ACADEMIC_QUESTIONS, DEFAULT_SURVEY_QUESTIONS, DEFAULT_FACULTY_DEPT, INTERVIEW_RATINGS
   };
 })();

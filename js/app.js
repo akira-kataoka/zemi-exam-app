@@ -140,6 +140,10 @@ const App = (() => {
     // Migrate sessions created before application phase
     if (sess.phases && sess.phases.application === undefined) { sess.phases.application = true; changed = true; }
     if (sess.applicationPasscode === undefined) { sess.applicationPasscode = ''; changed = true; }
+    if (!sess.interviewRatings) {
+      sess.interviewRatings = Stats.INTERVIEW_RATINGS.map(r => ({ ...r }));
+      changed = true;
+    }
     if (!sess.messageTemplate) {
       sess.messageTemplate = `{{name}}さん
 
@@ -1192,19 +1196,20 @@ const App = (() => {
     window.removeEventListener('scroll', window._profileScrollSpy);
     window._profileScrollSpy = updateActiveLink;
     window.addEventListener('scroll', window._profileScrollSpy);
-    // Interview radar — show each interviewer + average overlay
+    // Interview radar — show each interviewer + average overlay (session-aware categories)
     if (Stats.hasInterview(c)) {
       const ivCtx = document.getElementById('profile-radar-interview');
-      const catAvgs = Stats.interviewCategoryAvgs(c);
+      const sessForIv = getSession();
+      const ratingsIv = Stats.getInterviewRatings(sessForIv);
+      const catAvgs = Stats.interviewCategoryAvgs(c, sessForIv);
       const recs = Stats.interviewRecords(c);
       const recColors = ['#06b6d4', '#f59e0b', '#ec4899', '#84cc16', '#ef4444'];
       const datasets = [];
-      // 各面接官の個別評価（複数の場合のみ）
       if (recs.length > 1) {
         recs.forEach((r, i) => {
           datasets.push({
             label: r.interviewer || `面接官${i + 1}`,
-            data: Stats.INTERVIEW_RATINGS.map(k => Number(r.ratings?.[k.key]) || 0),
+            data: ratingsIv.map(k => Number(r.ratings?.[k.key]) || 0),
             backgroundColor: 'transparent',
             borderColor: recColors[i % recColors.length],
             borderDash: [4, 3],
@@ -1214,10 +1219,9 @@ const App = (() => {
           });
         });
       }
-      // 平均（メイン強調）
       datasets.push({
         label: recs.length > 1 ? `★平均 (${recs.length}人)` : '評価',
-        data: Stats.INTERVIEW_RATINGS.map(r => catAvgs[r.key] || 0),
+        data: ratingsIv.map(r => catAvgs[r.key] || 0),
         backgroundColor: 'rgba(139,92,246,.25)',
         borderColor: '#8b5cf6',
         borderWidth: 2.5,
@@ -1226,7 +1230,7 @@ const App = (() => {
       });
       if (ivCtx) new Chart(ivCtx, {
         type: 'radar',
-        data: { labels: Stats.INTERVIEW_RATINGS.map(r => r.label), datasets },
+        data: { labels: ratingsIv.map(r => r.label), datasets },
         options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
       });
     }
@@ -1252,13 +1256,15 @@ const App = (() => {
   }
 
   function renderInterviewView(c) {
+    const sess = getSession();
+    const ratings = Stats.getInterviewRatings(sess);
     const recs = Stats.interviewRecords(c);
     if (recs.length === 0) return '<p class="muted" style="padding:10px">面接記録はまだありません。「＋ 面接記録を追加」から登録できます。</p>';
-    const avg = Stats.interviewAvg(c);
-    const catAvgs = Stats.interviewCategoryAvgs(c);
-    const disagree = Stats.interviewDisagreement(c);
+    const avg = Stats.interviewAvg(c, sess);
+    const catAvgs = Stats.interviewCategoryAvgs(c, sess);
+    const disagree = Stats.interviewDisagreement(c, sess);
 
-    const catRows = Stats.INTERVIEW_RATINGS.map(r => {
+    const catRows = ratings.map(r => {
       const perRec = recs.map(rec => Number(rec.ratings?.[r.key]) || 0);
       const minV = Math.min(...perRec.filter(v => v > 0));
       const maxV = Math.max(...perRec.filter(v => v > 0));
@@ -1270,7 +1276,7 @@ const App = (() => {
       <div class="iv-summary">
         <div class="iv-meta">
           <div><span class="iv-k">面接実施数</span><span class="iv-v"><strong>${recs.length}件</strong></span></div>
-          <div><span class="iv-k">総合評価<small style="color:var(--muted);font-size:10px">（全${recs.length}人×全${Stats.INTERVIEW_RATINGS.length}項目の平均）</small></span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5.00</strong></span></div>
+          <div><span class="iv-k">総合評価<small style="color:var(--muted);font-size:10px">（全${recs.length}人×全${ratings.length}項目の平均）</small></span><span class="iv-v"><strong style="color:var(--primary)">${avg.toFixed(2)} / 5.00</strong></span></div>
           ${recs.length > 1 ? `<div><span class="iv-k">面接官間ばらつき<small style="color:var(--muted);font-size:10px">（標準偏差・0=全員一致）</small></span><span class="iv-v" title="各面接官の総合評価の標準偏差。0に近いほど一致">${disagree.toFixed(2)} ${disagree >= 0.5 ? '<span style="color:var(--warn);font-size:11px">⚠評価に差あり</span>' : '<span style="color:var(--accent);font-size:11px">✓概ね一致</span>'}</span></div>` : ''}
         </div>
         <div class="grid-2" style="margin-top:10px">
@@ -1284,7 +1290,7 @@ const App = (() => {
         </div>
         <h4 style="margin-top:14px">面接記録一覧（${recs.length}件・各面接官の評価）</h4>
         ${recs.map((r, i) => {
-          const ratingVals = Stats.INTERVIEW_RATINGS.map(k => Number(r.ratings?.[k.key]) || 0).filter(v => v > 0);
+          const ratingVals = ratings.map(k => Number(r.ratings?.[k.key]) || 0).filter(v => v > 0);
           const ravg = ratingVals.length ? ratingVals.reduce((a, b) => a + b, 0) / ratingVals.length : 0;
           const sum = ratingVals.reduce((a, b) => a + b, 0);
           return `
@@ -1295,7 +1301,7 @@ const App = (() => {
               <span class="muted" style="font-size:12px">${formatDate(r.heldAt)}</span>
             </div>
             <div class="iv-record-ratings">
-              ${Stats.INTERVIEW_RATINGS.map(k => `<span class="iv-rec-rating"><span class="muted">${escapeHtml(k.label)}:</span> <strong>${Number(r.ratings?.[k.key]) || '—'}</strong></span>`).join('')}
+              ${ratings.map(k => `<span class="iv-rec-rating"><span class="muted">${escapeHtml(k.label)}:</span> <strong>${Number(r.ratings?.[k.key]) || '—'}</strong></span>`).join('')}
             </div>
             ${r.notes ? `<div class="iv-record-notes">${escapeHtml(r.notes)}</div>` : ''}
           </div>
@@ -1348,7 +1354,7 @@ const App = (() => {
           </div>
           <h4 style="margin-top:14px">評価（1〜5）</h4>
           <div class="iv-rating-grid">
-            ${Stats.INTERVIEW_RATINGS.map(r => `
+            ${Stats.getInterviewRatings(getSession()).map(r => `
               <div class="iv-rating-edit">
                 <label>${escapeHtml(r.label)}</label>
                 <div class="iv-scale">
@@ -1399,7 +1405,7 @@ const App = (() => {
 
     modal.querySelector('#iv-save').addEventListener('click', () => {
       const ratings = {};
-      Stats.INTERVIEW_RATINGS.forEach(r => {
+      Stats.getInterviewRatings(getSession()).forEach(r => {
         const sel = modal.querySelector(`input[name="iv-${r.key}"]:checked`);
         ratings[r.key] = sel ? Number(sel.value) : 0;
       });
@@ -2072,8 +2078,42 @@ const App = (() => {
 
   const IV_STATUS_LABEL = { unscheduled: '未', future: '予定', now: '進行中', delayed: '⚠遅延中', done: '✅実施済', 'done-late': '⏰遅延で実施' };
 
+  function renderInterviewRatingsEditor(sess) {
+    const wrap = document.getElementById('iv-ratings-list');
+    if (!wrap) return;
+    const ratings = sess.interviewRatings || [];
+    wrap.innerHTML = ratings.length === 0
+      ? '<p class="muted">評価項目がありません。デフォルトに戻すか追加してください。</p>'
+      : ratings.map((r, idx) => `
+        <div class="q-edit-card" data-idx="${idx}">
+          <div class="q-edit-head">
+            <span class="q-edit-num">項目${idx + 1}</span>
+            <input type="text" data-iv-rate-label value="${escapeHtml(r.label)}" placeholder="評価項目名（例: 学業への取り組み）">
+            <button class="btn danger" data-act="del-iv-rate">削除</button>
+          </div>
+          <div class="muted" style="font-size:11px;padding:0 4px">識別子: <code>${escapeHtml(r.key)}</code>（変更不可）</div>
+        </div>
+      `).join('');
+    wrap.querySelectorAll('.q-edit-card').forEach(card => {
+      const idx = Number(card.dataset.idx);
+      card.querySelector('[data-iv-rate-label]').addEventListener('change', e => {
+        ratings[idx].label = e.target.value;
+        saveSession(sess);
+        toast('評価項目を更新しました', 'success', 1500);
+      });
+      card.querySelector('[data-act="del-iv-rate"]').addEventListener('click', () => {
+        if (!confirm(`「${ratings[idx].label}」を削除しますか？\n（既に登録された面接記録の数値は残ります）`)) return;
+        ratings.splice(idx, 1);
+        saveSession(sess);
+        renderInterviewRatingsEditor(sess);
+        toast('評価項目を削除しました', 'success', 1500);
+      });
+    });
+  }
+
   function renderInterviewMgr() {
     const sess = ensureTests(getSession());
+    renderInterviewRatingsEditor(sess);
     const sch = sess.interviewSchedule;
     $('#iv-sch-startDate').value = sch.startDate || '';
     $('#iv-sch-days').value = sch.days || 1;
@@ -3133,6 +3173,24 @@ const App = (() => {
       const sess = getSession(); sess.resumeExtraFields = []; saveSession(sess); renderResumeMgr();
     });
 
+    // Interview rating categories editor
+    document.getElementById('add-iv-rating')?.addEventListener('click', () => {
+      const sess = ensureTests(getSession());
+      const newKey = 'cust_' + Date.now().toString(36);
+      sess.interviewRatings = sess.interviewRatings || [];
+      sess.interviewRatings.push({ key: newKey, label: '新しい評価項目' });
+      saveSession(sess);
+      renderInterviewRatingsEditor(sess);
+      toast('評価項目を追加しました', 'success', 1500);
+    });
+    document.getElementById('reset-iv-ratings')?.addEventListener('click', () => {
+      if (!confirm('評価項目をデフォルト5項目に戻しますか？\n（既に登録された面接記録の数値は残ります）')) return;
+      const sess = ensureTests(getSession());
+      sess.interviewRatings = Stats.INTERVIEW_RATINGS.map(r => ({ ...r }));
+      saveSession(sess);
+      renderInterviewRatingsEditor(sess);
+      toast('デフォルトに戻しました', 'success', 1500);
+    });
     // Interview schedule
     ['startDate', 'days', 'dailyStart', 'dailyEnd', 'slotMinutes', 'breakStart', 'breakEnd'].forEach(k => {
       const el = document.getElementById('iv-sch-' + k);
