@@ -55,8 +55,9 @@
 ## 技術
 
 - 純粋HTML/CSS/JS（フレームワーク不使用）
-- CDN: Chart.js v4.4.0 / qrcode-generator v1.4.4
-- データ保存: ブラウザ localStorage
+- CDN: Chart.js v4.4.0 / qrcode-generator v1.4.4 / supabase-js v2
+- データ保存: ブラウザ localStorage（既定）+ オプションで Supabase 連携（[SUPABASE_SETUP.md](SUPABASE_SETUP.md) 参照、Free Tier 内で完結）
+- 認証: Supabase 連携時のみ（管理者: email/password、受験者: URL + 個別パスワード）
 - 公開: GitHub Pages
 
 ## ファイル構成
