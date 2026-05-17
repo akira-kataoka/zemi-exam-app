@@ -912,6 +912,7 @@ const App = (() => {
   // ===== Question editors =====
   function renderAcademicMgr() {
     const sess = ensureTests(getSession());
+    renderPhaseShare('academic', 'view-mgr-academic');
     const wrap = $('#academic-q-list');
     if (!wrap) return;
     $('#academic-q-count').textContent = `現在 ${sess.academicTest.questions.length} 問 / 合計 ${sess.academicTest.questions.reduce((s, q) => s + (q.points || 0), 0)} 点`;
@@ -982,6 +983,7 @@ const App = (() => {
 
   function renderSurveyMgr() {
     const sess = ensureTests(getSession());
+    renderPhaseShare('survey', 'view-mgr-survey');
     const wrap = $('#survey-q-list');
     if (!wrap) return;
     $('#survey-q-count').textContent = `現在 ${sess.surveyTest.questions.length} 項目`;
@@ -1032,7 +1034,7 @@ const App = (() => {
         sess.resumeExtraFields.splice(idx, 1); saveSession(sess); renderResumeMgr();
       });
     });
-    renderShareUrls();
+    renderPhaseShare('resume', 'view-mgr-resume');
   }
 
   function renderFacultyDeptEditor(sess) {
@@ -1090,53 +1092,57 @@ const App = (() => {
     const pinPart = needPin && sess.pin ? `&pin=${encodeURIComponent(sess.pin)}` : '';
     return `${base}?session=${encodeURIComponent(sess.id)}&phase=${phase}${pinPart}`;
   }
-  function renderShareUrls() {
+  // Render share URL + QR (+ PIN for academic/survey) for a single phase inside the specified container
+  function renderPhaseShare(phase, containerId) {
     const sess = ensureTests(getSession());
-    const exist = $('#share-urls-section');
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const exist = container.querySelector('.share-section');
     if (exist) exist.remove();
-    const wrap = document.createElement('div');
-    wrap.id = 'share-urls-section';
-    wrap.className = 'card';
-    wrap.innerHTML = `
-      <h3>🔗 受験者配布用URL / QRコード</h3>
-      <div class="pin-row">
-        <div>
-          <div class="pin-label">🔐 アクセスPIN（学力試験・アンケート用）</div>
-          <div class="pin-value">${escapeHtml(sess.pin)}</div>
-          <div class="pin-hint">学力試験とアンケートのURLにはこのPINが含まれます。流出した場合は再発行してください。</div>
-        </div>
-        <button class="btn" id="regenerate-pin">🔄 PINを再発行</button>
-      </div>
-      <p class="hint">下記URLまたはQRコードを受験者に配布してください。リンクをクリックすると受験者モードで該当の試験画面が直接開きます。</p>
-      <div class="share-grid">
-        ${['resume', 'academic', 'survey'].map(p => `
-          <div class="share-card">
-            <h4>${PHASE_LABEL[p]}${p !== 'resume' ? ' <span class="pin-badge">🔐 PIN付</span>' : ''}</h4>
-            <div class="share-url" id="share-url-${p}">${escapeHtml(buildPhaseUrl(p))}</div>
-            <div class="share-actions">
-              <button class="btn" data-copy="${p}">URLをコピー</button>
-              <a class="btn" href="${escapeHtml(buildPhaseUrl(p))}" target="_blank">プレビュー</a>
-            </div>
-            <div class="qr-area" id="qr-${p}"></div>
+    const url = buildPhaseUrl(phase);
+    const needPin = phase !== 'resume';
+    const section = document.createElement('div');
+    section.className = 'card share-section';
+    section.innerHTML = `
+      <h3>🔗 受験者配布用URL / QRコード — ${PHASE_LABEL[phase]}</h3>
+      ${needPin ? `
+        <div class="pin-row">
+          <div>
+            <div class="pin-label">🔐 アクセスPIN</div>
+            <div class="pin-value">${escapeHtml(sess.pin)}</div>
+            <div class="pin-hint">${PHASE_LABEL[phase]}のURLにこのPINが含まれます。流出時は再発行してください（学力試験・アンケート共通）。</div>
           </div>
-        `).join('')}
+          <button class="btn" data-regenerate-pin>🔄 PINを再発行</button>
+        </div>
+      ` : ''}
+      <div class="share-grid">
+        <div class="share-card">
+          <h4>${PHASE_LABEL[phase]}${needPin ? ' <span class="pin-badge">🔐 PIN付</span>' : ''}</h4>
+          <div class="share-url">${escapeHtml(url)}</div>
+          <div class="share-actions">
+            <button class="btn" data-copy>URLをコピー</button>
+            <a class="btn" href="${escapeHtml(url)}" target="_blank">プレビュー</a>
+          </div>
+          <div class="qr-area"></div>
+        </div>
       </div>
     `;
-    $('#view-mgr-resume').appendChild(wrap);
-    document.getElementById('regenerate-pin').addEventListener('click', () => {
+    container.appendChild(section);
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    section.querySelector('.qr-area').innerHTML = qr.createImgTag(4, 8);
+    section.querySelector('[data-copy]').addEventListener('click', () => {
+      navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました'));
+    });
+    const regen = section.querySelector('[data-regenerate-pin]');
+    if (regen) regen.addEventListener('click', () => {
       if (!confirm('PINを再発行すると、既に配布したURLは無効になります。続行しますか？')) return;
       Storage.regeneratePin(sess.id);
-      renderShareUrls();
-    });
-    ['resume', 'academic', 'survey'].forEach(p => {
-      const url = buildPhaseUrl(p);
-      const qr = qrcode(0, 'M');
-      qr.addData(url);
-      qr.make();
-      $('#qr-' + p).innerHTML = qr.createImgTag(4, 8);
-      wrap.querySelector(`[data-copy="${p}"]`).addEventListener('click', () => {
-        navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました'));
-      });
+      // Re-render all share blocks since PIN is shared
+      renderPhaseShare('resume', 'view-mgr-resume');
+      renderPhaseShare('academic', 'view-mgr-academic');
+      renderPhaseShare('survey', 'view-mgr-survey');
     });
   }
 
@@ -1432,7 +1438,10 @@ const App = (() => {
       Storage.setPhase(Storage.getCurrentSessionId(), cb.dataset.phaseToggle, cb.checked);
       renderSessionBar();
       renderPortal();
-      renderShareUrls();
+      // Re-render share blocks in all mgr tabs since URLs may include phase status
+      if ($('#academic-q-list')) renderPhaseShare('academic', 'view-mgr-academic');
+      if ($('#survey-q-list')) renderPhaseShare('survey', 'view-mgr-survey');
+      if ($('#resume-fields-list')) renderPhaseShare('resume', 'view-mgr-resume');
     }));
 
     // Data tab
