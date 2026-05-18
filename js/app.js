@@ -455,7 +455,8 @@ const App = (() => {
     if (name === 'profile') refreshProfileSelect();
     if (name === 'portal')   renderPortal();
     if (name === 'admin') {
-      const sub = _uiState.adminview || 'resume';
+      // 既存ユーザーで _uiState.adminview が古い値の場合も尊重、未設定なら基本タブから
+      const sub = _uiState.adminview || 'info';
       showAdminview(sub);
     }
   }
