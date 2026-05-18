@@ -634,7 +634,16 @@ const App = (() => {
       if (statMaxCard) { statMaxCard.classList.remove('clickable'); statMaxCard.title = ''; }
       if (statMinCard) { statMinCard.classList.remove('clickable'); statMinCard.title = ''; }
     }
-    $('#stat-passed').textContent = list.filter(c => c.passed).length;
+    // 合格者数: 目標合格人数があれば「X / 目標」形式で表示
+    const passedCount = list.filter(c => c.passed).length;
+    const statPassedEl = $('#stat-passed');
+    if (sess.targetPassCount != null && sess.targetPassCount > 0) {
+      const target = Number(sess.targetPassCount);
+      const reached = passedCount >= target;
+      statPassedEl.innerHTML = `${passedCount} <span class="stat-name" style="color:${reached ? 'var(--accent)' : 'var(--muted)'};font-size:13px">/ 目標 ${target}名${reached ? ' ✅達成' : ''}</span>`;
+    } else {
+      statPassedEl.textContent = passedCount;
+    }
     // Update tab counters
     updateTabBadges();
     renderEmptyStateBanner(list.length === 0);
