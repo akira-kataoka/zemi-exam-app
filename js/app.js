@@ -1345,13 +1345,31 @@ const App = (() => {
         <button type="button" class="ptab-close" data-close="${tid}" aria-label="${escapeHtml(name)} のタブを閉じる" title="タブを閉じる">×</button>
       </div>`;
     }).join('');
-    bar.querySelectorAll('.ptab').forEach(el => {
+    bar.querySelectorAll('.ptab').forEach((el, idx, all) => {
       el.addEventListener('click', (e) => {
         if (e.target.closest('.ptab-close')) return;
         openProfileTab(el.dataset.id);
       });
       el.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProfileTab(el.dataset.id); }
+        else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const prev = all[idx - 1] || all[all.length - 1];
+          if (prev) { prev.focus(); openProfileTab(prev.dataset.id); }
+        }
+        else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          const next = all[idx + 1] || all[0];
+          if (next) { next.focus(); openProfileTab(next.dataset.id); }
+        }
+        else if ((e.ctrlKey || e.metaKey) && (e.key === 'w' || e.key === 'W')) {
+          e.preventDefault();
+          closeProfileTab(el.dataset.id);
+        }
+        else if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          closeProfileTab(el.dataset.id);
+        }
       });
     });
     bar.querySelectorAll('.ptab-close').forEach(b => {

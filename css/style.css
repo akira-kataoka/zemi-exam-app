@@ -338,7 +338,7 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 
 /* Profile */
 /* Profile multi-tab (console-style) */
-.profile-tabbar{display:none;flex-wrap:wrap;align-items:center;gap:2px;margin:6px 0 12px;padding:4px;background:var(--surface-3);border-radius:10px;border:1px solid var(--border)}
+.profile-tabbar{display:none;flex-wrap:wrap;align-items:center;gap:2px;margin:6px 0 12px;padding:4px;background:var(--surface-3);border-radius:10px;border:1px solid var(--border);max-width:100%;overflow-x:auto}
 .ptab{display:inline-flex;align-items:center;gap:6px;padding:6px 10px 6px 12px;background:var(--surface);border:1px solid transparent;border-radius:8px;font-size:12px;color:var(--ink);cursor:pointer;max-width:240px;min-width:0;transition:all .12s var(--transition);position:relative}
 .ptab:hover{background:var(--surface-2,#fff);box-shadow:var(--shadow-sm)}
 .ptab.active{background:var(--surface);border-color:var(--primary);color:var(--primary-d);font-weight:700;box-shadow:0 2px 6px rgba(79,70,229,.18)}
