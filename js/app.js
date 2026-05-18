@@ -1606,6 +1606,7 @@ const App = (() => {
       if (ivCtx) {
         const ivOpts = radarChartOptions(5, 1);
         ivOpts.plugins.legend = { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 }, color: chartPalette().text } };
+        try { Chart.getChart(ivCtx)?.destroy(); } catch (_) {}
         new Chart(ivCtx, {
           type: 'radar',
           data: { labels: ratingsIv.map(r => truncateLabel(r.label, 10)), datasets },
@@ -1619,19 +1620,27 @@ const App = (() => {
       if (rec) { rec.passed = e.target.checked; Storage.save(list); renderOverview(); }
     });
 
-    new Chart($('#profile-radar-academic'), {
-      type: 'radar',
-      data: { labels: radar.labels.map(l => truncateLabel(l, 10)), datasets: [{ label: fullName(c), data: radar.data, backgroundColor: 'rgba(79,70,229,.2)', borderColor: '#4f46e5', pointBackgroundColor: '#4f46e5', borderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
-      options: radarChartOptions(100, 20)
-    });
-    new Chart($('#profile-radar-survey'), {
-      type: 'radar',
-      data: {
-        labels: (sess.surveyTest?.questions || []).map(q => truncateLabel(q.text, 10)),
-        datasets: [{ label: 'アンケート', data: Stats.surveyVector(c, sess), backgroundColor: 'rgba(245,158,11,.2)', borderColor: '#f59e0b', pointBackgroundColor: '#f59e0b' }]
-      },
-      options: radarChartOptions(5, 1)
-    });
+    const profAcCv = $('#profile-radar-academic');
+    if (profAcCv) {
+      try { Chart.getChart(profAcCv)?.destroy(); } catch (_) {}
+      new Chart(profAcCv, {
+        type: 'radar',
+        data: { labels: radar.labels.map(l => truncateLabel(l, 10)), datasets: [{ label: fullName(c), data: radar.data, backgroundColor: 'rgba(79,70,229,.2)', borderColor: '#4f46e5', pointBackgroundColor: '#4f46e5', borderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
+        options: radarChartOptions(100, 20)
+      });
+    }
+    const profSvCv = $('#profile-radar-survey');
+    if (profSvCv) {
+      try { Chart.getChart(profSvCv)?.destroy(); } catch (_) {}
+      new Chart(profSvCv, {
+        type: 'radar',
+        data: {
+          labels: (sess.surveyTest?.questions || []).map(q => truncateLabel(q.text, 10)),
+          datasets: [{ label: 'アンケート', data: Stats.surveyVector(c, sess), backgroundColor: 'rgba(245,158,11,.2)', borderColor: '#f59e0b', pointBackgroundColor: '#f59e0b' }]
+        },
+        options: radarChartOptions(5, 1)
+      });
+    }
   }
 
   function renderInterviewView(c) {
