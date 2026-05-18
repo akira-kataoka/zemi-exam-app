@@ -175,8 +175,9 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .sticky-table thead .sort-row th.sort-desc::after{content:" ▼";color:var(--primary);font-size:10px}
 .sticky-table thead .filter-row th{position:sticky;top:38px;z-index:3;background:#fafafa;padding:6px 8px}
 .sticky-table thead .filter-row input,.sticky-table thead .filter-row select{width:100%;padding:4px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink)}
-.row-passed td{background:linear-gradient(90deg,rgba(220,252,231,.6),rgba(220,252,231,.95)) !important;border-left:3px solid var(--accent)}
-.row-passed:hover td{background:linear-gradient(90deg,rgba(187,247,208,.7),rgba(187,247,208,1)) !important}
+.row-passed td{background:rgba(236,253,245,.55) !important;color:var(--ink)}
+.row-passed td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.row-passed:hover td{background:rgba(209,250,229,.7) !important}
 
 /* Form */
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px}
@@ -770,8 +771,9 @@ body.candidate-mode .brand .sub{display:none}
 :root[data-theme="dark"] .empty-cta{background:linear-gradient(135deg,#1e1b4b,#312e81);border-color:#4338ca}
 :root[data-theme="dark"] .empty-cta h3{color:#c7d2fe}
 :root[data-theme="dark"] .empty-state{background:#0a0f1a;border-color:var(--border)}
-:root[data-theme="dark"] .row-passed td{background:linear-gradient(90deg,rgba(6,78,59,.4),rgba(6,78,59,.7)) !important;border-left-color:var(--accent)}
-:root[data-theme="dark"] .row-passed:hover td{background:linear-gradient(90deg,rgba(6,95,70,.6),rgba(6,95,70,.85)) !important}
+:root[data-theme="dark"] .row-passed td{background:rgba(6,78,59,.35) !important;color:#d1fae5}
+:root[data-theme="dark"] .row-passed td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+:root[data-theme="dark"] .row-passed:hover td{background:rgba(6,95,70,.5) !important}
 :root[data-theme="dark"] .data-table th{background:#0a0f1a;color:#94a3b8}
 :root[data-theme="dark"] .data-table tbody tr:hover td{background:#1e1b4b}
 :root[data-theme="dark"] .card.stat{background:linear-gradient(180deg,var(--surface),#0a0f1a)}
