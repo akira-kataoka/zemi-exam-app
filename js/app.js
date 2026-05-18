@@ -711,7 +711,7 @@ const App = (() => {
       if (charts.dist) charts.dist.destroy();
       charts.dist = new Chart(dctx, {
         type: 'bar',
-        data: { labels, datasets: [{ label: '受験者数', data: bins, backgroundColor: '#2563eb' }] },
+        data: { labels, datasets: [{ label: '受験者数', data: bins, backgroundColor: 'rgba(79,70,229,.85)', borderRadius: 6, borderSkipped: false }] },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
       });
     }
@@ -727,7 +727,7 @@ const App = (() => {
       if (charts.subj) charts.subj.destroy();
       charts.subj = new Chart(sctx, {
         type: 'radar',
-        data: { labels: cats, datasets: [{ label: '平均(%)', data: avgs, backgroundColor: 'rgba(16,185,129,.2)', borderColor: '#10b981', pointBackgroundColor: '#10b981' }] },
+        data: { labels: cats, datasets: [{ label: '平均(%)', data: avgs, backgroundColor: 'rgba(5,150,105,.18)', borderColor: '#059669', pointBackgroundColor: '#059669', borderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
         options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
       });
     }
@@ -807,7 +807,7 @@ const App = (() => {
     const vectors = rawVectors;
     const { points } = Cluster.pca2(stdVectors);
 
-    const palette = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+    const palette = ['#4f46e5', '#059669', '#f59e0b', '#dc2626', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
 
     const cats = sess.academicTest?.questions?.length
       ? [...new Set(sess.academicTest.questions.map(q => q.category || 'その他'))]
@@ -1262,7 +1262,7 @@ const App = (() => {
 
     new Chart($('#profile-radar-academic'), {
       type: 'radar',
-      data: { labels: radar.labels, datasets: [{ label: fullName(c), data: radar.data, backgroundColor: 'rgba(37,99,235,.2)', borderColor: '#2563eb', pointBackgroundColor: '#2563eb' }] },
+      data: { labels: radar.labels, datasets: [{ label: fullName(c), data: radar.data, backgroundColor: 'rgba(79,70,229,.2)', borderColor: '#4f46e5', pointBackgroundColor: '#4f46e5', borderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
       options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
     });
     new Chart($('#profile-radar-survey'), {
@@ -1650,7 +1650,7 @@ const App = (() => {
 
   // Generate a tiny SVG-based avatar (data URL) — used for demo data so storage stays small
   function generateAvatarDataUrl(name, gender) {
-    const palette = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+    const palette = ['#4f46e5', '#059669', '#f59e0b', '#dc2626', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
     const color = palette[Math.abs(hash) % palette.length];
