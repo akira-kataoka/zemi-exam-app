@@ -411,14 +411,30 @@ const App = (() => {
     $('#stat-survey').textContent    = `${nS} / ${N}`;
     $('#stat-interview').textContent = `${nI} / ${N}`;
     const acEntries = list.filter(c => Stats.hasAcademic(c)).map(c => ({ c, pct: Stats.scoreAcademic(c, sess.academicTest).percent }));
+    const statMaxCard = document.querySelector('[data-stat="max"]') || $('#stat-max').closest('.card.stat');
+    const statMinCard = document.querySelector('[data-stat="min"]') || $('#stat-min').closest('.card.stat');
+    if (statMaxCard) statMaxCard.onclick = null;
+    if (statMinCard) statMinCard.onclick = null;
     if (acEntries.length) {
       const maxE = acEntries.reduce((a, b) => a.pct >= b.pct ? a : b);
       const minE = acEntries.reduce((a, b) => a.pct <= b.pct ? a : b);
       $('#stat-max').innerHTML = `${maxE.pct.toFixed(1)}% <span class="stat-name">${escapeHtml(fullName(maxE.c))}</span>`;
       $('#stat-min').innerHTML = `${minE.pct.toFixed(1)}% <span class="stat-name">${escapeHtml(fullName(minE.c))}</span>`;
+      if (statMaxCard) {
+        statMaxCard.classList.add('clickable');
+        statMaxCard.title = `${fullName(maxE.c)} の個人画面を開く`;
+        statMaxCard.onclick = () => { $('#profile-select').value = maxE.c.id; showView('profile'); renderProfile(maxE.c.id); };
+      }
+      if (statMinCard) {
+        statMinCard.classList.add('clickable');
+        statMinCard.title = `${fullName(minE.c)} の個人画面を開く`;
+        statMinCard.onclick = () => { $('#profile-select').value = minE.c.id; showView('profile'); renderProfile(minE.c.id); };
+      }
     } else {
       $('#stat-max').textContent = '—';
       $('#stat-min').textContent = '—';
+      if (statMaxCard) { statMaxCard.classList.remove('clickable'); statMaxCard.title = ''; }
+      if (statMinCard) { statMinCard.classList.remove('clickable'); statMinCard.title = ''; }
     }
     $('#stat-passed').textContent = list.filter(c => c.passed).length;
     // Update tab counters
