@@ -3998,7 +3998,15 @@ const App = (() => {
     $('#seed-demo').addEventListener('click', seedDemo);
     $('#clear-all').addEventListener('click', () => {
       if (!confirm('この試験回の全受験者データを削除しますか？（試験回自体は残ります）')) return;
-      Storage.clearAll(); renderOverview(); alert('削除しました。');
+      Storage.clearAll();
+      // 個人タブも全部閉じる
+      setProfileTabs([]);
+      saveUiState({ profileId: '' });
+      updateProfileTriggerLabel('');
+      renderProfileTabbar();
+      $('#profile-body').innerHTML = '';
+      renderOverview();
+      toast('全受験者データを削除しました', 'success', 2500);
     });
 
   }
