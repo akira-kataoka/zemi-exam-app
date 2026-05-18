@@ -897,6 +897,9 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 /* portal-card 各種ステータスを dark で明示 */
 :root[data-theme="dark"] .portal-card.open{background:rgba(16,185,129,.12);border-color:rgba(52,211,153,.5)}
 :root[data-theme="dark"] .portal-card.done{background:rgba(99,102,241,.10);border-color:rgba(165,180,252,.4)}
+/* profile-nav の白背景をダーク化 */
+:root[data-theme="dark"] .profile-nav{background:rgba(15,23,42,.85);border-color:var(--border)}
+:root[data-theme="dark"] .profile-nav-link.active{background:var(--primary);color:#fff}
 :root[data-theme="dark"] .help-tab.active{background:var(--surface);border-bottom-color:var(--surface)}
 :root[data-theme="dark"] .resume-subtab:hover{background:var(--surface)}
 :root[data-theme="dark"] .resume-subtab.active{background:var(--surface)}
