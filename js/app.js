@@ -868,7 +868,21 @@ const App = (() => {
       });
       tr.querySelector('[data-act="del"]')?.addEventListener('click', e => {
         e.stopPropagation();
-        if (confirm('この受験者データを削除しますか？')) { Storage.remove(tr.dataset.id); renderOverview(); }
+        if (confirm('この受験者データを削除しますか？')) {
+          const id = tr.dataset.id;
+          Storage.remove(id);
+          // 開いていた個人タブからもクリーンアップ
+          const tabs = getProfileTabs().filter(tid => tid !== id);
+          setProfileTabs(tabs);
+          if (_uiState.profileId === id) {
+            const next = tabs[tabs.length - 1] || '';
+            saveUiState({ profileId: next });
+            if (next) { updateProfileTriggerLabel(next); renderProfile(next); }
+            else { updateProfileTriggerLabel(''); $('#profile-body').innerHTML = ''; }
+          }
+          renderProfileTabbar();
+          renderOverview();
+        }
       });
       tr.addEventListener('click', e => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
