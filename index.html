@@ -431,28 +431,15 @@
 
   <!-- ===== Admin (all management combined) ===== -->
   <section class="view" id="view-admin">
-    <div class="admin-tabgroups">
-      <div class="admin-tabgroup">
-        <span class="admin-tabgroup-label">📌 基本</span>
-        <div class="subtabs admintabs">
-          <button class="subtab adminsubtab active" data-adminview="info">📋 試験回情報</button>
-        </div>
-      </div>
-      <div class="admin-tabgroup">
-        <span class="admin-tabgroup-label">📥 選考フェーズ</span>
-        <div class="subtabs admintabs">
-          <button class="subtab adminsubtab" data-adminview="resume">📄 履歴書</button>
-          <button class="subtab adminsubtab" data-adminview="survey">📋 アンケート</button>
-          <button class="subtab adminsubtab" data-adminview="academic">📚 学力試験</button>
-          <button class="subtab adminsubtab" data-adminview="interview">🎤 面接</button>
-        </div>
-      </div>
-      <div class="admin-tabgroup">
-        <span class="admin-tabgroup-label">💾 システム</span>
-        <div class="subtabs admintabs">
-          <button class="subtab adminsubtab" data-adminview="data">💾 データ</button>
-        </div>
-      </div>
+    <div class="subtabs admintabs">
+      <button class="subtab adminsubtab active" data-adminview="info">📋 試験回情報</button>
+      <span class="admin-divider" aria-hidden="true"></span>
+      <button class="subtab adminsubtab" data-adminview="resume">📄 履歴書</button>
+      <button class="subtab adminsubtab" data-adminview="survey">📋 アンケート</button>
+      <button class="subtab adminsubtab" data-adminview="academic">📚 学力試験</button>
+      <button class="subtab adminsubtab" data-adminview="interview">🎤 面接</button>
+      <span class="admin-divider" aria-hidden="true"></span>
+      <button class="subtab adminsubtab" data-adminview="data">💾 データ</button>
     </div>
 
     <div class="adminview active" id="adminview-info">

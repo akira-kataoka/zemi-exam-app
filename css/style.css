@@ -96,10 +96,8 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 
 /* Resume sub-tabs (3rd level) */
 .resume-subtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;padding:4px;background:var(--surface-3);border-radius:8px}
-.admin-tabgroups{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px;padding:8px 12px;background:var(--surface-3);border-radius:10px;border:1px solid var(--border)}
-.admin-tabgroup{display:flex;flex-direction:column;gap:4px;min-width:0}
-.admin-tabgroup-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;padding-left:6px}
-.admin-tabgroup .subtabs{padding:2px;background:var(--surface);border-radius:8px;margin:0;flex-wrap:wrap}
+.admin-divider{display:inline-block;width:1px;height:22px;background:var(--border);margin:0 6px;flex-shrink:0;align-self:center}
+@media (max-width:640px){.admin-divider{display:none}}
 .interviewview{display:none}
 .interviewview.active{display:block}
 .dataview{display:none}
