@@ -723,15 +723,17 @@ body.candidate-mode .brand .sub{display:none}
 
 /* Mobile responsive polish */
 @media(max-width:760px){
-  .topbar{padding:8px 12px}
-  .brand{gap:8px}
-  .brand .logo{font-size:22px}
-  .brand h1{font-size:15px;line-height:1.2}
-  .brand .sub{font-size:10px}
-  .header-actions{gap:4px}
-  .header-action-btn{padding:5px 8px !important;font-size:11px !important}
+  .topbar{padding:6px 10px;box-shadow:none;border-bottom:1px solid var(--border-soft)}
+  .brand{gap:6px}
+  .brand .logo{font-size:18px;filter:none}
+  .brand h1{font-size:13px;line-height:1.1;font-weight:600}
+  .brand .sub{display:none}
+  .brand > div{display:flex;flex-direction:column;justify-content:center}
+  .header-actions{gap:3px;position:static !important;margin-top:0 !important}
+  .brand-row{display:flex;justify-content:space-between;align-items:center;padding-right:0;gap:8px}
+  .header-action-btn{padding:4px 7px !important;font-size:11px !important;box-shadow:none !important}
   main{padding:12px}
-  .session-bar{padding:8px 10px;gap:6px}
+  .session-bar{padding:6px 10px;gap:6px;margin-top:8px}
   .session-bar .session-label{font-size:12px}
   .session-bar select{min-width:120px;font-size:12px;padding:4px 8px}
   .session-name-input{min-width:120px;font-size:13px;padding:4px 8px}
@@ -754,16 +756,19 @@ body.candidate-mode .brand .sub{display:none}
   .toolbar input[type="search"]{min-width:0;flex:1 1 160px}
 }
 @media(max-width:480px){
-  .topbar{padding:6px 10px}
-  .brand .logo{font-size:20px}
-  .brand h1{font-size:14px}
-  .brand .sub{display:none}
-  .header-action-btn{padding:4px 6px !important;font-size:10px !important}
+  .topbar{padding:5px 8px}
+  .brand .logo{font-size:16px}
+  .brand h1{font-size:12px}
+  .header-action-btn{padding:3px 6px !important;font-size:10px !important;gap:3px !important}
   .cards{grid-template-columns:1fr}
-  .session-bar{flex-direction:column;align-items:stretch}
-  .session-bar .session-label{width:100%}
-  .phase-status{flex-wrap:wrap;justify-content:flex-start}
+  .session-bar{padding:6px 8px;gap:4px}
+  .session-bar select{min-width:0;flex:1}
+  .session-name-input{min-width:0;flex:1;font-size:12px}
+  .phase-status{flex-wrap:wrap;justify-content:flex-start;gap:2px}
+  .phase-pill{padding:1px 5px;font-size:9px}
   .data-table th,.data-table td{padding:8px 10px;font-size:12px}
+  .tabs{gap:2px}
+  .tab{padding:5px 10px;font-size:11px}
 }
 
 /* Dark mode fixes for hardcoded light styles */
