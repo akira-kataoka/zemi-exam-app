@@ -778,6 +778,7 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 .session-collapse-btn{display:none;padding:4px 8px !important;font-size:11px;line-height:1}
 .session-bar.collapsed .phase-status,
 .session-bar.collapsed .session-meta,
+.session-bar.collapsed .session-info-chips,
 .session-bar.collapsed #session-delete{display:none !important}
 .session-bar.collapsed .session-collapse-btn{transform:rotate(180deg)}
 
@@ -801,6 +802,7 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
   /* デフォルトで折り畳み (phase-status と 🗑 を隠す)。展開ボタンで開く */
   .session-bar:not(.expanded) .phase-status,
   .session-bar:not(.expanded) #session-delete,
+  .session-bar:not(.expanded) .session-info-chips,
   .session-bar:not(.expanded) .session-meta{display:none}
   .session-bar.expanded .session-collapse-btn{transform:rotate(180deg)}
   .session-bar select{min-width:120px;font-size:12px;padding:4px 8px}

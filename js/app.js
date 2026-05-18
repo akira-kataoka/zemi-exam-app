@@ -3440,8 +3440,19 @@ const App = (() => {
       localStorage.setItem('zemiSA.theme', next);
       updateIcon();
       applyChartDefaults();
-      // 全画面再描画 (Chart.js含む)
+      // 全画面再描画 (Chart.js を完全に作り直してテーマ追従)
       try { renderOverview(); } catch (e) {}
+      // 個人画面が開いていれば、active タブのプロフィールを再描画
+      try {
+        if (document.getElementById('view-profile')?.classList.contains('active') && _uiState.profileId) {
+          renderProfile(_uiState.profileId);
+        }
+      } catch (e) {}
+      // クラスター結果が表示中なら再実行
+      try {
+        const cl = document.getElementById('cluster-result');
+        if (cl && cl.style.display !== 'none') runCluster();
+      } catch (e) {}
     });
   }
 
