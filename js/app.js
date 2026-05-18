@@ -953,10 +953,25 @@ const App = (() => {
       const cats = sess.academicTest?.questions?.length
         ? [...new Set(sess.academicTest.questions.map(q => q.category || 'その他'))]
         : Stats.DEFAULT_ACADEMIC_CATEGORIES;
+      const hasAcademicCount = list.filter(c => Stats.hasAcademic(c)).length;
       const avgs = cats.map(cat => {
         const vals = list.filter(c => Stats.hasAcademic(c)).map(c => Stats.scoreAcademic(c, sess.academicTest).perCategory[cat] || 0);
         return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
       });
+      // 空状態のヒント表示/削除
+      const subjCard = sctx.closest('.card');
+      if (subjCard) {
+        const existHint = subjCard.querySelector('.chart-empty-hint');
+        if (hasAcademicCount === 0 && !existHint) {
+          const p = document.createElement('p');
+          p.className = 'chart-empty-hint muted';
+          p.style.cssText = 'text-align:center;font-size:12px;margin:8px 0';
+          p.textContent = '学力試験を受験した受験者がまだいません';
+          subjCard.appendChild(p);
+        } else if (hasAcademicCount > 0 && existHint) {
+          existHint.remove();
+        }
+      }
       if (charts.subj) charts.subj.destroy();
       charts.subj = new Chart(sctx, {
         type: 'radar',
