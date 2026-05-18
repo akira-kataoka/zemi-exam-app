@@ -3025,16 +3025,43 @@ const App = (() => {
     area.querySelectorAll('[data-msg-id]').forEach(b => {
       b.addEventListener('click', () => {
         const txt = area.querySelector(`[data-msg-body="${b.dataset.msgId}"]`).textContent;
-        navigator.clipboard.writeText(txt).then(() => {
-          b.textContent = '✅ コピー済';
-          setTimeout(() => { b.textContent = '📋 コピー'; }, 1500);
+        copyToClipboard(txt).then(ok => {
+          if (ok) {
+            b.textContent = '✅ コピー済';
+            setTimeout(() => { b.textContent = '📋 コピー'; }, 1500);
+          }
         });
       });
     });
     document.getElementById('msg-copy-all').addEventListener('click', () => {
       const allTexts = list.map(c => `=== ${fullName(c)} (${c.examineeId}) ===\n${fillTemplate(template, c, sess)}`).join('\n\n---\n\n');
-      navigator.clipboard.writeText(allTexts).then(() => toast('全員分をクリップボードにコピーしました', 'success'));
+      copyToClipboard(allTexts).then(ok => {
+        if (ok) toast('全員分をクリップボードにコピーしました', 'success');
+      });
     });
+  }
+  // クリップボード API ラッパー (HTTPS 必須・フォールバック付き)
+  async function copyToClipboard(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      // フォールバック: 非 HTTPS / 古いブラウザ用
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      if (!ok) throw new Error('execCommand failed');
+      return true;
+    } catch (e) {
+      console.error('copyToClipboard failed', e);
+      toast('クリップボードへのコピーに失敗しました', 'error', 4000);
+      return false;
+    }
   }
 
   const DEFAULT_MSG_TEMPLATE = `{{name}}さん
@@ -3160,7 +3187,7 @@ const App = (() => {
       qr.make();
       document.getElementById('qr-application').innerHTML = qr.createImgTag(4, 8);
       section.querySelector('[data-copy-app]').addEventListener('click', () => {
-        navigator.clipboard.writeText(url).then(() => toast('URLをコピーしました', 'success'));
+        copyToClipboard(url).then(ok => { if (ok) toast('URLをコピーしました', 'success'); });
       });
     } else {
       section.innerHTML = `<p class="hint" style="margin:0">🔗 受験者ごとのアクセスURL・パスワード・配布用メッセージは <strong>設定 → 履歴書</strong> タブの「📨 配布メッセージ」セクションで生成・コピーできます。</p>`;
