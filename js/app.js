@@ -2279,7 +2279,13 @@ const App = (() => {
     const fd = new FormData(form);
     const data = {};
     fd.forEach((v, k) => data[k] = v);
-    data.gpa = data.gpa ? Number(data.gpa) : null;
+    // GPA: 数値変換失敗時は null (NaN を保存しない)
+    if (data.gpa) {
+      const gpaN = Number(data.gpa);
+      data.gpa = Number.isFinite(gpaN) ? gpaN : null;
+    } else {
+      data.gpa = null;
+    }
     data.qualifications = _currentQuals.slice();   // array
     data.history = getHistoryForSave();
     data.resumeSubmittedAt = new Date().toISOString();
