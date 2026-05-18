@@ -73,6 +73,20 @@ const Storage = (() => {
     const s = list.find(x => x.id === id);
     if (s) { s.name = name; saveSessions(list); }
   }
+  // 試験回の基本情報を一括更新（試験日・試験場所・目標合格人数・備考など）
+  function updateSessionInfo(id, info) {
+    const list = loadSessions();
+    const s = list.find(x => x.id === id);
+    if (!s) return null;
+    const fields = ['name', 'examDate', 'examLocation', 'targetPassCount', 'notes'];
+    fields.forEach(k => {
+      if (info && Object.prototype.hasOwnProperty.call(info, k)) {
+        s[k] = info[k];
+      }
+    });
+    saveSessions(list);
+    return s;
+  }
   function setPhase(sessionId, phase, open) {
     const list = loadSessions();
     const s = list.find(x => x.id === sessionId);
@@ -205,7 +219,7 @@ const Storage = (() => {
   return {
     load, save, loadForSession, findByExamineeId, upsert, remove, clearAll, regenerateCandidatePassword, generatePassword,
     getDefaultInterviewRatings, setDefaultInterviewRatings,
-    loadSessions, addSession, renameSession, setPhase, setPhaseSchedule, isPhaseOpen, isPhaseInGrace, phaseStatusText, removeSession, regeneratePin, generatePin,
+    loadSessions, addSession, renameSession, updateSessionInfo, setPhase, setPhaseSchedule, isPhaseOpen, isPhaseInGrace, phaseStatusText, removeSession, regeneratePin, generatePin,
     getCurrentSessionId, setCurrentSessionId, getCurrentSession,
     DEFAULT_SESSION_ID
   };

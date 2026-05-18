@@ -54,6 +54,7 @@
       <span class="phase-pill" data-phase="academic">③学力: <span data-phase-state="academic">-</span></span>
     </span>
     <span class="session-meta" id="session-meta"></span>
+    <div class="session-info-chips" id="session-info-chips" aria-live="polite"></div>
   </div>
   <nav class="tabs">
     <button class="tab active" data-view="overview">👥 全体</button>
@@ -66,9 +67,9 @@
   <!-- ===== Overview ===== -->
   <section class="view active" id="view-overview">
     <div class="subtabs">
-      <button class="subtab active" data-subview="summary">📊 概要</button>
-      <button class="subtab" data-subview="list">受験者一覧</button>
-      <button class="subtab" data-subview="analysis">📈 分析</button>
+      <button class="subtab active" data-subview="summary">📊 受験者概要</button>
+      <button class="subtab" data-subview="list">👥 受験者一覧</button>
+      <button class="subtab" data-subview="analysis">📈 受験者分析</button>
     </div>
 
     <!-- Sub: summary (概要 stats) -->
@@ -149,28 +150,30 @@
       </div>
     </section>
 
-    <!-- Sub: chart -->
-    <section class="subview" id="sub-chart">
-      <div class="grid-2">
-        <div class="card"><h3>得点分布</h3><canvas id="chart-distribution" height="200"></canvas></div>
-        <div class="card"><h3>科目別平均</h3><canvas id="chart-subjects" height="200"></canvas></div>
+    <!-- Sub: analysis (chart/rank/cluster をネスト) -->
+    <section class="subview" id="sub-analysis">
+      <div class="resume-subtabs" style="margin-bottom:14px">
+        <button class="resume-subtab active" data-analysisview="chart">📊 分布グラフ</button>
+        <button class="resume-subtab" data-analysisview="rank">🏆 学力ランキング</button>
+        <button class="resume-subtab" data-analysisview="cluster">🎯 クラスター分析</button>
       </div>
-    </section>
-
-    <!-- Sub: rank -->
-    <section class="subview" id="sub-rank">
-      <div class="toolbar">
-        <label>上位<select id="rank-n"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>名表示</label>
-        <span class="muted" style="font-size:12px">※ アンケートは点数化されません。順位は学力試験スコアのみで決定します。</span>
+      <div class="analysisview active" id="analysis-chart">
+        <div class="grid-2">
+          <div class="card"><h3>得点分布</h3><div class="chart-wrap"><canvas id="chart-distribution"></canvas></div></div>
+          <div class="card"><h3>科目別平均</h3><div class="chart-wrap"><canvas id="chart-subjects"></canvas></div></div>
+        </div>
       </div>
-      <table class="data-table" id="rank-table">
-        <thead><tr><th>順位</th><th>受験番号</th><th>氏名</th><th>学部・学科</th><th>合格</th><th>学力スコア</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- Sub: cluster -->
-    <section class="subview" id="sub-cluster">
+      <div class="analysisview" id="analysis-rank">
+        <div class="toolbar">
+          <label>上位<select id="rank-n"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>名表示</label>
+          <span class="muted" style="font-size:12px">※ アンケートは点数化されません。順位は学力試験スコアのみで決定します。</span>
+        </div>
+        <table class="data-table" id="rank-table">
+          <thead><tr><th>順位</th><th>受験番号</th><th>氏名</th><th>学部・学科</th><th>合格</th><th>学力スコア</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="analysisview" id="analysis-cluster">
       <div class="card cluster-hero">
         <div class="cluster-hero-inner">
           <div class="cluster-hero-text">
@@ -179,7 +182,11 @@
           </div>
           <div class="cluster-hero-controls">
             <label class="hero-k">分類数 k =
-              <input type="number" id="k-value" value="4" min="2" max="8">
+              <span class="k-stepper">
+                <button type="button" class="k-step-btn" id="k-dec" aria-label="kを1減らす">−</button>
+                <input type="number" id="k-value" value="4" min="2" max="8" inputmode="numeric">
+                <button type="button" class="k-step-btn" id="k-inc" aria-label="kを1増やす">＋</button>
+              </span>
             </label>
             <button class="btn primary" id="run-cluster">🚀 分析を実行</button>
           </div>
@@ -208,7 +215,8 @@
         <div style="font-size:48px">📊</div>
         <p>「🚀 分析を実行」をクリックして始めましょう</p>
       </div>
-    </section>
+      </div><!-- /analysis-cluster -->
+    </section><!-- /sub-analysis -->
   </section>
 
   <!-- ===== Profile ===== -->
@@ -419,62 +427,115 @@
 
   <!-- ===== Admin (all management combined) ===== -->
   <section class="view" id="view-admin">
-    <div class="subtabs admintabs">
-      <button class="subtab adminsubtab active" data-adminview="resume">📄 履歴書</button>
-      <button class="subtab adminsubtab" data-adminview="survey">📋 アンケート</button>
-      <button class="subtab adminsubtab" data-adminview="academic">📚 学力試験</button>
-      <button class="subtab adminsubtab" data-adminview="interview">🎤 面接</button>
-      <button class="subtab adminsubtab" data-adminview="data">💾 データ</button>
+    <div class="admin-tabgroups">
+      <div class="admin-tabgroup">
+        <span class="admin-tabgroup-label">📌 基本</span>
+        <div class="subtabs admintabs">
+          <button class="subtab adminsubtab active" data-adminview="info">📋 試験回情報</button>
+        </div>
+      </div>
+      <div class="admin-tabgroup">
+        <span class="admin-tabgroup-label">📥 選考フェーズ</span>
+        <div class="subtabs admintabs">
+          <button class="subtab adminsubtab" data-adminview="resume">📄 履歴書</button>
+          <button class="subtab adminsubtab" data-adminview="survey">📋 アンケート</button>
+          <button class="subtab adminsubtab" data-adminview="academic">📚 学力試験</button>
+          <button class="subtab adminsubtab" data-adminview="interview">🎤 面接</button>
+        </div>
+      </div>
+      <div class="admin-tabgroup">
+        <span class="admin-tabgroup-label">💾 システム</span>
+        <div class="subtabs admintabs">
+          <button class="subtab adminsubtab" data-adminview="data">💾 データ</button>
+        </div>
+      </div>
     </div>
 
+    <div class="adminview active" id="adminview-info">
+      <div class="card">
+        <h3>📋 試験回の基本情報</h3>
+        <p class="hint">この試験回（セッション）の名前と日時・場所・目標などを登録できます。受験者には公開されません（運営用メモ）。</p>
+        <form id="form-session-info" autocomplete="off">
+          <div class="form-grid">
+            <label>試験名<input type="text" id="si-name" placeholder="例: 2026年度 春季ゼミ入試"></label>
+            <label>試験日<input type="date" id="si-exam-date"></label>
+            <label>試験場所<input type="text" id="si-exam-location" placeholder="例: 本館3F 301教室"></label>
+            <label>目標合格人数<input type="number" id="si-target-pass" min="0" max="9999" placeholder="例: 12"></label>
+          </div>
+          <label class="full" style="display:block;margin-top:10px">備考
+            <textarea id="si-notes" rows="4" placeholder="運営メモ・連絡事項などを自由に記入" style="width:100%;resize:vertical"></textarea>
+          </label>
+          <div class="form-actions" style="justify-content:flex-end;gap:10px;margin-top:12px">
+            <button type="button" class="btn" id="si-reset">変更を破棄</button>
+            <button type="submit" class="btn primary" id="si-save">💾 保存</button>
+          </div>
+          <p class="muted" id="si-saved-status" style="font-size:11px;margin-top:8px;text-align:right" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
     <div class="adminview" id="adminview-academic"></div>
     <div class="adminview" id="adminview-survey"></div>
-    <div class="adminview active" id="adminview-resume"></div>
+    <div class="adminview" id="adminview-resume"></div>
     <div class="adminview" id="adminview-interview">
-      <div class="card">
-        <h3>📐 面接 評価項目（試験回ごと）</h3>
-        <p class="hint">面接で評価する観点を試験回ごとにカスタマイズできます。各項目は1〜5の5段階評価。<br>
-          「📌 デフォルトとして保存」で <strong>次に作る試験回も同じ項目で始まる</strong>ようになります。</p>
-        <div class="toolbar" style="align-items:center">
-          <button class="btn primary" id="add-iv-rating">＋ 評価項目を追加</button>
-          <button class="btn" id="reset-iv-ratings">デフォルトに戻す</button>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto">
-            <span class="muted" style="font-size:11px" id="iv-default-status"></span>
-            <button class="btn" id="save-iv-as-default" title="現在の項目を次回新規試験回のデフォルトとして保存">📌 これをデフォルトに保存</button>
-            <button class="btn" id="clear-iv-default" title="ユーザーデフォルトを削除してシステム標準に戻す">🗑 ユーザーデフォルト削除</button>
+      <div class="subtabs resume-subtabs">
+        <button class="subtab resume-subtab active" data-interviewview="ratings">📐 評価項目</button>
+        <button class="subtab resume-subtab" data-interviewview="schedule">🗓 スケジュール</button>
+        <button class="subtab resume-subtab" data-interviewview="timeline">⏱ タイムライン</button>
+      </div>
+
+      <div class="interviewview active" id="interviewview-ratings">
+        <div class="card">
+          <h3>📐 面接 評価項目（試験回ごと）</h3>
+          <p class="hint">面接で評価する観点を試験回ごとにカスタマイズできます。各項目は1〜5の5段階評価。<br>
+            「📌 デフォルトとして保存」で <strong>次に作る試験回も同じ項目で始まる</strong>ようになります。</p>
+          <div class="toolbar" style="align-items:center">
+            <button class="btn primary" id="add-iv-rating">＋ 評価項目を追加</button>
+            <button class="btn" id="reset-iv-ratings">デフォルトに戻す</button>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto">
+              <span class="muted" style="font-size:11px" id="iv-default-status"></span>
+              <button class="btn" id="save-iv-as-default" title="現在の項目を次回新規試験回のデフォルトとして保存">📌 これをデフォルトに保存</button>
+              <button class="btn" id="clear-iv-default" title="ユーザーデフォルトを削除してシステム標準に戻す">🗑 ユーザーデフォルト削除</button>
+            </div>
+          </div>
+          <div id="iv-ratings-list" class="q-list"></div>
+        </div>
+      </div>
+
+      <div class="interviewview" id="interviewview-schedule">
+        <div class="card">
+          <h3>🎤 面接スケジュール 設定</h3>
+          <p class="hint">面接の日時枠を設定して、未スケジュール受験者を一括で自動配置できます。</p>
+          <div class="form-grid">
+            <label>開始日<input type="date" id="iv-sch-startDate"></label>
+            <label>日数<input type="number" id="iv-sch-days" min="1" max="14" value="1"></label>
+            <label>1日の開始時刻<input type="time" id="iv-sch-dailyStart" value="09:00"></label>
+            <label>1日の終了時刻<input type="time" id="iv-sch-dailyEnd" value="17:00"></label>
+            <label>1人あたりの面接時間（分）<input type="number" id="iv-sch-slotMinutes" min="5" max="120" value="30"></label>
+            <label>休憩開始時刻<input type="time" id="iv-sch-breakStart" value="12:00"></label>
+            <label>休憩終了時刻<input type="time" id="iv-sch-breakEnd" value="13:00"></label>
+          </div>
+          <div class="form-actions" style="justify-content:flex-start;gap:10px;margin-top:10px">
+            <button class="btn primary" id="iv-sch-allocate">🎯 自動配置（未スケジュール）</button>
+            <button class="btn" id="iv-sch-reallocate">🔄 全員を再配置</button>
+            <button class="btn danger" id="iv-sch-clear">スケジュールをクリア</button>
           </div>
         </div>
-        <div id="iv-ratings-list" class="q-list"></div>
       </div>
 
-      <div class="card">
-        <h3>🎤 面接スケジュール 設定</h3>
-        <div class="form-grid">
-          <label>開始日<input type="date" id="iv-sch-startDate"></label>
-          <label>日数<input type="number" id="iv-sch-days" min="1" max="14" value="1"></label>
-          <label>1日の開始時刻<input type="time" id="iv-sch-dailyStart" value="09:00"></label>
-          <label>1日の終了時刻<input type="time" id="iv-sch-dailyEnd" value="17:00"></label>
-          <label>1人あたりの面接時間（分）<input type="number" id="iv-sch-slotMinutes" min="5" max="120" value="30"></label>
-          <label>休憩開始時刻<input type="time" id="iv-sch-breakStart" value="12:00"></label>
-          <label>休憩終了時刻<input type="time" id="iv-sch-breakEnd" value="13:00"></label>
-        </div>
-        <div class="form-actions" style="justify-content:flex-start;gap:10px;margin-top:10px">
-          <button class="btn primary" id="iv-sch-allocate">🎯 自動配置（未スケジュール）</button>
-          <button class="btn" id="iv-sch-reallocate">🔄 全員を再配置</button>
-          <button class="btn danger" id="iv-sch-clear">スケジュールをクリア</button>
+      <div class="interviewview" id="interviewview-timeline">
+        <div class="card">
+          <h3>⏱ 面接タイムライン</h3>
+          <div class="iv-timeline-legend">
+            <span class="iv-chip future">予定</span>
+            <span class="iv-chip now">進行中</span>
+            <span class="iv-chip delayed">遅延中</span>
+            <span class="iv-chip done">実施済</span>
+            <span class="iv-chip done-late">遅延で実施</span>
+            <span class="hint" style="margin-left:auto">💡 カードをドラッグして時間枠を入れ替え可能</span>
+          </div>
+          <div id="iv-timeline-area"></div>
         </div>
       </div>
-
-      <div class="iv-timeline-legend">
-        <span class="iv-chip future">予定</span>
-        <span class="iv-chip now">進行中</span>
-        <span class="iv-chip delayed">遅延中</span>
-        <span class="iv-chip done">実施済</span>
-        <span class="iv-chip done-late">遅延で実施</span>
-        <span class="hint" style="margin-left:auto">💡 カードをドラッグして時間枠を入れ替え可能</span>
-      </div>
-
-      <div id="iv-timeline-area"></div>
     </div>
     <div class="adminview" id="adminview-data"></div>
   </section>
@@ -624,6 +685,13 @@
 
   <!-- ===== Data ===== -->
   <section class="admin-content" id="view-data" data-admin="data">
+    <div class="subtabs resume-subtabs">
+      <button class="subtab resume-subtab active" data-dataview="import">📥 CSV取込</button>
+      <button class="subtab resume-subtab" data-dataview="manage">💾 データ管理</button>
+      <button class="subtab resume-subtab" data-dataview="cloud">☁ クラウド同期</button>
+    </div>
+
+    <div class="dataview active" id="dataview-import">
     <div class="card">
       <h3>📥 紙媒体回答のCSV取り込み</h3>
 
@@ -698,24 +766,36 @@
 
       <p class="hint" style="margin-top:10px">💡 <strong>同じ受験番号</strong>でアップロードすると既存データに上書きされます（追加情報を後から取り込む場合に便利）</p>
     </div>
+    </div><!-- /dataview-import -->
 
+    <div class="dataview" id="dataview-manage">
     <div class="card">
       <h3>💾 データ管理</h3>
+      <p class="hint">デモデータ投入や試験回の全データ削除など、データの一括操作を行います。</p>
       <div class="form-actions" style="justify-content:flex-start;gap:10px">
         <button class="btn primary" id="seed-demo">🚀 デモデータを投入</button>
         <button class="btn danger" id="clear-all">🗑 この試験回の全データ削除</button>
       </div>
     </div>
+    </div><!-- /dataview-manage -->
 
-    <div class="card" id="cloud-sync-card" style="display:none">
+    <div class="dataview" id="dataview-cloud">
+    <div class="card" id="cloud-sync-card-wrap">
       <h3>☁ クラウド同期 (Supabase)</h3>
-      <p class="muted" style="font-size:12px;margin-top:-4px">管理者ログイン中は自動的に書き込みが同期されます。手動で全件 push/pull したい場合のみ以下を利用してください。</p>
-      <div id="cloud-sync-status" class="hint" style="margin:8px 0"></div>
-      <div class="form-actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
-        <button class="btn" id="cloud-push-all" title="ローカルの全データを Supabase へ上書き push">⬆ ローカル → Cloud に全件push</button>
-        <button class="btn" id="cloud-pull-all" title="Supabase の全データでローカルを上書き pull">⬇ Cloud → ローカルに全件pull</button>
+      <div id="cloud-sync-disabled-hint" class="hint">
+        <p>クラウド同期は <strong>Supabase 接続後</strong> に利用可能です。<br>
+        詳細は <code>SUPABASE_SETUP.md</code> を参照してください。</p>
+      </div>
+      <div id="cloud-sync-card" style="display:none">
+        <p class="muted" style="font-size:12px;margin-top:0">管理者ログイン中は自動的に書き込みが同期されます。手動で全件 push/pull したい場合のみ以下を利用してください。</p>
+        <div id="cloud-sync-status" class="hint" style="margin:8px 0"></div>
+        <div class="form-actions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+          <button class="btn" id="cloud-push-all" title="ローカルの全データを Supabase へ上書き push">⬆ ローカル → Cloud に全件push</button>
+          <button class="btn" id="cloud-pull-all" title="Supabase の全データでローカルを上書き pull">⬇ Cloud → ローカルに全件pull</button>
+        </div>
       </div>
     </div>
+    </div><!-- /dataview-cloud -->
 
   </section>
 </main>
@@ -725,10 +805,6 @@
     <span><strong>ゼミ試験アプリケーション</strong> v3.0</span>
     <span class="footer-sep">·</span>
     <a href="https://github.com/akira-kataoka/zemi-exam-app" target="_blank" rel="noopener">📦 GitHub</a>
-    <span class="footer-sep">·</span>
-    <span class="footer-link" id="footer-help">❓ 使い方</span>
-    <span class="footer-sep">·</span>
-    <span class="muted footer-tip">データはブラウザに保存されます（localStorage）</span>
   </div>
 </footer>
 

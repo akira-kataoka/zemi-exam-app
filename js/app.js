@@ -52,6 +52,66 @@ const App = (() => {
     }, durationMs);
   }
 
+  // ===== Theme-aware chart palette =====
+  function isDarkTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+  function chartPalette() {
+    if (isDarkTheme()) {
+      return {
+        text: '#e2e8f0',         // ticks/labels
+        textMute: '#cbd5e1',
+        grid: 'rgba(226,232,240,.18)',
+        angle: 'rgba(226,232,240,.28)',
+        ticksBg: 'rgba(15,23,42,.85)'
+      };
+    }
+    return {
+      text: '#334155',
+      textMute: '#475569',
+      grid: 'rgba(15,23,42,.08)',
+      angle: 'rgba(15,23,42,.18)',
+      ticksBg: 'rgba(255,255,255,.85)'
+    };
+  }
+  function radarChartOptions(maxV, stepV) {
+    const p = chartPalette();
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: p.text, font: { size: 11 } } },
+        tooltip: {}
+      },
+      scales: {
+        r: {
+          min: 0,
+          max: maxV,
+          ticks: { stepSize: stepV, color: p.textMute, backdropColor: p.ticksBg, font: { size: 10 } },
+          grid: { color: p.grid },
+          angleLines: { color: p.angle },
+          pointLabels: { color: p.text, font: { size: 11 }, padding: 8 }
+        }
+      }
+    };
+  }
+  function barLineChartOptions(opts = {}) {
+    const p = chartPalette();
+    const base = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: opts.legend !== false, labels: { color: p.text } },
+        tooltip: {}
+      },
+      scales: {
+        x: { ticks: { color: p.textMute }, grid: { color: p.grid } },
+        y: { beginAtZero: true, ticks: { stepSize: 1, color: p.textMute }, grid: { color: p.grid } }
+      }
+    };
+    return base;
+  }
+
   // ===== Helpers =====
   function $(s, root = document) { return root.querySelector(s); }
   function $$(s, root = document) { return Array.from(root.querySelectorAll(s)); }
@@ -90,6 +150,23 @@ const App = (() => {
     const d = new Date(iso);
     const pad = n => String(n).padStart(2, '0');
     return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function truncateLabel(s, n) {
+    s = String(s ?? '');
+    // モバイル時はさらに短くする（ラベル突き抜け対策）
+    const isNarrow = (typeof window !== 'undefined') && window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    const eff = isNarrow ? Math.max(4, Math.floor(n * 0.7)) : n;
+    return s.length > eff ? s.slice(0, eff - 1) + '…' : s;
+  }
+  function formatDateOnly(ymd) {
+    if (!ymd) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      const [y, m, d] = ymd.split('-');
+      return `${y}/${Number(m)}/${Number(d)}`;
+    }
+    const d = new Date(ymd);
+    if (isNaN(d.getTime())) return ymd;
+    return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
   }
   function formatRelative(iso) {
     if (!iso) return '';
@@ -206,6 +283,17 @@ const App = (() => {
     if (nameInput && document.activeElement !== nameInput) nameInput.value = sess.name;
     const list = Storage.loadForSession();
     $('#session-meta').textContent = `${list.length}名 / 作成 ${formatDate(sess.createdAt)}`;
+    // basic info chips (試験日 / 試験場所 / 目標合格人数)
+    const chips = $('#session-info-chips');
+    if (chips) {
+      const parts = [];
+      if (sess.examDate)      parts.push(`<span class="sess-chip">📅 ${escapeHtml(formatDateOnly(sess.examDate))}</span>`);
+      if (sess.examLocation)  parts.push(`<span class="sess-chip">📍 ${escapeHtml(sess.examLocation)}</span>`);
+      if (sess.targetPassCount != null && sess.targetPassCount !== '')
+                              parts.push(`<span class="sess-chip">🎯 目標 ${escapeHtml(String(sess.targetPassCount))}名</span>`);
+      if (sess.notes)         parts.push(`<span class="sess-chip" title="${escapeHtml(sess.notes)}">📝 備考あり</span>`);
+      chips.innerHTML = parts.length ? parts.join('') : '<span class="sess-chip muted-chip">基本情報未設定（設定 → 試験回情報）</span>';
+    }
     ['application', 'resume', 'academic', 'survey'].forEach(p => {
       const el = document.querySelector(`[data-phase-state="${p}"]`);
       if (!el) return;
@@ -334,15 +422,27 @@ const App = (() => {
     $$('.adminsubtab').forEach(t => t.classList.toggle('active', t.dataset.adminview === name));
     $$('.adminview').forEach(v => v.classList.toggle('active', v.id === 'adminview-' + name));
     saveUiState({ adminview: name });
+    if (name === 'info')     renderSessionInfoMgr();
     if (name === 'academic') renderAcademicMgr();
     if (name === 'survey')   renderSurveyMgr();
     if (name === 'resume')   { renderResumeMgr(); showResumeview(_uiState.resumeview || 'apply'); }
-    if (name === 'interview') renderInterviewMgr();
+    if (name === 'interview') { renderInterviewMgr(); showInterviewview(_uiState.interviewview || 'ratings'); }
+    if (name === 'data')     showDataview(_uiState.dataview || 'import');
   }
   function showResumeview(name) {
-    $$('.resume-subtab').forEach(t => t.classList.toggle('active', t.dataset.resumeview === name));
+    $$('.resume-subtab[data-resumeview]').forEach(t => t.classList.toggle('active', t.dataset.resumeview === name));
     $$('.resumeview').forEach(v => v.classList.toggle('active', v.id === 'resumeview-' + name));
     saveUiState({ resumeview: name });
+  }
+  function showInterviewview(name) {
+    $$('.resume-subtab[data-interviewview]').forEach(t => t.classList.toggle('active', t.dataset.interviewview === name));
+    $$('.interviewview').forEach(v => v.classList.toggle('active', v.id === 'interviewview-' + name));
+    saveUiState({ interviewview: name });
+  }
+  function showDataview(name) {
+    $$('.resume-subtab[data-dataview]').forEach(t => t.classList.toggle('active', t.dataset.dataview === name));
+    $$('.dataview').forEach(v => v.classList.toggle('active', v.id === 'dataview-' + name));
+    saveUiState({ dataview: name });
   }
   function attachAdminContent() {
     document.querySelectorAll('.admin-content').forEach(el => {
@@ -350,10 +450,31 @@ const App = (() => {
       if (target && !target.contains(el)) target.appendChild(el);
     });
   }
+  function showAnalysisView(name) {
+    $$('.resume-subtab[data-analysisview]').forEach(t => t.classList.toggle('active', t.dataset.analysisview === name));
+    $$('.analysisview').forEach(v => v.classList.toggle('active', v.id === 'analysis-' + name));
+    saveUiState({ analysisview: name });
+    if (name === 'chart')   renderChartView();
+    if (name === 'rank')    renderRanking();
+    if (name === 'cluster') {
+      const list = Storage.loadForSession().filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c));
+      const kInput = $('#k-value');
+      if (kInput) {
+        kInput.max = Math.max(2, Math.min(8, list.length));
+        if (Number(kInput.value) > Number(kInput.max)) kInput.value = kInput.max;
+      }
+      if (list.length >= Math.max(2, Number(kInput?.value) || 4)) runCluster();
+    }
+  }
   function showSubview(name) {
     $$('.subtab').forEach(t => t.classList.toggle('active', t.dataset.subview === name));
     $$('.subview').forEach(v => v.classList.toggle('active', v.id === 'sub-' + name));
     saveUiState({ subview: name });
+    if (name === 'analysis') {
+      // 分析タブ: 復元 or デフォルト chart
+      const savedAv = _uiState.analysisview || 'chart';
+      showAnalysisView(savedAv);
+    }
     if (name === 'chart')   renderChartView();
     if (name === 'rank')    renderRanking();
     if (name === 'cluster') {
@@ -728,7 +849,7 @@ const App = (() => {
       charts.dist = new Chart(dctx, {
         type: 'bar',
         data: { labels, datasets: [{ label: '受験者数', data: bins, backgroundColor: 'rgba(79,70,229,.85)', borderRadius: 6, borderSkipped: false }] },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        options: barLineChartOptions({ legend: false })
       });
     }
     // subjects radar
@@ -744,7 +865,7 @@ const App = (() => {
       charts.subj = new Chart(sctx, {
         type: 'radar',
         data: { labels: cats, datasets: [{ label: '平均(%)', data: avgs, backgroundColor: 'rgba(5,150,105,.18)', borderColor: '#059669', pointBackgroundColor: '#059669', borderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
-        options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
+        options: radarChartOptions(100, 20)
       });
     }
   }
@@ -1275,11 +1396,15 @@ const App = (() => {
         pointRadius: 5,
         pointBackgroundColor: '#8b5cf6'
       });
-      if (ivCtx) new Chart(ivCtx, {
-        type: 'radar',
-        data: { labels: ratingsIv.map(r => r.label), datasets },
-        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
-      });
+      if (ivCtx) {
+        const ivOpts = radarChartOptions(5, 1);
+        ivOpts.plugins.legend = { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 }, color: chartPalette().text } };
+        new Chart(ivCtx, {
+          type: 'radar',
+          data: { labels: ratingsIv.map(r => truncateLabel(r.label, 10)), datasets },
+          options: ivOpts
+        });
+      }
     }
     document.getElementById('profile-pass').addEventListener('change', e => {
       const list = Storage.load();
@@ -1289,16 +1414,16 @@ const App = (() => {
 
     new Chart($('#profile-radar-academic'), {
       type: 'radar',
-      data: { labels: radar.labels, datasets: [{ label: fullName(c), data: radar.data, backgroundColor: 'rgba(79,70,229,.2)', borderColor: '#4f46e5', pointBackgroundColor: '#4f46e5', borderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
-      options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
+      data: { labels: radar.labels.map(l => truncateLabel(l, 10)), datasets: [{ label: fullName(c), data: radar.data, backgroundColor: 'rgba(79,70,229,.2)', borderColor: '#4f46e5', pointBackgroundColor: '#4f46e5', borderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
+      options: radarChartOptions(100, 20)
     });
     new Chart($('#profile-radar-survey'), {
       type: 'radar',
       data: {
-        labels: (sess.surveyTest?.questions || []).map(q => q.text.length > 12 ? q.text.slice(0, 12) + '…' : q.text),
+        labels: (sess.surveyTest?.questions || []).map(q => truncateLabel(q.text, 10)),
         datasets: [{ label: 'アンケート', data: Stats.surveyVector(c, sess), backgroundColor: 'rgba(245,158,11,.2)', borderColor: '#f59e0b', pointBackgroundColor: '#f59e0b' }]
       },
-      options: { responsive: true, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }
+      options: radarChartOptions(5, 1)
     });
   }
 
@@ -1977,6 +2102,47 @@ const App = (() => {
     $('#portal-survey').style.display = 'none';
     renderPortal();
     renderOverview();
+  }
+
+  // ===== Session info manager =====
+  function renderSessionInfoMgr() {
+    const sess = getSession();
+    if (!sess) return;
+    const setVal = (id, v) => { const el = $(id); if (el) el.value = (v ?? ''); };
+    setVal('#si-name', sess.name || '');
+    setVal('#si-exam-date', sess.examDate || '');
+    setVal('#si-exam-location', sess.examLocation || '');
+    setVal('#si-target-pass', sess.targetPassCount ?? '');
+    setVal('#si-notes', sess.notes || '');
+    const status = $('#si-saved-status');
+    if (status) status.textContent = '';
+  }
+  function saveSessionInfoForm(e) {
+    if (e) e.preventDefault();
+    const sess = getSession();
+    if (!sess) return;
+    const num = (v) => {
+      const s = String(v ?? '').trim();
+      if (s === '') return null;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    };
+    const payload = {
+      name: ($('#si-name').value || '').trim() || sess.name,
+      examDate: $('#si-exam-date').value || '',
+      examLocation: ($('#si-exam-location').value || '').trim(),
+      targetPassCount: num($('#si-target-pass').value),
+      notes: $('#si-notes').value || ''
+    };
+    Storage.updateSessionInfo(sess.id, payload);
+    renderSessionBar();
+    const status = $('#si-saved-status');
+    if (status) {
+      const t = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      status.textContent = `✅ 保存しました（${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}）`;
+      setTimeout(() => { if (status.textContent.startsWith('✅')) status.textContent = ''; }, 4000);
+    }
   }
 
   // ===== Question editors =====
@@ -3263,7 +3429,33 @@ const App = (() => {
     });
     $$('.subtab:not(.adminsubtab)').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
     $$('.adminsubtab').forEach(t => t.addEventListener('click', () => showAdminview(t.dataset.adminview)));
-    $$('.resume-subtab').forEach(t => t.addEventListener('click', () => showResumeview(t.dataset.resumeview)));
+    $$('.resume-subtab').forEach(t => t.addEventListener('click', () => {
+      if (t.dataset.resumeview)    showResumeview(t.dataset.resumeview);
+      else if (t.dataset.interviewview) showInterviewview(t.dataset.interviewview);
+      else if (t.dataset.dataview) showDataview(t.dataset.dataview);
+      else if (t.dataset.analysisview) showAnalysisView(t.dataset.analysisview);
+    }));
+    // Session info form
+    const siForm = document.getElementById('form-session-info');
+    if (siForm) siForm.addEventListener('submit', saveSessionInfoForm);
+    const siReset = document.getElementById('si-reset');
+    if (siReset) siReset.addEventListener('click', () => renderSessionInfoMgr());
+    // k-value stepper
+    const kInc = document.getElementById('k-inc');
+    const kDec = document.getElementById('k-dec');
+    const kInp = document.getElementById('k-value');
+    function clampK(v) {
+      const min = Number(kInp.min) || 2, max = Number(kInp.max) || 8;
+      return Math.max(min, Math.min(max, v));
+    }
+    if (kInc && kInp) kInc.addEventListener('click', () => {
+      kInp.value = clampK((Number(kInp.value) || 2) + 1);
+      kInp.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    if (kDec && kInp) kDec.addEventListener('click', () => {
+      kInp.value = clampK((Number(kInp.value) || 2) - 1);
+      kInp.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 
     // Overview controls
     let searchDebounce;
