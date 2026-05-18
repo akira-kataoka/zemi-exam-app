@@ -3378,7 +3378,11 @@ const App = (() => {
     downloadCsv(`アンケートテンプレート_${todayStr()}.csv`, [headers, sample]);
   }
 
-  function todayStr() { return new Date().toISOString().slice(0, 10); }
+  function todayStr() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
 
   // --- Import handlers ---
   function importResumeCsv(file) {
