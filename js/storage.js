@@ -238,7 +238,7 @@ const Storage = (() => {
   return {
     load, save, loadForSession, findByExamineeId, upsert, remove, clearAll, regenerateCandidatePassword, generatePassword,
     getDefaultInterviewRatings, setDefaultInterviewRatings,
-    loadSessions, addSession, renameSession, updateSessionInfo, setPhase, setPhaseSchedule, isPhaseOpen, isPhaseInGrace, phaseStatusText, removeSession, regeneratePin, generatePin,
+    loadSessions, saveSessions, addSession, renameSession, updateSessionInfo, setPhase, setPhaseSchedule, isPhaseOpen, isPhaseInGrace, phaseStatusText, removeSession, regeneratePin, generatePin,
     getCurrentSessionId, setCurrentSessionId, getCurrentSession,
     DEFAULT_SESSION_ID
   };
