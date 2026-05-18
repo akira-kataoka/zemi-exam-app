@@ -11,6 +11,8 @@ const Storage = (() => {
     let list;
     try { list = JSON.parse(localStorage.getItem(KEY_SESS)) || []; }
     catch (e) { list = []; }
+    // 配列以外が保存されている場合は破棄 (壊れた localStorage 対策)
+    if (!Array.isArray(list)) list = [];
     if (list.length === 0) {
       list = [{ id: DEFAULT_SESSION_ID, name: '通常入試', createdAt: new Date().toISOString(), phases: { ...defaultPhases } }];
       try { localStorage.setItem(KEY_SESS, JSON.stringify(list)); } catch (e) { console.error('[Storage] init sessions failed', e); }
@@ -164,8 +166,10 @@ const Storage = (() => {
 
   // ---- Candidates ----
   function load() {
-    try { return JSON.parse(localStorage.getItem(KEY_CAND)) || []; }
-    catch (e) { return []; }
+    try {
+      const v = JSON.parse(localStorage.getItem(KEY_CAND)) || [];
+      return Array.isArray(v) ? v : [];
+    } catch (e) { return []; }
   }
   function save(list) { _safeSet(KEY_CAND, JSON.stringify(list), '受験者データ'); }
   // localStorage クォータ枯渇時にユーザーへ通知（base64 写真等でMB超過しやすい）
