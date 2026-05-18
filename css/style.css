@@ -104,9 +104,10 @@ main{padding:24px;max-width:1280px;margin:0 auto}
 .interviewview.active{display:block}
 .dataview{display:none}
 .dataview.active{display:block}
-.resume-subtab{padding:6px 12px;font-size:12px;border:none;background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;font-weight:600}
-.resume-subtab:hover{background:var(--surface)}
-.resume-subtab.active{background:var(--surface);color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.resume-subtab{padding:8px 14px;font-size:12px;border:1px solid transparent;background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-weight:600;transition:all .15s var(--transition)}
+.resume-subtab:hover{background:var(--surface);color:var(--ink)}
+.resume-subtab.active{background:var(--surface);color:var(--primary-d);border-color:var(--primary);box-shadow:0 2px 6px rgba(79,70,229,.18);font-weight:700}
+:root[data-theme="dark"] .resume-subtab.active{background:#312e81;color:#e0e7ff;border-color:#6366f1;box-shadow:0 2px 8px rgba(99,102,241,.35)}
 .resumeview{display:none}
 .resumeview.active{display:block}
 .analysisview{display:none}
@@ -338,6 +339,24 @@ html{scroll-behavior:smooth;scroll-padding-top:160px}
 @media(max-width:760px){.profile-nav{top:0;font-size:11px}.profile-nav-link{padding:4px 8px;font-size:10px}}
 
 /* Profile */
+/* Profile multi-tab (console-style) */
+.profile-tabbar{display:none;flex-wrap:wrap;align-items:center;gap:2px;margin:6px 0 12px;padding:4px;background:var(--surface-3);border-radius:10px;border:1px solid var(--border)}
+.ptab{display:inline-flex;align-items:center;gap:6px;padding:6px 10px 6px 12px;background:var(--surface);border:1px solid transparent;border-radius:8px;font-size:12px;color:var(--ink);cursor:pointer;max-width:240px;min-width:0;transition:all .12s var(--transition);position:relative}
+.ptab:hover{background:var(--surface-2,#fff);box-shadow:var(--shadow-sm)}
+.ptab.active{background:var(--surface);border-color:var(--primary);color:var(--primary-d);font-weight:700;box-shadow:0 2px 6px rgba(79,70,229,.18)}
+.ptab.active::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--primary);border-radius:2px}
+.ptab-id{font-size:10px;color:var(--muted);font-weight:600;background:rgba(99,102,241,.12);padding:2px 5px;border-radius:4px;flex-shrink:0}
+.ptab.active .ptab-id{background:rgba(99,102,241,.22);color:var(--primary-d)}
+.ptab-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ptab-close{appearance:none;border:none;background:transparent;color:var(--muted);font-size:14px;line-height:1;padding:2px 4px;cursor:pointer;border-radius:3px;flex-shrink:0;font-weight:700}
+.ptab-close:hover{background:var(--danger);color:#fff}
+:root[data-theme="dark"] .ptab{background:#1e293b;color:#e2e8f0}
+:root[data-theme="dark"] .ptab.active{background:#312e81;border-color:#6366f1;color:#e0e7ff}
+:root[data-theme="dark"] .ptab-id{background:rgba(165,180,252,.18);color:#e0e7ff}
+@media (max-width:640px){
+  .ptab{max-width:160px;padding:5px 8px 5px 10px;font-size:11px}
+}
+
 .profile-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px;box-shadow:var(--shadow);transition:box-shadow .2s var(--transition)}
 .profile-card:hover{box-shadow:var(--shadow-lg)}
 /* レーダー/分布チャートのラベル突き抜け対策（canvas を相対サイズに） */

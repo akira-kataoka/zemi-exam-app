@@ -544,12 +544,12 @@ const App = (() => {
       if (statMaxCard) {
         statMaxCard.classList.add('clickable');
         statMaxCard.title = `${fullName(maxE.c)} の個人画面を開く`;
-        statMaxCard.onclick = () => { $('#profile-select').value = maxE.c.id; showView('profile'); renderProfile(maxE.c.id); };
+        statMaxCard.onclick = () => { showView('profile'); openProfileTab(maxE.c.id); };
       }
       if (statMinCard) {
         statMinCard.classList.add('clickable');
         statMinCard.title = `${fullName(minE.c)} の個人画面を開く`;
-        statMinCard.onclick = () => { $('#profile-select').value = minE.c.id; showView('profile'); renderProfile(minE.c.id); };
+        statMinCard.onclick = () => { showView('profile'); openProfileTab(minE.c.id); };
       }
     } else {
       $('#stat-max').textContent = '—';
@@ -646,9 +646,8 @@ const App = (() => {
     modal.querySelectorAll('.submission-row[data-id]').forEach(row => {
       row.addEventListener('click', () => {
         modal.remove();
-        $('#profile-select').value = row.dataset.id;
         showView('profile');
-        renderProfile(row.dataset.id);
+        openProfileTab(row.dataset.id);
       });
     });
   }
@@ -819,9 +818,8 @@ const App = (() => {
     tbody.querySelectorAll('tr[data-id]').forEach(tr => {
       tr.querySelector('[data-act="view"]')?.addEventListener('click', e => {
         e.stopPropagation();
-        $('#profile-select').value = tr.dataset.id;
         showView('profile');
-        renderProfile(tr.dataset.id);
+        openProfileTab(tr.dataset.id);
       });
       tr.querySelector('[data-act="del"]')?.addEventListener('click', e => {
         e.stopPropagation();
@@ -829,9 +827,8 @@ const App = (() => {
       });
       tr.addEventListener('click', e => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
-        $('#profile-select').value = tr.dataset.id;
         showView('profile');
-        renderProfile(tr.dataset.id);
+        openProfileTab(tr.dataset.id);
       });
     });
   }
@@ -900,9 +897,8 @@ const App = (() => {
     `).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">学力試験を受験した受験者がいません。</td></tr>`;
     tbody.querySelectorAll('tr[data-id]').forEach(tr => {
       tr.addEventListener('click', () => {
-        $('#profile-select').value = tr.dataset.id;
         showView('profile');
-        renderProfile(tr.dataset.id);
+        openProfileTab(tr.dataset.id);
       });
     });
   }
@@ -1133,10 +1129,8 @@ const App = (() => {
       el.addEventListener('click', e => {
         if (e.target.matches('input,a')) return;
         e.preventDefault();
-        const id = el.dataset.jumpId;
-        $('#profile-select').value = id;
         showView('profile');
-        renderProfile(id);
+        openProfileTab(el.dataset.jumpId);
       });
     });
   }
@@ -1248,6 +1242,98 @@ const App = (() => {
         renderProfile(id);
         closeProfilePicker();
       });
+    });
+  }
+
+  // ===== Profile tab system (console-style multi-open) =====
+  const MAX_PROFILE_TABS = 10;
+  function getProfileTabs() {
+    const arr = Array.isArray(_uiState.profileTabs) ? _uiState.profileTabs.slice() : [];
+    // ensure they still exist in current session
+    const list = Storage.loadForSession();
+    return arr.filter(tid => list.some(c => c.id === tid));
+  }
+  function setProfileTabs(arr) {
+    _uiState.profileTabs = arr.slice(0, MAX_PROFILE_TABS);
+    saveUiState({ profileTabs: _uiState.profileTabs });
+  }
+  function openProfileTab(id) {
+    if (!id) return;
+    const list = Storage.loadForSession();
+    if (!list.some(c => c.id === id)) return;
+    let tabs = getProfileTabs();
+    if (!tabs.includes(id)) {
+      tabs.push(id);
+      if (tabs.length > MAX_PROFILE_TABS) tabs = tabs.slice(-MAX_PROFILE_TABS);
+      setProfileTabs(tabs);
+    }
+    document.getElementById('profile-select').value = id;
+    saveUiState({ profileId: id });
+    updateProfileTriggerLabel(id);
+    renderProfileTabbar();
+    renderProfile(id);
+  }
+  function closeProfileTab(id) {
+    let tabs = getProfileTabs();
+    const idx = tabs.indexOf(id);
+    if (idx < 0) return;
+    tabs.splice(idx, 1);
+    setProfileTabs(tabs);
+    const active = _uiState.profileId;
+    if (active === id) {
+      const next = tabs[idx] || tabs[idx - 1] || tabs[0] || null;
+      if (next) {
+        document.getElementById('profile-select').value = next;
+        saveUiState({ profileId: next });
+        updateProfileTriggerLabel(next);
+        renderProfile(next);
+      } else {
+        document.getElementById('profile-select').value = '';
+        saveUiState({ profileId: '' });
+        updateProfileTriggerLabel('');
+        $('#profile-body').innerHTML = '<div class="empty-cta" style="padding:40px;text-align:center;color:var(--muted)"><div style="font-size:48px">👤</div><p>受験者を選択するとプロフィールが開きます</p></div>';
+      }
+    }
+    renderProfileTabbar();
+  }
+  function closeAllProfileTabs() {
+    setProfileTabs([]);
+    document.getElementById('profile-select').value = '';
+    saveUiState({ profileId: '' });
+    updateProfileTriggerLabel('');
+    $('#profile-body').innerHTML = '<div class="empty-cta" style="padding:40px;text-align:center;color:var(--muted)"><div style="font-size:48px">👤</div><p>受験者を選択するとプロフィールが開きます</p></div>';
+    renderProfileTabbar();
+  }
+  function renderProfileTabbar() {
+    const bar = document.getElementById('profile-tabbar');
+    if (!bar) return;
+    const tabs = getProfileTabs();
+    const list = Storage.loadForSession();
+    const active = _uiState.profileId;
+    if (tabs.length === 0) { bar.innerHTML = ''; bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    bar.innerHTML = tabs.map(tid => {
+      const c = list.find(x => x.id === tid);
+      if (!c) return '';
+      const name = fullName(c) || '(無名)';
+      const eid = c.examineeId ? `<span class="ptab-id">${escapeHtml(c.examineeId)}</span>` : '';
+      const isActive = tid === active;
+      return `<div class="ptab ${isActive ? 'active' : ''}" data-id="${tid}" role="tab" tabindex="0" aria-selected="${isActive}">
+        ${eid}<span class="ptab-name">${escapeHtml(name)}</span>
+        <button type="button" class="ptab-close" data-close="${tid}" aria-label="${escapeHtml(name)} のタブを閉じる" title="タブを閉じる">×</button>
+      </div>`;
+    }).join('');
+    bar.querySelectorAll('.ptab').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.ptab-close')) return;
+        openProfileTab(el.dataset.id);
+      });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProfileTab(el.dataset.id); }
+      });
+    });
+    bar.querySelectorAll('.ptab-close').forEach(b => {
+      b.addEventListener('click', (e) => { e.stopPropagation(); closeProfileTab(b.dataset.close); });
     });
   }
 
@@ -2102,6 +2188,48 @@ const App = (() => {
     $('#portal-survey').style.display = 'none';
     renderPortal();
     renderOverview();
+  }
+
+  // ===== Session info modal (session-bar から開く) =====
+  function openSessionInfoModal() {
+    const sess = getSession();
+    if (!sess) return;
+    const m = document.getElementById('session-info-modal');
+    if (!m) return;
+    $('#sim-name').value = sess.name || '';
+    $('#sim-exam-date').value = sess.examDate || '';
+    $('#sim-exam-location').value = sess.examLocation || '';
+    $('#sim-target-pass').value = sess.targetPassCount ?? '';
+    $('#sim-notes').value = sess.notes || '';
+    m.style.display = 'flex';
+    setTimeout(() => $('#sim-name')?.focus(), 0);
+  }
+  function closeSessionInfoModal() {
+    const m = document.getElementById('session-info-modal');
+    if (m) m.style.display = 'none';
+  }
+  function saveSessionInfoModal(e) {
+    if (e) e.preventDefault();
+    const sess = getSession();
+    if (!sess) return;
+    const num = (v) => {
+      const s = String(v ?? '').trim();
+      if (s === '') return null;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    };
+    Storage.updateSessionInfo(sess.id, {
+      name: ($('#sim-name').value || '').trim() || sess.name,
+      examDate: $('#sim-exam-date').value || '',
+      examLocation: ($('#sim-exam-location').value || '').trim(),
+      targetPassCount: num($('#sim-target-pass').value),
+      notes: $('#sim-notes').value || ''
+    });
+    renderSessionBar();
+    // admin の試験回情報フォームも追随
+    try { if (document.getElementById('si-name')) renderSessionInfoMgr(); } catch (_) {}
+    closeSessionInfoModal();
+    toast('試験回の基本情報を保存しました', 'success', 2000);
   }
 
   // ===== Session info manager =====
@@ -3351,12 +3479,22 @@ const App = (() => {
     }
     showView(savedView);
     if (savedView === 'overview') showSubview(savedSubview);
-    if (savedView === 'profile' && _uiState.profileId) {
-      const sel = $('#profile-select');
-      if (sel.querySelector(`option[value="${_uiState.profileId}"]`)) {
-        sel.value = _uiState.profileId;
-        renderProfile(_uiState.profileId);
+    // 復元: profileTabs があれば全タブを再構築し、active を開く
+    if (Array.isArray(_uiState.profileTabs) && _uiState.profileTabs.length) {
+      const list = Storage.loadForSession();
+      const valid = _uiState.profileTabs.filter(tid => list.some(c => c.id === tid));
+      _uiState.profileTabs = valid;
+      saveUiState({ profileTabs: valid });
+      const active = (valid.includes(_uiState.profileId) ? _uiState.profileId : valid[valid.length - 1]) || null;
+      if (active) {
+        document.getElementById('profile-select').value = active;
+        saveUiState({ profileId: active });
+        updateProfileTriggerLabel(active);
+        renderProfileTabbar();
+        if (savedView === 'profile') renderProfile(active);
       }
+    } else if (savedView === 'profile' && _uiState.profileId) {
+      openProfileTab(_uiState.profileId);
     }
 
     // Session bar
@@ -3440,6 +3578,17 @@ const App = (() => {
     if (siForm) siForm.addEventListener('submit', saveSessionInfoForm);
     const siReset = document.getElementById('si-reset');
     if (siReset) siReset.addEventListener('click', () => renderSessionInfoMgr());
+    // Session info modal (session-bar)
+    const sibBtn = document.getElementById('session-info-btn');
+    if (sibBtn) sibBtn.addEventListener('click', openSessionInfoModal);
+    const simClose = document.getElementById('sim-close');
+    if (simClose) simClose.addEventListener('click', closeSessionInfoModal);
+    const simCancel = document.getElementById('sim-cancel');
+    if (simCancel) simCancel.addEventListener('click', closeSessionInfoModal);
+    const simForm = document.getElementById('form-session-info-modal');
+    if (simForm) simForm.addEventListener('submit', saveSessionInfoModal);
+    const simOverlay = document.getElementById('session-info-modal');
+    if (simOverlay) simOverlay.addEventListener('click', (e) => { if (e.target === simOverlay) closeSessionInfoModal(); });
     // k-value stepper
     const kInc = document.getElementById('k-inc');
     const kDec = document.getElementById('k-dec');
@@ -3517,6 +3666,11 @@ const App = (() => {
       }
     });
     $('#print-profile').addEventListener('click', () => window.print());
+    const closeAllBtn = document.getElementById('close-all-tabs');
+    if (closeAllBtn) closeAllBtn.addEventListener('click', () => {
+      if (getProfileTabs().length === 0) return;
+      if (confirm('開いている全ての受験者タブを閉じます。よろしいですか？')) closeAllProfileTabs();
+    });
 
     // Portal
     $('#portal-load').addEventListener('click', renderPortal);

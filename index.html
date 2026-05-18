@@ -34,6 +34,7 @@
   <div class="session-bar">
     <label class="session-label">🗓 試験回:</label>
     <input type="text" id="session-name-input" class="session-name-input" title="クリックして名称を編集" placeholder="試験回の名前">
+    <button class="btn icon-btn" id="session-info-btn" title="試験日・場所・目標などの基本情報を編集">ℹ 基本情報</button>
     <div class="session-picker-wrap">
       <button class="btn icon-btn" id="session-picker-btn" title="試験回を検索・切り替え">🔍 切替</button>
       <div class="session-popover" id="session-popover" style="display:none">
@@ -224,7 +225,7 @@
     <div class="toolbar">
       <div class="profile-picker-wrap">
         <button class="btn profile-picker-trigger" id="profile-trigger" type="button">
-          <span id="profile-trigger-label">-- 受験者を選択 --</span>
+          <span id="profile-trigger-label">＋ 受験者を開く</span>
           <span class="caret">▼</span>
         </button>
         <div class="profile-picker-popover" id="profile-picker-popover" style="display:none">
@@ -234,7 +235,10 @@
       </div>
       <input type="hidden" id="profile-select">
       <button class="btn" id="print-profile">🖨 印刷</button>
+      <button class="btn" id="close-all-tabs" title="開いている全タブを閉じる">🗑 全タブを閉じる</button>
     </div>
+    <!-- コンソールタブ風: 複数受験者を同時に開く -->
+    <div class="profile-tabbar" id="profile-tabbar" role="tablist" aria-label="開いている受験者タブ"></div>
     <div id="profile-body"></div>
   </section>
 
@@ -807,6 +811,34 @@
     <a href="https://github.com/akira-kataoka/zemi-exam-app" target="_blank" rel="noopener">📦 GitHub</a>
   </div>
 </footer>
+
+<!-- ===== Session Info Modal (試験回基本情報 編集) ===== -->
+<div id="session-info-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="sim-title">
+  <div class="modal-window" style="max-width:560px">
+    <div class="modal-head">
+      <h3 style="margin:0" id="sim-title">📋 試験回の基本情報</h3>
+      <button class="btn modal-close" id="sim-close" title="閉じる" aria-label="基本情報ダイアログを閉じる">✕</button>
+    </div>
+    <div class="modal-body" style="display:block">
+      <p class="muted" style="margin-top:0;font-size:12px">この試験回の名前・日時・場所・目標を設定します。設定→📋試験回情報 と同じ内容を編集できます。</p>
+      <form id="form-session-info-modal" autocomplete="off">
+        <div class="form-grid">
+          <label>試験名<input type="text" id="sim-name" placeholder="例: 2026年度 春季ゼミ入試"></label>
+          <label>試験日<input type="date" id="sim-exam-date"></label>
+          <label>試験場所<input type="text" id="sim-exam-location" placeholder="例: 本館3F 301教室"></label>
+          <label>目標合格人数<input type="number" id="sim-target-pass" min="0" max="9999" placeholder="例: 12"></label>
+        </div>
+        <label class="full" style="display:block;margin-top:10px">備考
+          <textarea id="sim-notes" rows="3" placeholder="運営メモ・連絡事項などを自由に記入" style="width:100%;resize:vertical"></textarea>
+        </label>
+        <div class="form-actions" style="justify-content:flex-end;gap:8px;margin-top:12px">
+          <button type="button" class="btn" id="sim-cancel">キャンセル</button>
+          <button type="submit" class="btn primary">💾 保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <!-- ===== Login Modal (Supabase 認証時のみ表示) ===== -->
 <div id="login-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="login-title">
