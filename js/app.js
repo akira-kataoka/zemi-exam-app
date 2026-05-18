@@ -397,11 +397,28 @@ const App = (() => {
     refreshAllViews();
   }
   function refreshAllViews() {
+    // 試験回切替時: 他セッションの受験者を開いていたタブをクリーンアップ
+    const listIds = new Set(Storage.loadForSession().map(c => c.id));
+    if (Array.isArray(_uiState.profileTabs)) {
+      const valid = _uiState.profileTabs.filter(id => listIds.has(id));
+      if (valid.length !== _uiState.profileTabs.length) {
+        _uiState.profileTabs = valid;
+        saveUiState({ profileTabs: valid });
+      }
+      if (_uiState.profileId && !listIds.has(_uiState.profileId)) {
+        saveUiState({ profileId: valid[valid.length - 1] || '' });
+      }
+    }
     renderOverview();
     refreshProfileSelect();
     renderAcademicMgr();
     renderSurveyMgr();
     renderResumeMgr();
+    renderProfileTabbar();
+    // active profile が無くなった場合は body をクリア
+    if (!_uiState.profileId && document.getElementById('view-profile').classList.contains('active')) {
+      $('#profile-body').innerHTML = '<div class="empty-cta" style="padding:40px;text-align:center;color:var(--muted)"><div style="font-size:48px">👤</div><p>受験者を選択するとプロフィールが開きます</p></div>';
+    }
   }
 
   // ===== Tabs =====
@@ -969,15 +986,20 @@ const App = (() => {
                         .filter((_, i) => assignments[i] === c);
       datasets.push({ label: `${clusterSystemNames[c]} (${pts.length}名)`, data: pts, backgroundColor: palette[c % palette.length], pointRadius: 6, pointHoverRadius: 9 });
     }
+    const palP = chartPalette();
     charts.cluster = new Chart($('#chart-cluster'), {
       type: 'scatter',
       data: { datasets },
       options: {
         responsive: true,
-        plugins: { tooltip: { callbacks: { label: ctx => { const c = list[ctx.raw._idx]; return `${fullName(c)} (${c.examineeId})`; } } } },
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: palP.text } },
+          tooltip: { callbacks: { label: ctx => { const c = list[ctx.raw._idx]; return `${fullName(c)} (${c.examineeId})`; } } }
+        },
         scales: {
-          x: { title: { display: true, text: '← 違いの軸1 →' }, ticks: { display: false } },
-          y: { title: { display: true, text: '↑ 違いの軸2 ↓' }, ticks: { display: false } }
+          x: { title: { display: true, text: '← 違いの軸1 →', color: palP.text }, ticks: { display: false }, grid: { color: palP.grid } },
+          y: { title: { display: true, text: '↑ 違いの軸2 ↓', color: palP.text }, ticks: { display: false }, grid: { color: palP.grid } }
         }
       }
     });
@@ -992,8 +1014,8 @@ const App = (() => {
     }));
     charts.clusterRadar = new Chart($('#chart-cluster-radar'), {
       type: 'radar',
-      data: { labels: cats, datasets: radarDS },
-      options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } } }
+      data: { labels: cats.map(c => truncateLabel(c, 10)), datasets: radarDS },
+      options: radarChartOptions(100, 20)
     });
 
     // ===== Cluster characterization: 系統名・属性差分・スコア範囲 =====
