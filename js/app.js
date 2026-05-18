@@ -443,6 +443,17 @@ const App = (() => {
     if (!_uiState.profileId && document.getElementById('view-profile').classList.contains('active')) {
       $('#profile-body').innerHTML = '<div class="empty-cta" style="padding:40px;text-align:center;color:var(--muted)"><div style="font-size:48px">👤</div><p>受験者を選択するとプロフィールが開きます</p></div>';
     }
+    // クラスター結果は試験回切替時に明示的にリセット (古い結果が残らないように)
+    const clResult = document.getElementById('cluster-result');
+    const clEmpty = document.getElementById('cluster-empty');
+    if (clResult) clResult.style.display = 'none';
+    if (clEmpty) clEmpty.style.display = 'block';
+    // 既存 Chart インスタンスがあれば破棄してメモリ解放
+    if (typeof charts !== 'undefined') {
+      ['cluster', 'clusterRadar'].forEach(k => {
+        if (charts[k]) { try { charts[k].destroy(); } catch (_) {} charts[k] = null; }
+      });
+    }
   }
 
   // ===== Tabs =====
