@@ -296,16 +296,27 @@ const App = (() => {
     if (nameInput && document.activeElement !== nameInput) nameInput.value = sess.name;
     const list = Storage.loadForSession();
     $('#session-meta').textContent = `${list.length}名 / 作成 ${formatDate(sess.createdAt)}`;
-    // basic info chips (試験日 / 試験場所 / 目標合格人数)
+    // basic info chips (試験日 / 試験場所 / 目標合格人数 / 備考)
     const chips = $('#session-info-chips');
     if (chips) {
       const parts = [];
-      if (sess.examDate)      parts.push(`<span class="sess-chip">📅 ${escapeHtml(formatDateOnly(sess.examDate))}</span>`);
-      if (sess.examLocation)  parts.push(`<span class="sess-chip">📍 ${escapeHtml(sess.examLocation)}</span>`);
+      if (sess.examDate)      parts.push(`<span class="sess-chip" title="試験日">📅 ${escapeHtml(formatDateOnly(sess.examDate))}</span>`);
+      if (sess.examLocation)  parts.push(`<span class="sess-chip" title="試験場所: ${escapeHtml(sess.examLocation)}">📍 ${escapeHtml(sess.examLocation)}</span>`);
       if (sess.targetPassCount != null && sess.targetPassCount !== '')
-                              parts.push(`<span class="sess-chip">🎯 目標 ${escapeHtml(String(sess.targetPassCount))}名</span>`);
-      if (sess.notes)         parts.push(`<span class="sess-chip" title="${escapeHtml(sess.notes)}">📝 備考あり</span>`);
-      chips.innerHTML = parts.length ? parts.join('') : '<span class="sess-chip muted-chip">基本情報未設定（設定 → 試験回情報）</span>';
+                              parts.push(`<span class="sess-chip" title="目標合格人数">🎯 目標 ${escapeHtml(String(sess.targetPassCount))}名</span>`);
+      if (sess.notes)         parts.push(`<span class="sess-chip" title="${escapeHtml(sess.notes)}" role="button" tabindex="0" data-show-notes>📝 備考</span>`);
+      chips.innerHTML = parts.length
+        ? parts.join('') + '<button type="button" class="sess-chip muted-chip" id="open-session-info" title="基本情報を編集" style="cursor:pointer;border:1px dashed var(--primary);color:var(--primary-d)">✏ 編集</button>'
+        : '<button type="button" class="sess-chip muted-chip" id="open-session-info" style="cursor:pointer;color:var(--primary-d);border:1px dashed var(--primary)">＋ 基本情報を入力</button>';
+      // chip click → open modal
+      const opener = chips.querySelector('#open-session-info');
+      if (opener) opener.addEventListener('click', openSessionInfoModal);
+      const notesChip = chips.querySelector('[data-show-notes]');
+      if (notesChip) {
+        notesChip.style.cursor = 'pointer';
+        notesChip.addEventListener('click', () => alert(`📝 備考\n\n${sess.notes}`));
+        notesChip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alert(`📝 備考\n\n${sess.notes}`); } });
+      }
     }
     ['application', 'resume', 'academic', 'survey'].forEach(p => {
       const el = document.querySelector(`[data-phase-state="${p}"]`);
