@@ -880,6 +880,21 @@ const App = (() => {
     const sess = getSession();
     const list = Storage.loadForSession();
     const totals = list.filter(c => Stats.hasAcademic(c) || Stats.hasSurvey(c)).map(c => Stats.totalScore(c, sess));
+    // データ無し時はチャート枠に「データなし」プレースホルダーを表示
+    const distEmptyHint = totals.length === 0;
+    const distCard = $('#chart-distribution')?.closest('.card');
+    if (distCard) {
+      const existHint = distCard.querySelector('.chart-empty-hint');
+      if (distEmptyHint && !existHint) {
+        const p = document.createElement('p');
+        p.className = 'chart-empty-hint muted';
+        p.style.cssText = 'text-align:center;font-size:12px;margin:8px 0';
+        p.textContent = '学力試験またはアンケートのデータがまだありません';
+        distCard.appendChild(p);
+      } else if (!distEmptyHint && existHint) {
+        existHint.remove();
+      }
+    }
     // distribution
     const dctx = $('#chart-distribution'); if (dctx) {
       const bins = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
