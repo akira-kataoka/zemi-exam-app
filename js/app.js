@@ -3182,10 +3182,20 @@ const App = (() => {
         <p class="hint" style="margin-top:14px">💡 申込後に届く <strong>受験者ごとの個別URL（履歴書・学力・アンケート）</strong>は下記「📨 配布メッセージ」から生成・送信してください。</p>
       `;
       container.insertBefore(section, container.firstChild);
-      const qr = qrcode(0, 'M');
-      qr.addData(url);
-      qr.make();
-      document.getElementById('qr-application').innerHTML = qr.createImgTag(4, 8);
+      // qrcode-generator が CDN から読み込めなかった場合に備える
+      try {
+        if (typeof qrcode === 'function') {
+          const qr = qrcode(0, 'M');
+          qr.addData(url);
+          qr.make();
+          document.getElementById('qr-application').innerHTML = qr.createImgTag(4, 8);
+        } else {
+          document.getElementById('qr-application').innerHTML = '<p class="muted" style="font-size:11px">QR ライブラリの読み込みに失敗しました（オフラインの可能性）</p>';
+        }
+      } catch (e) {
+        console.error('QR generation failed', e);
+        document.getElementById('qr-application').innerHTML = '<p class="muted" style="font-size:11px">QR生成に失敗しました</p>';
+      }
       section.querySelector('[data-copy-app]').addEventListener('click', () => {
         copyToClipboard(url).then(ok => { if (ok) toast('URLをコピーしました', 'success'); });
       });
