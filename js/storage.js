@@ -173,7 +173,7 @@ const Storage = (() => {
     try { localStorage.setItem(key, value); }
     catch (e) {
       if (e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(String(e.message)))) {
-        const msg = `⚠ ブラウザの保存容量が上限に達しました。${label || ''}の保存に失敗しました。\n顔写真を減らす・古い試験回を削除する・データをJSONエクスポートしてバックアップ後にクリアしてください。`;
+        const msg = `⚠ ブラウザの保存容量が上限に達しました。${label || ''}の保存に失敗しました。\n対処方法:\n・顔写真を減らす\n・古い試験回を削除する\n・Supabase 同期を有効化してクラウドへ移行する`;
         try { console.error('[Storage] QuotaExceeded', e); } catch (_) {}
         try { alert(msg); } catch (_) {}
         throw e;
