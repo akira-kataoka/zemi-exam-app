@@ -479,6 +479,8 @@ const App = (() => {
       if (kInput) {
         kInput.max = Math.max(2, Math.min(8, list.length));
         if (Number(kInput.value) > Number(kInput.max)) kInput.value = kInput.max;
+        // 動的に max が変わるので、ステッパー disabled 状態を更新
+        kInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
       if (list.length >= Math.max(2, Number(kInput?.value) || 4)) runCluster();
     }
@@ -1206,10 +1208,8 @@ const App = (() => {
   function updateProfileTriggerLabel(id) {
     const lbl = document.getElementById('profile-trigger-label');
     if (!lbl) return;
-    if (!id) { lbl.textContent = '-- 受験者を選択 --'; return; }
-    const c = Storage.loadForSession().find(x => x.id === id);
-    if (!c) { lbl.textContent = '-- 受験者を選択 --'; return; }
-    lbl.innerHTML = `${c.photo ? `<img class="avatar-sm" src="${c.photo}" style="width:24px;height:24px;margin-right:6px;vertical-align:middle">` : ''}${escapeHtml(c.examineeId || '')} ${escapeHtml(fullName(c))}`;
+    // タブ式UIではトリガーは「タブを追加」用なので、選択中受験者を表示する必要がない
+    lbl.textContent = id ? '＋ 別の受験者を追加' : '＋ 受験者を開く';
   }
 
   function toggleProfilePicker() {
