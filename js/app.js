@@ -2239,7 +2239,18 @@ const App = (() => {
     }
     data.examineeId = nextExamineeId(sess.id);
     data.applicationSubmittedAt = new Date().toISOString();
-    const saved = Storage.upsert(data);
+    let saved;
+    try {
+      saved = Storage.upsert(data);
+    } catch (err) {
+      if (String(err).includes('QuotaExceeded')) {
+        alert('保存容量を超えました。\n大量の申込で容量上限に達した可能性があります。事務局までご連絡ください。');
+        return;
+      }
+      console.error('submitApplication error:', err);
+      alert('申込の保存に失敗しました: ' + (err?.message || err));
+      return;
+    }
     form.reset();
     // 完了画面 (テーマ追従)
     document.getElementById('portal-application').innerHTML = `
@@ -2340,7 +2351,17 @@ const App = (() => {
       if (sel) answers[q.id] = Number(sel.value);
     });
     const result = Stats.scoreAcademic({ academicAnswers: answers }, sess.academicTest);
-    Storage.upsert({ examineeId, academicAnswers: answers, academicScore: result, academicSubmittedAt: new Date().toISOString() });
+    try {
+      Storage.upsert({ examineeId, academicAnswers: answers, academicScore: result, academicSubmittedAt: new Date().toISOString() });
+    } catch (err) {
+      if (String(err).includes('QuotaExceeded')) {
+        alert('保存容量を超えました。事務局までご連絡ください。');
+        return;
+      }
+      console.error('submitAcademic error:', err);
+      alert('提出に失敗しました: ' + (err?.message || err));
+      return;
+    }
     toast(`学力試験を提出しました（自動採点 ${result.total} / ${result.max}点・${result.percent.toFixed(1)}%）`, 'success', 5000);
     $('#portal-academic').style.display = 'none';
     renderPortal();
@@ -2358,12 +2379,22 @@ const App = (() => {
       const sel = form.querySelector(`input[name="sv_${q.id}"]:checked`);
       if (sel) answers[q.id] = Number(sel.value);
     });
-    Storage.upsert({
-      examineeId, surveyAnswers: answers,
-      freeAchievement: form.elements.freeAchievement.value,
-      freeAspiration: form.elements.freeAspiration.value,
-      surveySubmittedAt: new Date().toISOString()
-    });
+    try {
+      Storage.upsert({
+        examineeId, surveyAnswers: answers,
+        freeAchievement: form.elements.freeAchievement.value,
+        freeAspiration: form.elements.freeAspiration.value,
+        surveySubmittedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      if (String(err).includes('QuotaExceeded')) {
+        alert('保存容量を超えました。事務局までご連絡ください。');
+        return;
+      }
+      console.error('submitSurvey error:', err);
+      alert('提出に失敗しました: ' + (err?.message || err));
+      return;
+    }
     toast('アンケートを提出しました', 'success');
     $('#portal-survey').style.display = 'none';
     renderPortal();
