@@ -893,6 +893,10 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 /* ダーク時のアバター白枠を surface 色に置換 (ハロー対策) */
 :root[data-theme="dark"] .avatar-sm,
 :root[data-theme="dark"] .avatar-lg{border-color:var(--surface)}
+:root[data-theme="dark"] .iv-status-pill.unscheduled{color:#94a3b8}
+/* portal-card 各種ステータスを dark で明示 */
+:root[data-theme="dark"] .portal-card.open{background:rgba(16,185,129,.12);border-color:rgba(52,211,153,.5)}
+:root[data-theme="dark"] .portal-card.done{background:rgba(99,102,241,.10);border-color:rgba(165,180,252,.4)}
 :root[data-theme="dark"] .help-tab.active{background:var(--surface);border-bottom-color:var(--surface)}
 :root[data-theme="dark"] .resume-subtab:hover{background:var(--surface)}
 :root[data-theme="dark"] .resume-subtab.active{background:var(--surface)}
