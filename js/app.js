@@ -2143,10 +2143,10 @@ const App = (() => {
     data.applicationSubmittedAt = new Date().toISOString();
     const saved = Storage.upsert(data);
     form.reset();
-    // 完了画面
+    // 完了画面 (テーマ追従)
     document.getElementById('portal-application').innerHTML = `
-      <div class="card" style="background:#dcfce7;border-color:#86efac;text-align:center;padding:30px">
-        <h2 style="color:#166534">✅ 受験申込を受け付けました</h2>
+      <div class="card success-card" style="text-align:center;padding:30px">
+        <h2 class="success-title">✅ 受験申込を受け付けました</h2>
         <p>${escapeHtml(saved.lastName)} ${escapeHtml(saved.firstName)} 様</p>
         <p>あなたの受験番号は <strong style="font-size:24px;color:var(--primary);font-family:monospace">${escapeHtml(saved.examineeId)}</strong> です。</p>
         <p class="muted" style="font-size:13px">後日、メールアドレス <strong>${escapeHtml(saved.email)}</strong> 宛に専用URL・パスワードをお送りし、履歴書／学力試験／アンケートの提出をご案内します。</p>
