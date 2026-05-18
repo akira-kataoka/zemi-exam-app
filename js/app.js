@@ -3081,13 +3081,22 @@ const App = (() => {
   function applyChartDefaults() {
     if (typeof Chart === 'undefined') return;
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    Chart.defaults.color = isDark ? '#e2e8f0' : '#334155';
-    Chart.defaults.borderColor = isDark ? 'rgba(148,163,184,.18)' : 'rgba(15,23,42,.08)';
-    Chart.defaults.plugins.legend.labels.color = isDark ? '#e2e8f0' : '#334155';
-    Chart.defaults.scale.grid = Chart.defaults.scale.grid || {};
-    Chart.defaults.scale.grid.color = isDark ? 'rgba(148,163,184,.18)' : 'rgba(15,23,42,.08)';
-    Chart.defaults.scale.ticks = Chart.defaults.scale.ticks || {};
-    Chart.defaults.scale.ticks.color = isDark ? '#94a3b8' : '#64748b';
+    const txt = isDark ? '#e2e8f0' : '#334155';
+    const grid = isDark ? 'rgba(148,163,184,.22)' : 'rgba(15,23,42,.08)';
+    const tick = isDark ? '#cbd5e1' : '#475569';
+    Chart.defaults.color = txt;
+    Chart.defaults.borderColor = grid;
+    Chart.defaults.plugins.legend.labels.color = txt;
+    // Linear/Category scale (棒・線)
+    Chart.defaults.scale.grid = Object.assign({}, Chart.defaults.scale.grid, { color: grid });
+    Chart.defaults.scale.ticks = Object.assign({}, Chart.defaults.scale.ticks, { color: tick, backdropColor: 'transparent' });
+    // Radial (radar) — Chart.js v4 では scales.r.ticks.backdropColor が白固定
+    if (Chart.defaults.scales && Chart.defaults.scales.radialLinear) {
+      Chart.defaults.scales.radialLinear.ticks = Object.assign({}, Chart.defaults.scales.radialLinear.ticks, { color: tick, backdropColor: 'transparent', font: { weight: '600' } });
+      Chart.defaults.scales.radialLinear.grid = Object.assign({}, Chart.defaults.scales.radialLinear.grid, { color: grid });
+      Chart.defaults.scales.radialLinear.angleLines = Object.assign({}, Chart.defaults.scales.radialLinear.angleLines, { color: grid });
+      Chart.defaults.scales.radialLinear.pointLabels = Object.assign({}, Chart.defaults.scales.radialLinear.pointLabels, { color: txt, font: { weight: '500' } });
+    }
     // 既存チャート再描画
     Object.values(charts).forEach(c => { try { c.update(); } catch (e) {} });
   }
