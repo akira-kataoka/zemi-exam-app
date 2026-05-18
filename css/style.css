@@ -737,6 +737,13 @@ kbd{display:inline-block;padding:2px 8px;font-family:monospace;font-size:12px;ba
 body.candidate-mode .topbar{padding:10px 18px}
 body.candidate-mode .brand h1{font-size:16px}
 body.candidate-mode .brand .sub{display:none}
+/* 受験者には管理用ボタン (設定/テーマ切替) を表示しない */
+body.candidate-mode .header-action-btn[data-view="admin"],
+body.candidate-mode #theme-toggle,
+body.candidate-mode #auth-signin-btn,
+body.candidate-mode #auth-signout-btn,
+body.candidate-mode #auth-status{display:none !important}
+body.candidate-mode .header-action-help{font-size:11px;padding:4px 10px}
 
 /* App footer */
 .app-footer{margin-top:48px;padding:20px 24px;background:linear-gradient(180deg,#fff,#fafbfd);border-top:1px solid var(--border-soft);font-size:12px;color:var(--muted)}
