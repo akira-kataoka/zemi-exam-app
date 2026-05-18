@@ -1234,27 +1234,32 @@ const App = (() => {
   function renderProfilePickerList() {
     const q = (document.getElementById('profile-picker-search').value || '').trim().toLowerCase();
     const sess = getSession();
-    const curId = document.getElementById('profile-select').value;
+    const curId = _uiState.profileId;
+    const openTabs = new Set(getProfileTabs());
     let list = Storage.loadForSession();
     if (q) list = list.filter(c => [fullName(c), fullKana(c), c.examineeId, c.faculty, c.department].some(v => String(v || '').toLowerCase().includes(q)));
     const wrap = document.getElementById('profile-picker-list');
     if (list.length === 0) {
-      wrap.innerHTML = '<div class="muted" style="padding:14px;text-align:center;font-size:12px">該当する受験者がいません</div>';
+      const sessionTotal = Storage.loadForSession().length;
+      wrap.innerHTML = `<div class="muted" style="padding:14px;text-align:center;font-size:12px">${sessionTotal === 0 ? '受験者がまだ登録されていません' : '該当する受験者がいません'}</div>`;
       return;
     }
     wrap.innerHTML = list.map(c => {
       const ac = Stats.scoreAcademic(c, sess.academicTest);
       const isCurrent = c.id === curId;
+      const isOpen = openTabs.has(c.id);
       const phaseDots = [
         Stats.hasResume(c) ? '<span class="pp-dot done" title="履歴書済">📄</span>' : '<span class="pp-dot miss" title="履歴書未">📄</span>',
         Stats.hasAcademic(c) ? '<span class="pp-dot done" title="学力済">📚</span>' : '<span class="pp-dot miss" title="学力未">📚</span>',
         Stats.hasSurvey(c) ? '<span class="pp-dot done" title="アンケ済">📋</span>' : '<span class="pp-dot miss" title="アンケ未">📋</span>',
         Stats.hasInterview(c) ? '<span class="pp-dot done" title="面接済">🎤</span>' : '<span class="pp-dot miss" title="面接未">🎤</span>'
       ].join('');
+      const openBadge = isCurrent ? '<span class="pp-pass" style="background:rgba(99,102,241,.18);color:var(--primary-d)">▶ 表示中</span>'
+                         : isOpen ? '<span class="pp-pass" style="background:rgba(99,102,241,.12);color:var(--primary-d)">📑 タブで開いています</span>' : '';
       return `<div class="pp-item ${isCurrent ? 'current' : ''} ${c.passed ? 'passed' : ''}" data-id="${c.id}">
         ${c.photo ? `<img class="avatar-sm" src="${c.photo}" alt="">` : '<div class="avatar-sm avatar-blank">👤</div>'}
         <div class="pp-main">
-          <div class="pp-name">${escapeHtml(fullName(c))} ${c.passed ? '<span class="pp-pass">✅合格</span>' : ''}</div>
+          <div class="pp-name">${escapeHtml(fullName(c))} ${c.passed ? '<span class="pp-pass">✅合格</span>' : ''} ${openBadge}</div>
           <div class="pp-meta">${escapeHtml(c.examineeId || '')} ・ ${escapeHtml(c.faculty || '')} ${escapeHtml(c.department || '')}</div>
           <div class="pp-detail">
             <span class="pp-phases">${phaseDots}</span>
@@ -1265,11 +1270,7 @@ const App = (() => {
     }).join('');
     wrap.querySelectorAll('.pp-item').forEach(el => {
       el.addEventListener('click', () => {
-        const id = el.dataset.id;
-        document.getElementById('profile-select').value = id;
-        saveUiState({ profileId: id });
-        updateProfileTriggerLabel(id);
-        renderProfile(id);
+        openProfileTab(el.dataset.id);
         closeProfilePicker();
       });
     });
