@@ -56,7 +56,12 @@ const Storage = (() => {
       name: name || '新規試験回',
       createdAt: new Date().toISOString(),
       phases: phases ? { ...defaultPhases, ...phases } : { ...defaultPhases },
-      pin: generatePin()
+      pin: generatePin(),
+      // 基本情報フィールド (2026-05-18 追加)
+      examDate: '',
+      examLocation: '',
+      targetPassCount: null,
+      notes: ''
     };
     list.push(s);
     saveSessions(list);
