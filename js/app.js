@@ -586,9 +586,12 @@ const App = (() => {
   }
 
   function openHelpModal() {
-    document.getElementById('help-modal').style.display = 'flex';
+    const modal = document.getElementById('help-modal');
+    modal.style.display = 'flex';
     document.getElementById('help-btn').classList.remove('first-visit-pulse');
     saveUiState({ helpSeen: true });
+    // 閉じるボタンにフォーカスして ESC/Enter で閉じやすく
+    setTimeout(() => modal.querySelector('#help-close')?.focus(), 0);
   }
   function closeHelpModal() { document.getElementById('help-modal').style.display = 'none'; }
 
