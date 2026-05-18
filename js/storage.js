@@ -13,15 +13,15 @@ const Storage = (() => {
     catch (e) { list = []; }
     if (list.length === 0) {
       list = [{ id: DEFAULT_SESSION_ID, name: '通常入試', createdAt: new Date().toISOString(), phases: { ...defaultPhases } }];
-      localStorage.setItem(KEY_SESS, JSON.stringify(list));
+      try { localStorage.setItem(KEY_SESS, JSON.stringify(list)); } catch (e) { console.error('[Storage] init sessions failed', e); }
     }
     // Migration: ensure all have phases
     let changed = false;
     list.forEach(s => { if (!s.phases) { s.phases = { ...defaultPhases }; changed = true; } });
-    if (changed) localStorage.setItem(KEY_SESS, JSON.stringify(list));
+    if (changed) { try { localStorage.setItem(KEY_SESS, JSON.stringify(list)); } catch (e) { console.error('[Storage] migration failed', e); } }
     return list;
   }
-  function saveSessions(list) { localStorage.setItem(KEY_SESS, JSON.stringify(list)); }
+  function saveSessions(list) { _safeSet(KEY_SESS, JSON.stringify(list), '試験回データ'); }
   function generatePin() {
     // Avoid confusable characters (0/O/1/I)
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -167,7 +167,21 @@ const Storage = (() => {
     try { return JSON.parse(localStorage.getItem(KEY_CAND)) || []; }
     catch (e) { return []; }
   }
-  function save(list) { localStorage.setItem(KEY_CAND, JSON.stringify(list)); }
+  function save(list) { _safeSet(KEY_CAND, JSON.stringify(list), '受験者データ'); }
+  // localStorage クォータ枯渇時にユーザーへ通知（base64 写真等でMB超過しやすい）
+  function _safeSet(key, value, label) {
+    try { localStorage.setItem(key, value); }
+    catch (e) {
+      if (e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(String(e.message)))) {
+        const msg = `⚠ ブラウザの保存容量が上限に達しました。${label || ''}の保存に失敗しました。\n顔写真を減らす・古い試験回を削除する・データをJSONエクスポートしてバックアップ後にクリアしてください。`;
+        try { console.error('[Storage] QuotaExceeded', e); } catch (_) {}
+        try { alert(msg); } catch (_) {}
+        throw e;
+      }
+      try { console.error('[Storage] setItem failed', e); } catch (_) {}
+      throw e;
+    }
+  }
 
   function loadForSession(sessionId) {
     const sid = sessionId || getCurrentSessionId();
