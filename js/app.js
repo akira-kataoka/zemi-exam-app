@@ -3043,8 +3043,30 @@ const App = (() => {
     });
   }
 
+  // ===== Theme toggle =====
+  function initThemeToggle() {
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    const saved = localStorage.getItem('zemiSA.theme');
+    if (saved === 'dark' || saved === 'light') document.documentElement.setAttribute('data-theme', saved);
+    const updateIcon = () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      btn.textContent = isDark ? '☀' : '🌙';
+      btn.title = isDark ? 'ライトモードに切替' : 'ダークモードに切替';
+    };
+    updateIcon();
+    btn.addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('zemiSA.theme', next);
+      updateIcon();
+    });
+  }
+
   // ===== Init =====
   function init() {
+    initThemeToggle();
     ensureTests(getSession());
     attachAdminContent();
     initAuthUI();
