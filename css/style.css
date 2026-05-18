@@ -701,6 +701,12 @@ body.candidate-mode .brand .sub{display:none}
 .cluster-member-row input:checked ~ .cluster-member-name{color:#166534}
 .cluster-member-row:has(input:checked){background:#dcfce7}
 
+/* Contact links (mailto/tel) */
+dd a[href^="mailto:"],dd a[href^="tel:"]{color:var(--primary);text-decoration:none;border-bottom:1px dashed currentColor;transition:.15s}
+dd a[href^="mailto:"]:hover,dd a[href^="tel:"]:hover{color:var(--primary-d);border-bottom-style:solid}
+dd a[href^="mailto:"]::before{content:"✉ ";font-size:.9em}
+dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
+
 /* Empty states */
 .empty-state{text-align:center;padding:36px 20px;color:var(--muted);background:var(--surface-2);border:2px dashed var(--border);border-radius:8px}
 .empty-state .empty-icon{font-size:42px;margin-bottom:6px}
@@ -814,6 +820,22 @@ body.candidate-mode .brand .sub{display:none}
 :root[data-theme="dark"] kbd{background:var(--surface);color:var(--ink)}
 :root[data-theme="dark"] code{background:#1e1b4b;color:#c7d2fe;padding:1px 6px;border-radius:4px}
 :root[data-theme="dark"] body{color-scheme:dark}
+/* warn 系統 (#fef3c7/#fffbeb) を dark で見やすく */
+:root[data-theme="dark"] .pass-toggle,
+:root[data-theme="dark"] .pin-row,
+:root[data-theme="dark"] .pin-badge,
+:root[data-theme="dark"] .header-action-help,
+:root[data-theme="dark"] .tip-card,
+:root[data-theme="dark"] .cluster-hint,
+:root[data-theme="dark"] .portal-card.blocked,
+:root[data-theme="dark"] .ac-timer.warn,
+:root[data-theme="dark"] .iv-chip.now,
+:root[data-theme="dark"] .iv-status-pill.now,
+:root[data-theme="dark"] .iv-card.status-now,
+:root[data-theme="dark"] .iv-card.status-done-late,
+:root[data-theme="dark"] .session-popover-item .sp-rename:hover{background:rgba(245,158,11,.12);color:#fde68a;border-color:rgba(245,158,11,.35)}
+:root[data-theme="dark"] .header-action-help{font-weight:600}
+:root[data-theme="dark"] .msg-item-head code{background:#1e1b4b;color:#fbbf24}
 /* ダークモード時のネイティブ form 要素 (date/time/datetime-local など) を強制的にダーク化 */
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] select,

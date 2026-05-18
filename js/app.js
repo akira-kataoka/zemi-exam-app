@@ -1185,8 +1185,8 @@ const App = (() => {
         <div class="form-grid">
           <div><dt>生年月日</dt><dd>${escapeHtml(c.birthdate || '')}${calcAge(c.birthdate) != null ? ` <span class="muted">(${calcAge(c.birthdate)}歳)</span>` : ''}</dd></div>
           <div><dt>性別</dt><dd>${escapeHtml(c.gender || '')}</dd></div>
-          <div><dt>メール</dt><dd>${escapeHtml(c.email || '')}</dd></div>
-          <div><dt>電話</dt><dd>${escapeHtml(c.phone || '')}</dd></div>
+          <div><dt>メール</dt><dd>${c.email ? `<a href="mailto:${encodeURIComponent(c.email).replace(/%40/g,'@')}" title="メールを送信">${escapeHtml(c.email)}</a>` : ''}</dd></div>
+          <div><dt>電話</dt><dd>${c.phone ? `<a href="tel:${encodeURIComponent(c.phone.replace(/[^0-9+\-]/g,''))}" title="電話をかける">${escapeHtml(c.phone)}</a>` : ''}</dd></div>
           <div><dt>GPA</dt><dd>${c.gpa ?? ''}</dd></div>
           <div class="full"><dt>取得資格・スキル</dt><dd>${(normalizeQualifications(c.qualifications).map(q => `<span class="qual-chip">${escapeHtml(q)}</span>`).join('') || '<span class="muted">なし</span>')}</dd></div>
           <div class="full"><dt>サークル・部活動</dt><dd>${escapeHtml(c.club || '') || '<span class="muted">なし</span>'}</dd></div>
