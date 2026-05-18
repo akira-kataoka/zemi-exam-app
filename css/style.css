@@ -890,6 +890,9 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 :root[data-theme="dark"] .qual-chip:hover{background:#312e81}
 :root[data-theme="dark"] .topbar{background:rgba(15,23,42,.85)}
 :root[data-theme="dark"] .avatar-blank{background:linear-gradient(135deg,#1e293b,#0f172a);color:#475569}
+/* ダーク時のアバター白枠を surface 色に置換 (ハロー対策) */
+:root[data-theme="dark"] .avatar-sm,
+:root[data-theme="dark"] .avatar-lg{border-color:var(--surface)}
 :root[data-theme="dark"] .help-tab.active{background:var(--surface);border-bottom-color:var(--surface)}
 :root[data-theme="dark"] .resume-subtab:hover{background:var(--surface)}
 :root[data-theme="dark"] .resume-subtab.active{background:var(--surface)}
