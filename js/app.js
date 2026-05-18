@@ -2991,7 +2991,11 @@ const App = (() => {
       interview_date: ivDate || '（未定）',
       interview_time: ivTime || '（未定）',
       interview_datetime: ivDt || '（未定）',
-      sessionName: sess.name || ''
+      sessionName: sess.name || '',
+      // 試験回の基本情報 (2026-05-18 追加: 配布メッセージで案内に使える)
+      examDate: sess.examDate || '',
+      examLocation: sess.examLocation || '',
+      targetPassCount: sess.targetPassCount != null ? String(sess.targetPassCount) : ''
     };
     return template.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? '{{' + k + '}}');
   }
