@@ -946,6 +946,10 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 :root[data-theme="dark"] .iv-rec-avg strong{background:rgba(139,92,246,.18) !important;color:#ddd6fe !important}
 :root[data-theme="dark"] .portal-card.open .pc-status{color:#a7f3d0 !important}
 :root[data-theme="dark"] .portal-card.blocked .pc-status{color:#fde68a !important}
+:root[data-theme="dark"] .portal-card.closed .pc-status{color:#94a3b8}
+:root[data-theme="dark"] .portal-card.done .pc-status{color:#c7d2fe}
+:root[data-theme="dark"] .portal-card{background:var(--surface);border-color:var(--border);color:var(--ink)}
+:root[data-theme="dark"] .portal-card:hover{border-color:var(--primary)}
 :root[data-theme="dark"] .phase-status-cell.s-open{color:#a7f3d0 !important}
 /* photo-area / share-card / share-url 等の白基調 */
 :root[data-theme="dark"] .photo-area{background:var(--surface-2);border-color:var(--border)}
