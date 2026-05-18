@@ -2378,16 +2378,18 @@ const App = (() => {
     saveScheduleConfig();
     const sch = sess.interviewSchedule;
     const slots = buildSlots(sch).map(s => s.iso);
-    if (slots.length === 0) { alert('時間枠が0です。配置設定を確認してください。'); return; }
+    if (slots.length === 0) { toast('⚠ 時間枠が0です。開始日・時間設定を確認してください', 'warn', 4500); return; }
     const list = Storage.load();
     const inSession = list.filter(c => c.sessionId === sess.id);
     if (mode === 'reallocate') {
       // Clear all scheduled
       inSession.forEach(c => { if (c.interview) delete c.interview.scheduledAt; });
     }
-    // Find candidates to allocate (unscheduled, not done)
-    const targets = inSession.filter(c => !c.interview?.scheduledAt && !Stats.hasInterview(c))
+    // 未配置候補: scheduledAt 無し全員 (実施済も含めて再スケジュール可能とする)
+    const unscheduled = inSession.filter(c => !c.interview?.scheduledAt)
       .sort((a, b) => (a.examineeId || '').localeCompare(b.examineeId || '', 'ja'));
+    const skipped = unscheduled.filter(c => Stats.hasInterview(c)).length;
+    const targets = unscheduled.filter(c => !Stats.hasInterview(c));
     // Find open slots
     const used = new Set(inSession.filter(c => c.interview?.scheduledAt).map(c => c.interview.scheduledAt));
     const openSlots = slots.filter(s => !used.has(s));
@@ -2400,7 +2402,17 @@ const App = (() => {
     });
     Storage.save(list);
     renderInterviewTimeline();
-    alert(`${assigned}名を時間枠に配置しました（残り未配置: ${Math.max(0, targets.length - assigned)}名）。`);
+    // 詳細フィードバック (toast でモバイルでも見やすく)
+    if (assigned === 0 && skipped > 0 && targets.length === 0) {
+      toast(`ℹ 未配置 ${skipped}名 は全員すでに面接実施済みのため配置不要`, 'info', 5000);
+    } else if (assigned === 0 && openSlots.length === 0) {
+      toast(`⚠ 空き枠なし。「全員を再配置」を試すか日数を増やしてください`, 'warn', 5000);
+    } else {
+      const parts = [`✅ ${assigned}名を配置`];
+      if (targets.length - assigned > 0) parts.push(`枠不足で${targets.length - assigned}名未配置`);
+      if (skipped > 0) parts.push(`実施済${skipped}名スキップ`);
+      toast(parts.join(' / '), 'success', 4500);
+    }
   }
 
   function clearAllSchedules() {
