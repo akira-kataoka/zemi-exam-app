@@ -1256,7 +1256,7 @@ const App = (() => {
       const list = Storage.loadForSession();
       $('#profile-body').innerHTML = list.length === 0
         ? '<div class="empty-state"><div class="empty-icon">👤</div><p>受験者がまだ登録されていません。</p><p style="font-size:12px">設定 → データから「デモデータを投入」、または受験申込URLを配布してください。</p></div>'
-        : `<div class="empty-state"><div class="empty-icon">🔍</div><p>上部の「-- 受験者を選択 --」ボタンから ${list.length}名 の中から受験者を選んでください。</p></div>`;
+        : `<div class="empty-state"><div class="empty-icon">🔍</div><p>上部の「＋ 受験者を開く」ボタンから ${list.length}名 の中から受験者を選んでください。</p><p style="font-size:12px;color:var(--muted)">複数開いてタブで切り替えできます</p></div>`;
     }
   }
 
