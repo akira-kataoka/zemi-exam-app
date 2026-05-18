@@ -836,6 +836,44 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 :root[data-theme="dark"] .session-popover-item .sp-rename:hover{background:rgba(245,158,11,.12);color:#fde68a;border-color:rgba(245,158,11,.35)}
 :root[data-theme="dark"] .header-action-help{font-weight:600}
 :root[data-theme="dark"] .msg-item-head code{background:#1e1b4b;color:#fbbf24}
+/* ステータス色 (success/danger/warn/info/purple) dark バリアント一括 */
+:root[data-theme="dark"] .ac-timer.ok,
+:root[data-theme="dark"] .ps-done,
+:root[data-theme="dark"] .iv-chip.done,
+:root[data-theme="dark"] .iv-status-pill.done,
+:root[data-theme="dark"] .ill-box.success,
+:root[data-theme="dark"] .cluster-member-row:has(input:checked){background:rgba(5,150,105,.18) !important;color:#a7f3d0 !important;border-color:rgba(16,185,129,.4) !important}
+:root[data-theme="dark"] .pp-dot.done{background:rgba(5,150,105,.4) !important}
+:root[data-theme="dark"] .ac-timer.grace,
+:root[data-theme="dark"] .ps-miss,
+:root[data-theme="dark"] .req-mark,
+:root[data-theme="dark"] .miss-badge,
+:root[data-theme="dark"] .iv-chip.delayed,
+:root[data-theme="dark"] .iv-status-pill.delayed,
+:root[data-theme="dark"] .iv-pool-col,
+:root[data-theme="dark"] .iv-card.status-delayed,
+:root[data-theme="dark"] .submission-row.unsubmitted{background:rgba(220,38,38,.15) !important;color:#fca5a5 !important;border-color:rgba(248,113,113,.4) !important}
+:root[data-theme="dark"] .pp-dot.miss{background:rgba(220,38,38,.3) !important;filter:none !important;opacity:.85 !important}
+:root[data-theme="dark"] .iv-chip.future,
+:root[data-theme="dark"] .iv-status-pill.future{color:#93c5fd !important}
+:root[data-theme="dark"] .iv-rec-avg,
+:root[data-theme="dark"] .iv-rec-avg strong{background:rgba(139,92,246,.18) !important;color:#ddd6fe !important}
+:root[data-theme="dark"] .portal-card.open .pc-status{color:#a7f3d0 !important}
+:root[data-theme="dark"] .portal-card.blocked .pc-status{color:#fde68a !important}
+:root[data-theme="dark"] .phase-status-cell.s-open{color:#a7f3d0 !important}
+/* photo-area / share-card / share-url 等の白基調 */
+:root[data-theme="dark"] .photo-area{background:var(--surface-2);border-color:var(--border)}
+:root[data-theme="dark"] .photo-area .photo-placeholder{color:var(--muted)}
+:root[data-theme="dark"] .share-card{background:var(--surface-2)}
+:root[data-theme="dark"] .share-url{background:var(--surface);color:var(--ink);border-color:var(--border)}
+:root[data-theme="dark"] .qr-area{background:#fff} /* QR は白背景必須 (スキャン精度のため) */
+:root[data-theme="dark"] .msg-body{background:var(--surface-2);color:var(--ink);border-color:var(--border)}
+:root[data-theme="dark"] .import-step{background:var(--surface-2);color:var(--ink)}
+:root[data-theme="dark"] .iv-record-card{background:var(--surface-2);border-color:var(--border)}
+:root[data-theme="dark"] dd a[href^="mailto:"],
+:root[data-theme="dark"] dd a[href^="tel:"]{color:#a5b4fc}
+:root[data-theme="dark"] dd a[href^="mailto:"]:hover,
+:root[data-theme="dark"] dd a[href^="tel:"]:hover{color:#c7d2fe}
 /* ダークモード時のネイティブ form 要素 (date/time/datetime-local など) を強制的にダーク化 */
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] select,
