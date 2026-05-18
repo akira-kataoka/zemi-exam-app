@@ -228,6 +228,11 @@ const App = (() => {
     // Migrate sessions created before application phase
     if (sess.phases && sess.phases.application === undefined) { sess.phases.application = true; changed = true; }
     if (sess.applicationPasscode === undefined) { sess.applicationPasscode = ''; changed = true; }
+    // 基本情報フィールド (2026-05-18 追加): 存在しなければ空文字で初期化
+    if (sess.examDate === undefined) { sess.examDate = ''; changed = true; }
+    if (sess.examLocation === undefined) { sess.examLocation = ''; changed = true; }
+    if (sess.targetPassCount === undefined) { sess.targetPassCount = null; changed = true; }
+    if (sess.notes === undefined) { sess.notes = ''; changed = true; }
     if (!sess.interviewRatings) {
       const userDefault = Storage.getDefaultInterviewRatings();
       sess.interviewRatings = (userDefault && userDefault.length > 0)
@@ -2265,7 +2270,9 @@ const App = (() => {
       const s = String(v ?? '').trim();
       if (s === '') return null;
       const n = Number(s);
-      return Number.isFinite(n) ? n : null;
+      if (!Number.isFinite(n)) return null;
+      // 負数・小数は丸めて 0 以上に
+      return Math.max(0, Math.floor(n));
     };
     Storage.updateSessionInfo(sess.id, {
       name: ($('#sim-name').value || '').trim() || sess.name,
@@ -2302,7 +2309,8 @@ const App = (() => {
       const s = String(v ?? '').trim();
       if (s === '') return null;
       const n = Number(s);
-      return Number.isFinite(n) ? n : null;
+      if (!Number.isFinite(n)) return null;
+      return Math.max(0, Math.floor(n));
     };
     const payload = {
       name: ($('#si-name').value || '').trim() || sess.name,
