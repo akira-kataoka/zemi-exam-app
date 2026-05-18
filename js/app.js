@@ -1134,6 +1134,11 @@ const App = (() => {
     const sess = getSession();
     const c = Storage.loadForSession().find(x => x.id === id);
     const body = $('#profile-body');
+    const printBtn = document.getElementById('print-profile');
+    if (printBtn) {
+      printBtn.disabled = !c;
+      printBtn.title = c ? '印刷' : '受験者を選択すると印刷できます';
+    }
     if (!c) { body.innerHTML = ''; return; }
     const ac = Stats.scoreAcademic(c, sess.academicTest);
     const sv = Stats.surveyAvg(c, sess.surveyTest);
