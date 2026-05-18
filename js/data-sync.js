@@ -9,7 +9,6 @@ const DataSync = (() => {
   let _enabled = false;
   let _adminLoggedIn = false;
   let _syncing = false;
-  let _pendingPush = new Set(); // candidate IDs needing push
 
   // ===== カラム変換 (キャメル → スネーク) =====
   function candToRow(c) {
