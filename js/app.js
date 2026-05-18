@@ -3078,6 +3078,19 @@ const App = (() => {
   }
 
   // ===== Theme toggle =====
+  function applyChartDefaults() {
+    if (typeof Chart === 'undefined') return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    Chart.defaults.color = isDark ? '#e2e8f0' : '#334155';
+    Chart.defaults.borderColor = isDark ? 'rgba(148,163,184,.18)' : 'rgba(15,23,42,.08)';
+    Chart.defaults.plugins.legend.labels.color = isDark ? '#e2e8f0' : '#334155';
+    Chart.defaults.scale.grid = Chart.defaults.scale.grid || {};
+    Chart.defaults.scale.grid.color = isDark ? 'rgba(148,163,184,.18)' : 'rgba(15,23,42,.08)';
+    Chart.defaults.scale.ticks = Chart.defaults.scale.ticks || {};
+    Chart.defaults.scale.ticks.color = isDark ? '#94a3b8' : '#64748b';
+    // 既存チャート再描画
+    Object.values(charts).forEach(c => { try { c.update(); } catch (e) {} });
+  }
   function initThemeToggle() {
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
@@ -3089,12 +3102,16 @@ const App = (() => {
       btn.title = isDark ? 'ライトモードに切替' : 'ダークモードに切替';
     };
     updateIcon();
+    applyChartDefaults();
     btn.addEventListener('click', () => {
       const cur = document.documentElement.getAttribute('data-theme');
       const next = cur === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('zemiSA.theme', next);
       updateIcon();
+      applyChartDefaults();
+      // 全画面再描画 (Chart.js含む)
+      try { renderOverview(); } catch (e) {}
     });
   }
 
