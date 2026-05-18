@@ -92,7 +92,12 @@ const DataSync = (() => {
       interview_ratings: s.interviewRatings || null,
       faculty_dept: s.facultyDept || null,
       resume_fields: s.resumeFields || null,
-      msg_template: s.msgTemplate || null
+      msg_template: s.msgTemplate || null,
+      // 基本情報 (2026-05-18 追加)
+      exam_date: s.examDate || null,
+      exam_location: s.examLocation || null,
+      target_pass_count: (s.targetPassCount == null || s.targetPassCount === '') ? null : Number(s.targetPassCount),
+      notes: s.notes || null
     };
   }
   function rowToSess(r) {
@@ -109,7 +114,11 @@ const DataSync = (() => {
       interviewRatings: r.interview_ratings,
       facultyDept: r.faculty_dept,
       resumeFields: r.resume_fields,
-      msgTemplate: r.msg_template
+      msgTemplate: r.msg_template,
+      examDate: r.exam_date || '',
+      examLocation: r.exam_location || '',
+      targetPassCount: r.target_pass_count,
+      notes: r.notes || ''
     };
   }
 

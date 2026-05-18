@@ -31,8 +31,19 @@ create table if not exists public.sessions (
   faculty_dept jsonb,
   resume_fields jsonb,
   msg_template text,
-  owner_admin uuid references public.admins(id) on delete set null
+  owner_admin uuid references public.admins(id) on delete set null,
+  -- 基本情報 (2026-05-18 追加)
+  exam_date date,
+  exam_location text,
+  target_pass_count integer,
+  notes text
 );
+
+-- 既存環境向け migration（idempotent）
+alter table public.sessions add column if not exists exam_date date;
+alter table public.sessions add column if not exists exam_location text;
+alter table public.sessions add column if not exists target_pass_count integer;
+alter table public.sessions add column if not exists notes text;
 
 comment on table public.sessions is '試験回（入試の各回）。1管理者が複数保持。';
 
