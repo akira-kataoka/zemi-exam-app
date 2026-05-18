@@ -1415,7 +1415,9 @@ const App = (() => {
     const active = _uiState.profileId;
     if (tabs.length === 0) { bar.innerHTML = ''; bar.style.display = 'none'; return; }
     bar.style.display = 'flex';
-    bar.innerHTML = tabs.map(tid => {
+    // タブ数が上限に近い時の警告表示
+    const nearMax = tabs.length >= MAX_PROFILE_TABS - 1;
+    const tabsHtml = tabs.map(tid => {
       const c = list.find(x => x.id === tid);
       if (!c) return '';
       const name = fullName(c) || '(無名)';
@@ -1426,6 +1428,21 @@ const App = (() => {
         <button type="button" class="ptab-close" data-close="${tid}" aria-label="${escapeHtml(name)} のタブを閉じる" title="タブを閉じる">×</button>
       </div>`;
     }).join('');
+    const counter = `<span class="ptab-counter" title="開いているタブ数 / 上限">${tabs.length}/${MAX_PROFILE_TABS}</span>`;
+    bar.innerHTML = tabsHtml + counter;
+    // 開いたタブをスクロールして見えるようにする
+    setTimeout(() => {
+      const activeTab = bar.querySelector('.ptab.active');
+      if (activeTab && typeof activeTab.scrollIntoView === 'function') {
+        activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    }, 0);
+    if (nearMax) {
+      // 上限到達警告ヒント
+      bar.title = `タブ上限 (${MAX_PROFILE_TABS}) 近くまで開いています。古いタブから自動的に閉じられます`;
+    } else {
+      bar.title = '';
+    }
     bar.querySelectorAll('.ptab').forEach((el, idx, all) => {
       el.addEventListener('click', (e) => {
         if (e.target.closest('.ptab-close')) return;
