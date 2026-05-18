@@ -510,7 +510,8 @@ const App = (() => {
     }
   }
   function showSubview(name) {
-    $$('.subtab').forEach(t => t.classList.toggle('active', t.dataset.subview === name));
+    // data-subview を持つ .subtab だけ active 切替 (admin/resume の .subtab 流用に干渉しない)
+    $$('.subtab[data-subview]').forEach(t => t.classList.toggle('active', t.dataset.subview === name));
     $$('.subview').forEach(v => v.classList.toggle('active', v.id === 'sub-' + name));
     saveUiState({ subview: name });
     if (name === 'analysis') {
@@ -3662,8 +3663,9 @@ const App = (() => {
         openHelpModal();
       }
     });
-    $$('.subtab:not(.adminsubtab)').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
-    $$('.adminsubtab').forEach(t => t.addEventListener('click', () => showAdminview(t.dataset.adminview)));
+    // data-subview を持つボタンだけバインド (重複 class での誤発火を防ぐ)
+    $$('.subtab[data-subview]').forEach(t => t.addEventListener('click', () => showSubview(t.dataset.subview)));
+    $$('.adminsubtab[data-adminview]').forEach(t => t.addEventListener('click', () => showAdminview(t.dataset.adminview)));
     $$('.resume-subtab').forEach(t => t.addEventListener('click', () => {
       if (t.dataset.resumeview)    showResumeview(t.dataset.resumeview);
       else if (t.dataset.interviewview) showInterviewview(t.dataset.interviewview);
