@@ -1048,7 +1048,13 @@ const App = (() => {
     const sel = $('#profile-select');
     const list = Storage.loadForSession();
     const current = sel.value;
-    if (current && list.find(c => c.id === current)) {
+    const printBtn = document.getElementById('print-profile');
+    const hasSelection = !!(current && list.find(c => c.id === current));
+    if (printBtn) {
+      printBtn.disabled = !hasSelection;
+      printBtn.title = hasSelection ? '印刷' : '受験者を選択すると印刷できます';
+    }
+    if (hasSelection) {
       updateProfileTriggerLabel(current);
       renderProfile(current);
     } else {
