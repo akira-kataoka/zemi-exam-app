@@ -3189,8 +3189,10 @@ const App = (() => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    // ダウンロード処理完了を待ってから revoke (即時 revoke で失敗する一部ブラウザ対策)
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
   }
   function parseCsv(text) {
     const rows = [];
