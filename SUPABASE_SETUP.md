@@ -82,6 +82,20 @@ values ('<貼り付けた UUID>', '<管理者のメール>', '管理者');
 | 1週間以上アクセス無しで Project が休止 | ダッシュボードから手動再開 (即時・無料) |
 | サポート | コミュニティフォーラムを利用 (無料) |
 
+## 既存環境の Migration
+
+`db/schema.sql` には基本情報フィールド追加 (2026-05-18) の `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` が含まれています。  
+古いスキーマで運用中の場合、SQL Editor で以下のいずれかを実行してください。
+
+- 楽な方法: `db/schema.sql` 全体を再実行（`if not exists` で既存データは保持されます）
+- 個別追加:
+  ```sql
+  alter table public.sessions add column if not exists exam_date date;
+  alter table public.sessions add column if not exists exam_location text;
+  alter table public.sessions add column if not exists target_pass_count integer;
+  alter table public.sessions add column if not exists notes text;
+  ```
+
 ## ローカル開発時のフォールバック
 
 `js/supabase-client.js` で `SUPABASE_URL` が未設定 (placeholder のまま) の場合、  
