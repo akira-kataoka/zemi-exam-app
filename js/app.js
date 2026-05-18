@@ -296,6 +296,11 @@ const App = (() => {
     if (nameInput && document.activeElement !== nameInput) nameInput.value = sess.name;
     const list = Storage.loadForSession();
     $('#session-meta').textContent = `${list.length}名 / 作成 ${formatDate(sess.createdAt)}`;
+    // 試験回名をブラウザタブのタイトルに反映
+    try {
+      const baseTitle = 'ゼミ試験アプリケーション';
+      document.title = sess.name && sess.name !== '通常入試' ? `${sess.name} - ${baseTitle}` : baseTitle;
+    } catch (_) {}
     // basic info chips (試験日 / 試験場所 / 目標合格人数 / 備考)
     const chips = $('#session-info-chips');
     if (chips) {
