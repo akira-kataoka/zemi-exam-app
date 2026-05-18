@@ -41,9 +41,17 @@ const App = (() => {
       container.id = 'toast-container';
       document.body.appendChild(container);
     }
+    // 同一メッセージ重複表示を抑制（直前と同じならスキップ）
+    const last = container.lastElementChild;
+    if (last && last.dataset.msg === message) return;
+    // 表示中トーストが3件超なら最も古いものを削除
+    while (container.children.length >= 3) container.firstElementChild.remove();
     const t = document.createElement('div');
     t.className = 'toast toast-' + type;
     t.textContent = message;
+    t.dataset.msg = message;
+    t.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    t.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
     container.appendChild(t);
     requestAnimationFrame(() => t.classList.add('show'));
     setTimeout(() => {
