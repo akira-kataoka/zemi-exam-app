@@ -4056,6 +4056,10 @@ const App = (() => {
       const sid = Storage.getCurrentSessionId();
       const start = document.querySelector(`[data-phase-start="${phase}"]`).value;
       const end   = document.querySelector(`[data-phase-end="${phase}"]`).value;
+      // start > end の場合は警告 (受付期間として成立しない)
+      if (start && end && new Date(start) > new Date(end)) {
+        toast('⚠ 開始日時が終了日時より後になっています。設定し直してください', 'warn', 4000);
+      }
       Storage.setPhaseSchedule(sid, phase, localInputToIso(start), localInputToIso(end));
       renderSessionBar(); renderPortal();
     }
