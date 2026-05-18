@@ -904,6 +904,18 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 :root[data-theme="dark"] .flow-step{background:var(--surface-2);border-color:var(--border)}
 :root[data-theme="dark"] .help-tabs{background:var(--surface-3);border-color:var(--border)}
 :root[data-theme="dark"] .help-tab.active{background:var(--surface);color:#e0e7ff;border-color:var(--border)}
+/* Dark: ハードコードされた淡色背景を漸進的に修正 */
+:root[data-theme="dark"] .data-table th{background:#0a0f1a;color:#94a3b8}
+:root[data-theme="dark"] .data-table td{background:transparent;color:var(--ink)}
+:root[data-theme="dark"] .data-table tbody tr:hover td{background:rgba(99,102,241,.08)}
+:root[data-theme="dark"] .portal-card.blocked{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.4);color:#fde68a}
+:root[data-theme="dark"] .header-action-help{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.4);color:#fde68a}
+:root[data-theme="dark"] .pass-toggle{background:rgba(245,158,11,.12);color:#fde68a;border-color:rgba(245,158,11,.4)}
+:root[data-theme="dark"] .pin-badge{background:rgba(245,158,11,.18);color:#fde68a}
+:root[data-theme="dark"] .session-popover-item .sp-rename:hover{background:rgba(245,158,11,.18)}
+:root[data-theme="dark"] .pp-dot.done{background:rgba(5,150,105,.35)}
+:root[data-theme="dark"] .sticky-table thead .sort-row th{background:#0a0f1a;color:#94a3b8}
+:root[data-theme="dark"] .sticky-table thead .filter-row th{background:#0d1322}
 :root[data-theme="dark"] .header-action-help{font-weight:600}
 :root[data-theme="dark"] .msg-item-head code{background:#1e1b4b;color:#fbbf24}
 /* ステータス色 (success/danger/warn/info/purple) dark バリアント一括 */
