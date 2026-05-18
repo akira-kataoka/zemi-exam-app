@@ -3639,6 +3639,9 @@ const App = (() => {
           if (m.style.display !== 'none' && getComputedStyle(m).display !== 'none') {
             if (m.id === 'help-modal') closeHelpModal();
             else if (m.id === 'login-modal') m.style.display = 'none';
+            else if (m.id === 'session-info-modal') closeSessionInfoModal();
+            // 静的に存在する modal は hide のみ、動的生成された modal (submission-modal等) は remove
+            else if (m.dataset.persistent === '1') m.style.display = 'none';
             else m.remove();
           }
         });
@@ -3711,12 +3714,7 @@ const App = (() => {
     if (kInp) kInp.addEventListener('change', updateKStepperState);
     if (kInp) kInp.addEventListener('input', updateKStepperState);
     updateKStepperState();
-    // ESC closes any open modal
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape') return;
-      const sim = document.getElementById('session-info-modal');
-      if (sim && sim.style.display === 'flex') { closeSessionInfoModal(); return; }
-    });
+    // ESC handling は init() 内の汎用キー処理に統合済み（重複防止のためここでは何もしない）
 
     // Overview controls
     let searchDebounce;
