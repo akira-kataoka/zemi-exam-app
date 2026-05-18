@@ -3588,6 +3588,10 @@ const App = (() => {
       toast('ログアウトしました', 'info');
     });
 
+    // Supabase 接続済みなら「未接続ヒント」を隠す
+    const disabledHint = document.getElementById('cloud-sync-disabled-hint');
+    if (disabledHint) disabledHint.style.display = 'none';
+
     async function syncAuthUI() {
       const session = await SupabaseClient.getSession();
       const cloudCard = document.getElementById('cloud-sync-card');
