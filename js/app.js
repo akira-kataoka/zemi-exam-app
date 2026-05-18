@@ -2231,11 +2231,18 @@ const App = (() => {
     const fd = new FormData(form);
     const data = {};
     fd.forEach((v, k) => data[k] = v);
-    // メアド重複チェック
-    const existing = Storage.loadForSession(sess.id).find(c => c.email && c.email === data.email);
-    if (existing) {
-      alert('このメールアドレスは既に申込済みです。重複の場合は事務局までご連絡ください。');
-      return;
+    // メアド重複チェック (大文字小文字無視・前後空白除去)
+    const emailKey = (data.email || '').trim().toLowerCase();
+    if (emailKey) {
+      const existing = Storage.loadForSession(sess.id).find(c =>
+        c.email && c.email.trim().toLowerCase() === emailKey
+      );
+      if (existing) {
+        alert('このメールアドレスは既に申込済みです。重複の場合は事務局までご連絡ください。');
+        return;
+      }
+      // normalize stored value
+      data.email = emailKey;
     }
     data.examineeId = nextExamineeId(sess.id);
     data.applicationSubmittedAt = new Date().toISOString();
