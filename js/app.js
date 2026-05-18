@@ -3991,4 +3991,32 @@ const App = (() => {
   return { init };
 })();
 
-document.addEventListener('DOMContentLoaded', App.init);
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    App.init();
+  } catch (e) {
+    // init 失敗時はサイレントクラッシュさせず、画面上部に赤バナーを出す（自律改善ループ中の検知用）
+    try { console.error('[App.init] crashed:', e); } catch (_) {}
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:10px 14px;font-size:13px;font-weight:600;z-index:9999;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.3)';
+    bar.innerHTML = `⚠ アプリ初期化に失敗しました: <code style="background:rgba(255,255,255,.2);padding:2px 6px;border-radius:3px">${String(e && (e.message || e))}</code> <button style="margin-left:12px;padding:4px 10px;background:#fff;color:#dc2626;border:none;border-radius:4px;cursor:pointer;font-weight:700" onclick="this.parentElement.remove()">×</button>`;
+    document.body.appendChild(bar);
+  }
+});
+// 未捕捉エラー一般 (init 後の操作中のクラッシュも検知)
+window.addEventListener('error', (ev) => {
+  try {
+    const msg = ev?.error?.message || ev?.message || '';
+    if (!msg) return;
+    // 既に表示済みなら何もしない
+    if (document.getElementById('runtime-err-banner')) return;
+    // localStorage の quota など、想定済みエラーはスルー
+    if (/QuotaExceeded/.test(msg)) return;
+    const bar = document.createElement('div');
+    bar.id = 'runtime-err-banner';
+    bar.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;background:#dc2626;color:#fff;padding:8px 12px;font-size:12px;border-radius:6px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.3)';
+    bar.innerHTML = `⚠ エラー: <code style="background:rgba(255,255,255,.2);padding:1px 4px">${msg.slice(0, 200)}</code> <button style="float:right;background:transparent;color:#fff;border:1px solid #fff;border-radius:3px;cursor:pointer;padding:0 6px" onclick="this.parentElement.remove()">×</button>`;
+    document.body.appendChild(bar);
+    setTimeout(() => { const b = document.getElementById('runtime-err-banner'); if (b) b.remove(); }, 10000);
+  } catch (_) {}
+});
