@@ -1256,7 +1256,16 @@ const App = (() => {
         e.stopPropagation();
         const updated = Storage.load();
         const rec = updated.find(x => x.id === cb.dataset.id);
-        if (rec) { rec.passed = cb.checked; Storage.save(updated); toast(`${fullName(rec)} を ${cb.checked ? '合格' : '未合格'} に更新`, 'success', 1500); renderOverview(); }
+        if (rec) {
+          rec.passed = cb.checked;
+          Storage.save(updated);
+          toast(`${fullName(rec)} を ${cb.checked ? '合格' : '未合格'} に更新`, 'success', 1500);
+          renderOverview();
+          // 開いている個人タブも更新 (合格状態が反映されるよう)
+          if (_uiState.profileId === cb.dataset.id) {
+            try { renderProfile(cb.dataset.id); } catch (_) {}
+          }
+        }
       });
     });
     // Representative name / member row clicks jump to profile
@@ -1665,7 +1674,14 @@ const App = (() => {
     document.getElementById('profile-pass').addEventListener('change', e => {
       const list = Storage.load();
       const rec = list.find(x => x.id === c.id);
-      if (rec) { rec.passed = e.target.checked; Storage.save(list); renderOverview(); }
+      if (rec) {
+        rec.passed = e.target.checked;
+        Storage.save(list);
+        renderOverview();
+        // クラスター分析が表示中ならそのチェックボックスも追従
+        const clCb = document.querySelector(`.cluster-pass-check[data-id="${c.id}"]`);
+        if (clCb) clCb.checked = e.target.checked;
+      }
     });
 
     const profAcCv = $('#profile-radar-academic');
