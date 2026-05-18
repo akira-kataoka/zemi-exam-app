@@ -300,10 +300,24 @@ const App = (() => {
     const chips = $('#session-info-chips');
     if (chips) {
       const parts = [];
-      if (sess.examDate)      parts.push(`<span class="sess-chip" title="試験日">📅 ${escapeHtml(formatDateOnly(sess.examDate))}</span>`);
+      if (sess.examDate) {
+        // 試験日との相対表記 (本日/N日後/N日前)
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const examD = new Date(sess.examDate + 'T00:00:00'); examD.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((examD - today) / (1000 * 60 * 60 * 24));
+        let relLabel = '';
+        if (diffDays === 0) relLabel = ' <span style="background:var(--primary);color:#fff;padding:1px 6px;border-radius:8px;font-size:10px;margin-left:4px">本日</span>';
+        else if (diffDays > 0 && diffDays <= 30) relLabel = ` <span style="color:var(--primary-d);font-size:10px;margin-left:2px">あと${diffDays}日</span>`;
+        else if (diffDays < 0) relLabel = ` <span style="color:var(--muted);font-size:10px;margin-left:2px">${-diffDays}日前</span>`;
+        parts.push(`<span class="sess-chip" title="試験日 (${formatDateOnly(sess.examDate)})">📅 ${escapeHtml(formatDateOnly(sess.examDate))}${relLabel}</span>`);
+      }
       if (sess.examLocation)  parts.push(`<span class="sess-chip" title="試験場所: ${escapeHtml(sess.examLocation)}">📍 ${escapeHtml(sess.examLocation)}</span>`);
-      if (sess.targetPassCount != null && sess.targetPassCount !== '')
-                              parts.push(`<span class="sess-chip" title="目標合格人数">🎯 目標 ${escapeHtml(String(sess.targetPassCount))}名</span>`);
+      if (sess.targetPassCount != null && sess.targetPassCount !== '') {
+        const passed = list.filter(c => c.passed).length;
+        const remaining = Math.max(0, Number(sess.targetPassCount) - passed);
+        const progressTip = `目標 ${sess.targetPassCount}名 / 現在 ${passed}名合格 (残り ${remaining}名)`;
+        parts.push(`<span class="sess-chip" title="${escapeHtml(progressTip)}">🎯 目標 ${escapeHtml(String(sess.targetPassCount))}名 <small style="color:var(--muted)">(${passed}/${sess.targetPassCount})</small></span>`);
+      }
       if (sess.notes)         parts.push(`<span class="sess-chip" title="${escapeHtml(sess.notes)}" role="button" tabindex="0" data-show-notes>📝 備考</span>`);
       chips.innerHTML = parts.length
         ? parts.join('') + '<button type="button" class="sess-chip muted-chip" id="open-session-info" title="基本情報を編集" style="cursor:pointer;border:1px dashed var(--primary);color:var(--primary-d)">✏ 編集</button>'
