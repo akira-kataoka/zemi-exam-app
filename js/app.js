@@ -2716,7 +2716,9 @@ const App = (() => {
       const date = new Date(sch.startDate + 'T00:00:00');
       if (isNaN(date.getTime())) return slots;
       date.setDate(date.getDate() + d);
-      const dateStr = date.toISOString().slice(0, 10);
+      // ローカル時刻ベースで日付文字列を作る (toISOString は UTC でズレる)
+      const pad = n => String(n).padStart(2, '0');
+      const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
       const [sh, sm] = sch.dailyStart.split(':').map(Number);
       const [eh, em] = sch.dailyEnd.split(':').map(Number);
       if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return slots;
