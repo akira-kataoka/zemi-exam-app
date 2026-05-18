@@ -11,6 +11,18 @@
   --radius:14px; --radius-sm:8px; --radius-lg:18px;
   --transition:cubic-bezier(.4,0,.2,1);
 }
+/* Dark mode 準備: opt-in 方式 (将来 data-theme="dark" トグル予定)
+   ※全コンポーネントのハードコード #fff を順次 var(--surface) 化してから @media (prefers-color-scheme: dark) で自動切替する */
+:root[data-theme="dark"]{
+  --bg:#0b1220; --surface:#0f172a; --ink:#f1f5f9; --muted:#94a3b8;
+  --primary:#818cf8; --primary-d:#6366f1; --primary-soft:#1e1b4b;
+  --accent:#34d399; --accent-soft:#064e3b;
+  --danger:#f87171; --danger-soft:#450a0a; --warn:#fbbf24; --warn-soft:#451a03;
+  --border:#1e293b; --border-soft:#1a2233;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.4);
+  --shadow-lg:0 12px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.3);
+}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI Variable","Segoe UI","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI",system-ui,sans-serif;font-size:14px;line-height:1.6;font-feature-settings:"palt"1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .muted{color:var(--muted);font-size:12px}
