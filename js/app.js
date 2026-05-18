@@ -266,8 +266,10 @@ const App = (() => {
     }
     if (!sess.interviewSchedule) {
       const today = new Date(); today.setDate(today.getDate() + 1);
+      const pad = n => String(n).padStart(2, '0');
+      const localDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
       sess.interviewSchedule = {
-        startDate: today.toISOString().slice(0, 10),
+        startDate: localDate,
         days: 1,
         dailyStart: '09:00',
         dailyEnd: '17:00',
@@ -3508,17 +3510,18 @@ const App = (() => {
 
   // ===== Demo =====
   function seedDemo() {
-    const name = `デモデータ ${new Date().toISOString().slice(0, 10)}`;
+    const name = `デモデータ ${todayStr()}`;
     const sess = Storage.addSession(name, { resume: true, academic: true, survey: true });
     Storage.setCurrentSessionId(sess.id);
     ensureTests(getSession());
     const live = getSession();
-    // demo interview schedule = today
-    live.interviewSchedule.startDate = new Date().toISOString().slice(0, 10);
+    // demo interview schedule = today (local date)
+    live.interviewSchedule.startDate = todayStr();
     live.interviewSchedule.days = 2;
     // デモ用の基本情報 (試験日: 7日後、目標合格者数: 15名)
     const examDate = new Date(); examDate.setDate(examDate.getDate() + 7);
-    live.examDate = examDate.toISOString().slice(0, 10);
+    const pad = n => String(n).padStart(2, '0');
+    live.examDate = `${examDate.getFullYear()}-${pad(examDate.getMonth() + 1)}-${pad(examDate.getDate())}`;
     live.examLocation = 'デモ会場（仮設定）';
     live.targetPassCount = 15;
     live.notes = 'これはデモデータです。実運用前に削除してください。';
