@@ -2629,14 +2629,16 @@ const App = (() => {
   // ===== Interview schedule manager =====
   function buildSlots(sch) {
     const slots = [];
-    if (!sch?.startDate) return slots;
+    if (!sch?.startDate || !sch?.dailyStart || !sch?.dailyEnd) return slots;
     const days = Number(sch.days) || 1;
     for (let d = 0; d < days; d++) {
       const date = new Date(sch.startDate + 'T00:00:00');
+      if (isNaN(date.getTime())) return slots;
       date.setDate(date.getDate() + d);
       const dateStr = date.toISOString().slice(0, 10);
       const [sh, sm] = sch.dailyStart.split(':').map(Number);
       const [eh, em] = sch.dailyEnd.split(':').map(Number);
+      if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return slots;
       const dayStart = new Date(date); dayStart.setHours(sh, sm, 0, 0);
       const dayEnd = new Date(date); dayEnd.setHours(eh, em, 0, 0);
       const bs = sch.breakStart ? sch.breakStart.split(':').map(Number) : null;
@@ -2761,6 +2763,12 @@ const App = (() => {
     slots.forEach(s => { (days[s.dateStr] = days[s.dateStr] || []).push(s); });
 
     const wrap = $('#iv-timeline-area');
+    if (!wrap) return;
+    // スケジュール未設定の場合は案内表示
+    if (slots.length === 0) {
+      wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🗓</div><p>面接スケジュールが未設定です。</p><p style="font-size:12px">上の「スケジュール」サブタブで開始日・時間枠を設定してから「🎯 自動配置」を実行してください。</p></div>`;
+      return;
+    }
     wrap.innerHTML = `
       <div class="iv-timeline-grid">
         <div class="iv-pool-col">
