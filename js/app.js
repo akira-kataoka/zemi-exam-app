@@ -375,11 +375,13 @@ const App = (() => {
     wrap.innerHTML = sessions.length ? sessions.map(s => {
       const count = Storage.loadForSession(s.id).length;
       const isCurrent = s.id === curId;
+      const dateInfo = s.examDate ? `📅 ${formatDateOnly(s.examDate)}` : `作成 ${formatDate(s.createdAt).slice(0, 10)}`;
+      const locInfo = s.examLocation ? ` ・ 📍${escapeHtml(s.examLocation)}` : '';
       return `<div class="session-popover-item ${isCurrent ? 'current' : ''}" data-id="${s.id}">
         <button class="sp-pick" data-pick="${s.id}" title="この試験回に切り替え">
           ${isCurrent ? '●' : '○'}
           <span class="sp-name">${escapeHtml(s.name)}</span>
-          <span class="sp-meta">${count}名 / ${formatDate(s.createdAt).slice(0, 10)}</span>
+          <span class="sp-meta">${count}名 / ${dateInfo}${locInfo}</span>
         </button>
         <button class="sp-rename icon-btn btn" data-rename="${s.id}" title="名称変更">✏</button>
       </div>`;
