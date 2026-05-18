@@ -2058,24 +2058,40 @@ const App = (() => {
     }
   }
   function handlePhotoUpload(file) {
+    // 入力検証 (画像形式のみ・サイズ上限)
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      toast('画像ファイル（JPG/PNG等）を選択してください', 'error', 3000);
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) { // 10MB上限
+      toast('画像が大きすぎます（10MB以下にしてください）', 'error', 3000);
+      return;
+    }
     const r = new FileReader();
     r.onload = e => {
       // Resize to max 320x320 to keep localStorage small
       const img = new Image();
       img.onload = () => {
-        const maxSide = 320;
-        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-        setPhotoPreview(dataUrl);
-        document.querySelector('#form-resume [name="photo"]').value = dataUrl;
+        try {
+          const maxSide = 320;
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          setPhotoPreview(dataUrl);
+          document.querySelector('#form-resume [name="photo"]').value = dataUrl;
+        } catch (err) {
+          console.error('Photo resize failed', err);
+          toast('画像の変換に失敗しました', 'error', 3000);
+        }
       };
+      img.onerror = () => toast('画像を読み込めませんでした（破損 or 非対応形式）', 'error', 3000);
       img.src = e.target.result;
     };
+    r.onerror = () => toast('ファイル読み込みに失敗しました', 'error', 3000);
     r.readAsDataURL(file);
   }
 
