@@ -3174,7 +3174,7 @@ const App = (() => {
       const rows = parseCsv(text.replace(/^﻿/, ''));
       // Skip leading comment rows starting with '#'
       while (rows.length && rows[0][0] && rows[0][0].startsWith('#')) rows.shift();
-      if (rows.length < 2) { alert('データ行が見つかりません。'); return; }
+      if (rows.length < 2) { toast('データ行が見つかりません', 'error', 3000); return; }
       const headers = rows[0].map(h => h.trim());
       let added = 0, updated = 0;
       // ヘッダーを内部キーに変換（日本語ラベル → key、未知のラベルはそのまま使用）
@@ -3193,6 +3193,9 @@ const App = (() => {
       });
       toast(`履歴書を取り込みました（新規 ${added}名 / 更新 ${updated}名）`, 'success', 4000);
       renderOverview();
+    }).catch(e => {
+      console.error('CSV import failed', e);
+      toast('CSV読み込みに失敗しました: ' + (e?.message || e), 'error', 5000);
     });
   }
 
@@ -3201,7 +3204,7 @@ const App = (() => {
       const sess = ensureTests(getSession());
       const rows = parseCsv(text.replace(/^﻿/, ''));
       while (rows.length && rows[0][0] && rows[0][0].startsWith('#')) rows.shift();
-      if (rows.length < 2) { alert('データ行が見つかりません。'); return; }
+      if (rows.length < 2) { toast('データ行が見つかりません', 'error', 3000); return; }
       // 位置ベース: 1列目=受験番号, 2列目以降=問1, 問2, ... (session の問題順)
       // 後方互換: ヘッダーが q_xxx 形式なら従来通りキー照合も試す
       const headers = rows[0].map(h => h.trim());
@@ -3230,6 +3233,9 @@ const App = (() => {
       });
       toast(`学力試験を取り込みました（${imported}名）` + (skipped ? ` / 空行スキップ ${skipped}名` : ''), 'success', 4000);
       renderOverview();
+    }).catch(e => {
+      console.error('CSV import failed', e);
+      toast('CSV読み込みに失敗しました: ' + (e?.message || e), 'error', 5000);
     });
   }
 
@@ -3238,7 +3244,7 @@ const App = (() => {
       const sess = ensureTests(getSession());
       const rows = parseCsv(text.replace(/^﻿/, ''));
       while (rows.length && rows[0][0] && rows[0][0].startsWith('#')) rows.shift();
-      if (rows.length < 2) { alert('データ行が見つかりません。'); return; }
+      if (rows.length < 2) { toast('データ行が見つかりません', 'error', 3000); return; }
       const headers = rows[0].map(h => h.trim());
       const qIds = sess.surveyTest.questions.map(q => q.id);
       // 位置ベース: 1列目=受験番号, 2〜=各項目, 末尾2列=自由記述
@@ -3269,6 +3275,9 @@ const App = (() => {
       });
       toast(`アンケートを取り込みました（${imported}名）`, 'success', 4000);
       renderOverview();
+    }).catch(e => {
+      console.error('CSV import failed', e);
+      toast('CSV読み込みに失敗しました: ' + (e?.message || e), 'error', 5000);
     });
   }
 
