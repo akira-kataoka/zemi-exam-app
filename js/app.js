@@ -3392,6 +3392,12 @@ const App = (() => {
     // demo interview schedule = today
     live.interviewSchedule.startDate = new Date().toISOString().slice(0, 10);
     live.interviewSchedule.days = 2;
+    // デモ用の基本情報 (試験日: 7日後、目標合格者数: 15名)
+    const examDate = new Date(); examDate.setDate(examDate.getDate() + 7);
+    live.examDate = examDate.toISOString().slice(0, 10);
+    live.examLocation = 'デモ会場（仮設定）';
+    live.targetPassCount = 15;
+    live.notes = 'これはデモデータです。実運用前に削除してください。';
     saveSession(live);
 
     const facDeptList = live.facultyDept || Stats.DEFAULT_FACULTY_DEPT;
