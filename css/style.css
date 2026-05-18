@@ -942,7 +942,7 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 @media print{
   @page{size:A4;margin:14mm 12mm}
   /* Hide all chrome */
-  .topbar,.toolbar,.tabs,.subtabs,.form-actions,.btn,.portal-cards,.portal-form,#toast-container,.modal-overlay,.session-bar,.admintabs,.adminsubtab,.profile-nav,.app-footer,#autosave-indicator,.empty-cta,#empty-cta,.empty-state,.help-modal,.tab-help,.help-tabs{display:none !important}
+  .topbar,.toolbar,.tabs,.subtabs,.form-actions,.btn,.portal-cards,.portal-form,#toast-container,.modal-overlay,.session-bar,.admintabs,.adminsubtab,.profile-nav,.app-footer,#autosave-indicator,.empty-cta,#empty-cta,.empty-state,.help-modal,.tab-help,.help-tabs,.profile-tabbar,.resume-subtabs,.admin-divider{display:none !important}
   body{background:var(--surface);color:#000;font-size:11pt;line-height:1.5}
   main{padding:0;max-width:100%}
   /* Card styling for print */
@@ -978,6 +978,8 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
   .history-table td{border:none;border-bottom:1px dashed #999;padding:1.5mm 2mm;font-size:10pt}
   .history-table .history-year{color:#000;font-weight:600}
   .iv-record-card{background:var(--surface);border:1px solid #999;padding:3mm;margin-top:3mm;page-break-inside:avoid}
+  /* 印刷時はサブタブ系を全部表示（タブUIは非表示済み） */
+  .analysisview,.interviewview,.dataview,.resumeview{display:block !important}
   .iv-rec-avg{background:#fff !important;color:#000 !important;border:1px solid #999;padding:0.5mm 2mm;font-size:9pt}
   .iv-record-notes{background:var(--surface-2) !important;color:#000 !important;border-left:2px solid #333}
   /* Print header */

@@ -3619,13 +3619,31 @@ const App = (() => {
       const min = Number(kInp.min) || 2, max = Number(kInp.max) || 8;
       return Math.max(min, Math.min(max, v));
     }
+    function updateKStepperState() {
+      if (!kInp) return;
+      const v = Number(kInp.value) || 2;
+      const min = Number(kInp.min) || 2, max = Number(kInp.max) || 8;
+      if (kDec) kDec.disabled = v <= min;
+      if (kInc) kInc.disabled = v >= max;
+    }
     if (kInc && kInp) kInc.addEventListener('click', () => {
       kInp.value = clampK((Number(kInp.value) || 2) + 1);
       kInp.dispatchEvent(new Event('change', { bubbles: true }));
+      updateKStepperState();
     });
     if (kDec && kInp) kDec.addEventListener('click', () => {
       kInp.value = clampK((Number(kInp.value) || 2) - 1);
       kInp.dispatchEvent(new Event('change', { bubbles: true }));
+      updateKStepperState();
+    });
+    if (kInp) kInp.addEventListener('change', updateKStepperState);
+    if (kInp) kInp.addEventListener('input', updateKStepperState);
+    updateKStepperState();
+    // ESC closes any open modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const sim = document.getElementById('session-info-modal');
+      if (sim && sim.style.display === 'flex') { closeSessionInfoModal(); return; }
     });
 
     // Overview controls
