@@ -14,7 +14,7 @@
 <header class="topbar">
   <div class="brand-row">
     <div class="brand">
-      <span class="logo">🎓</span>
+      <span class="logo">🏫</span>
       <div>
         <h1>ゼミ試験アプリケーション</h1>
         <p class="sub">履歴書・学力試験・アンケート・面接の管理・分析</p>
@@ -32,7 +32,7 @@
     </div>
   </div>
   <div class="session-bar">
-    <label class="session-label">🗂 試験回:</label>
+    <label class="session-label">🗓 試験回:</label>
     <input type="text" id="session-name-input" class="session-name-input" title="クリックして名称を編集" placeholder="試験回の名前">
     <div class="session-picker-wrap">
       <button class="btn icon-btn" id="session-picker-btn" title="試験回を検索・切り替え">🔍 切替</button>
@@ -1024,6 +1024,36 @@
           <div class="tip-icon">⌨</div>
           <div><strong>キーボードショートカット</strong><br>
             <kbd>/</kbd> 検索バーにフォーカス　/　<kbd>?</kbd> このヘルプを開く　/　<kbd>Esc</kbd> モーダルを閉じる
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">🌙</div>
+          <div><strong>ダークモード切替</strong><br>
+            画面右上の <kbd>🌙 / ☀</kbd> ボタンで明暗を切替できます。設定はブラウザに保存され、次回以降も維持されます。グラフ色も自動的に追従。
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">📱</div>
+          <div><strong>スマホでの試験回バー折り畳み</strong><br>
+            スマホ表示時は試験回バーの <kbd>▲</kbd> ボタンでフェーズ状態などの詳細表示を折り畳んで省スペース化できます。
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">📧</div>
+          <div><strong>メール・電話のワンタップ起動</strong><br>
+            個人画面の <strong>メール</strong> アドレスをクリックすると標準メーラーが、<strong>電話</strong> 番号をタップすると電話アプリが起動します。
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">🏆</div>
+          <div><strong>最高/最低得点カードから個人画面へ</strong><br>
+            ダッシュボードの「最高得点」「最低得点」カードをクリックすると、その受験者の個人画面に直接ジャンプできます。
+          </div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">☁</div>
+          <div><strong>Supabase によるクラウド同期（オプション）</strong><br>
+            <code>SUPABASE_SETUP.md</code> の手順で Supabase 無料プロジェクトを接続すると、複数端末でデータ共有可能。<strong>設定 → データ</strong> の「☁ クラウド同期」カードで手動 push/pull もできます。
           </div>
         </div>
       </div>
