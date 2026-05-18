@@ -721,6 +721,13 @@ body.candidate-mode .brand .sub{display:none}
 .toast-warn{background:var(--warn)}
 .toast-error{background:var(--danger)}
 
+/* Session bar collapse */
+.session-collapse-btn{display:none;padding:4px 8px !important;font-size:11px;line-height:1}
+.session-bar.collapsed .phase-status,
+.session-bar.collapsed .session-meta,
+.session-bar.collapsed #session-delete{display:none !important}
+.session-bar.collapsed .session-collapse-btn{transform:rotate(180deg)}
+
 /* Mobile responsive polish */
 @media(max-width:760px){
   .topbar{padding:6px 10px;box-shadow:none;border-bottom:1px solid var(--border-soft)}
@@ -735,6 +742,14 @@ body.candidate-mode .brand .sub{display:none}
   main{padding:12px}
   .session-bar{padding:6px 10px;gap:6px;margin-top:8px}
   .session-bar .session-label{font-size:12px}
+  .session-collapse-btn{display:inline-flex;margin-left:auto}
+  /* 🗑 ボタンを必要最小幅のアイコンのみに */
+  #session-delete{padding:4px 8px !important;font-size:14px;flex:0 0 auto;min-width:auto;line-height:1}
+  /* デフォルトで折り畳み (phase-status と 🗑 を隠す)。展開ボタンで開く */
+  .session-bar:not(.expanded) .phase-status,
+  .session-bar:not(.expanded) #session-delete,
+  .session-bar:not(.expanded) .session-meta{display:none}
+  .session-bar.expanded .session-collapse-btn{transform:rotate(180deg)}
   .session-bar select{min-width:120px;font-size:12px;padding:4px 8px}
   .session-name-input{min-width:120px;font-size:13px;padding:4px 8px}
   .phase-status{font-size:10px;gap:3px;width:100%;margin-left:0}

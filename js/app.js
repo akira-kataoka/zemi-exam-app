@@ -3115,9 +3115,31 @@ const App = (() => {
     });
   }
 
+  // ===== Session bar collapse toggle =====
+  function initSessionCollapse() {
+    const btn = document.getElementById('session-collapse');
+    const bar = document.querySelector('.session-bar');
+    if (!btn || !bar) return;
+    // 状態を localStorage に保存。デスクトップは常に展開、モバイルは保存値 or デフォルト折畳
+    const isMobile = window.matchMedia('(max-width:760px)').matches;
+    const saved = localStorage.getItem('zemiSA.sessionBarExpanded');
+    if (isMobile) {
+      if (saved === '1') bar.classList.add('expanded');
+    } else {
+      bar.classList.add('expanded'); // デスクトップは常に展開
+    }
+    btn.addEventListener('click', () => {
+      bar.classList.toggle('expanded');
+      const expanded = bar.classList.contains('expanded');
+      btn.setAttribute('aria-expanded', String(expanded));
+      localStorage.setItem('zemiSA.sessionBarExpanded', expanded ? '1' : '0');
+    });
+  }
+
   // ===== Init =====
   function init() {
     initThemeToggle();
+    initSessionCollapse();
     ensureTests(getSession());
     attachAdminContent();
     initAuthUI();
