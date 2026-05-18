@@ -773,6 +773,16 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 .toast-info{background:var(--primary)}
 .toast-warn{background:var(--warn)}
 .toast-error{background:var(--danger)}
+:root[data-theme="dark"] .toast{background:#1e293b;color:#f1f5f9;border-color:rgba(165,180,252,.2)}
+:root[data-theme="dark"] .toast-success{background:#065f46;color:#d1fae5}
+:root[data-theme="dark"] .toast-info{background:#312e81;color:#e0e7ff}
+:root[data-theme="dark"] .toast-warn{background:#78350f;color:#fef3c7}
+:root[data-theme="dark"] .toast-error{background:#7f1d1d;color:#fee2e2}
+/* Mobile: toast at bottom-center */
+@media (max-width:640px){
+  #toast-container{left:12px;right:12px;bottom:12px;align-items:center}
+  .toast{min-width:0;width:100%;max-width:none}
+}
 
 /* Session bar collapse */
 .session-collapse-btn{display:none;padding:4px 8px !important;font-size:11px;line-height:1}
@@ -883,6 +893,17 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 :root[data-theme="dark"] .iv-card.status-now,
 :root[data-theme="dark"] .iv-card.status-done-late,
 :root[data-theme="dark"] .session-popover-item .sp-rename:hover{background:rgba(245,158,11,.12);color:#fde68a;border-color:rgba(245,158,11,.35)}
+:root[data-theme="dark"] .session-popover{background:var(--surface);border-color:var(--border);box-shadow:0 12px 32px rgba(0,0,0,.6)}
+:root[data-theme="dark"] .session-popover-item{background:var(--surface-2);border-color:var(--border)}
+:root[data-theme="dark"] .session-popover-item.current{border-color:var(--primary);background:rgba(99,102,241,.15)}
+:root[data-theme="dark"] .session-popover-item .sp-pick:hover{background:var(--surface-hover)}
+:root[data-theme="dark"] .session-popover input[type="search"]{background:var(--surface);color:var(--ink);border-color:var(--border)}
+:root[data-theme="dark"] .profile-picker-popover{background:var(--surface);border-color:var(--border)}
+:root[data-theme="dark"] .help-modal{background:var(--surface);color:var(--ink)}
+:root[data-theme="dark"] .help-card{background:var(--surface-2);border-color:var(--border)}
+:root[data-theme="dark"] .flow-step{background:var(--surface-2);border-color:var(--border)}
+:root[data-theme="dark"] .help-tabs{background:var(--surface-3);border-color:var(--border)}
+:root[data-theme="dark"] .help-tab.active{background:var(--surface);color:#e0e7ff;border-color:var(--border)}
 :root[data-theme="dark"] .header-action-help{font-weight:600}
 :root[data-theme="dark"] .msg-item-head code{background:#1e1b4b;color:#fbbf24}
 /* ステータス色 (success/danger/warn/info/purple) dark バリアント一括 */
