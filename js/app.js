@@ -3972,7 +3972,12 @@ const App = (() => {
       kInp.dispatchEvent(new Event('change', { bubbles: true }));
       updateKStepperState();
     });
-    if (kInp) kInp.addEventListener('change', updateKStepperState);
+    if (kInp) kInp.addEventListener('change', () => {
+      // 直接入力値も範囲内にクランプ (例: 100 や -5 を入れたら 2-8 に補正)
+      const clamped = clampK(Number(kInp.value) || 2);
+      if (Number(kInp.value) !== clamped) kInp.value = clamped;
+      updateKStepperState();
+    });
     if (kInp) kInp.addEventListener('input', updateKStepperState);
     updateKStepperState();
     // ESC handling は init() 内の汎用キー処理に統合済み（重複防止のためここでは何もしない）
