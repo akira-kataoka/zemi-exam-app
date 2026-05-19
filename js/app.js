@@ -1159,6 +1159,8 @@ const App = (() => {
     for (let ci = 0; ci < k; ci++) {
       const memberIdx = list.map((_, i) => i).filter(i => assignments[i] === ci);
       const members = memberIdx.map(i => list[i]);
+      // 空クラスタ（k-means の収束結果でメンバー0になることがある）はスキップ
+      if (members.length === 0) continue;
       // Find representative: member closest to centroid
       let repIdx = memberIdx[0], minDist = Infinity;
       memberIdx.forEach(i => {
