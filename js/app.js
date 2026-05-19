@@ -1035,6 +1035,15 @@ const App = (() => {
       </tr>
     `).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">学力試験を受験した受験者がいません。</td></tr>`;
     tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.setAttribute('tabindex', '0');
+      tr.setAttribute('role', 'button');
+      tr.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          showView('profile');
+          openProfileTab(tr.dataset.id);
+        }
+      });
       tr.addEventListener('click', () => {
         showView('profile');
         openProfileTab(tr.dataset.id);
