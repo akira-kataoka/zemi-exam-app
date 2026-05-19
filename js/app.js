@@ -2896,7 +2896,7 @@ const App = (() => {
   function candidateCard(c, sch) {
     const status = interviewStatus(c, sch);
     const cls = `iv-card status-${status}`;
-    return `<div class="${cls}" draggable="true" data-id="${c.id}" title="クリックで面接記録を編集">
+    return `<div class="${cls}" draggable="true" data-id="${c.id}" role="button" tabindex="0" title="クリック/Enter で面接記録を編集（ドラッグで枠移動）" aria-label="${escapeHtml(fullName(c))} の面接記録">
       ${c.photo ? `<img class="avatar-sm" src="${c.photo}" alt="">` : '<div class="avatar-sm avatar-blank">👤</div>'}
       <div class="iv-card-info">
         <div class="iv-card-name">${escapeHtml(fullName(c))}</div>
@@ -2918,6 +2918,13 @@ const App = (() => {
         if (e.target.closest('.iv-card')) {
           const id = card.dataset.id;
           openInterviewEditor(id);
+        }
+      });
+      // キーボード: Enter/Space で面接記録モーダルを開く
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openInterviewEditor(card.dataset.id);
         }
       });
     });
