@@ -2480,8 +2480,8 @@ const App = (() => {
       if (s === '') return null;
       const n = Number(s);
       if (!Number.isFinite(n)) return null;
-      // 負数・小数は丸めて 0 以上に
-      return Math.max(0, Math.floor(n));
+      // 負数・小数は丸めて 0〜9999 の範囲に
+      return Math.max(0, Math.min(9999, Math.floor(n)));
     };
     Storage.updateSessionInfo(sess.id, {
       name: ($('#sim-name').value || '').trim() || sess.name,
@@ -2519,7 +2519,7 @@ const App = (() => {
       if (s === '') return null;
       const n = Number(s);
       if (!Number.isFinite(n)) return null;
-      return Math.max(0, Math.floor(n));
+      return Math.max(0, Math.min(9999, Math.floor(n)));
     };
     const payload = {
       name: ($('#si-name').value || '').trim() || sess.name,
