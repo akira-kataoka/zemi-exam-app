@@ -1244,8 +1244,8 @@ const App = (() => {
         <div class="cluster-members">
           <div class="trait-title">全メンバー（チェックで合格マーク）</div>
           <div class="cluster-member-list">${members.map(m => `
-            <label class="cluster-member-row" data-jump-id="${m.id}">
-              <input type="checkbox" class="cluster-pass-check" data-id="${m.id}" ${m.passed ? 'checked' : ''}>
+            <label class="cluster-member-row" data-jump-id="${m.id}" title="クリックで個人タブを開く（チェックは合格マーク）">
+              <input type="checkbox" class="cluster-pass-check" data-id="${m.id}" ${m.passed ? 'checked' : ''} aria-label="${escapeHtml(fullName(m))} を合格にする">
               ${m.photo ? `<img class="avatar-sm" src="${m.photo}" alt="" style="width:22px;height:22px">` : '<span class="avatar-sm avatar-blank" style="width:22px;height:22px">👤</span>'}
               <span class="cluster-member-name">${escapeHtml(fullName(m))}</span>
               <span class="cluster-member-score">${Stats.hasAcademic(m) ? Stats.scoreAcademic(m, sess.academicTest).percent.toFixed(1) + '%' : ''}</span>
