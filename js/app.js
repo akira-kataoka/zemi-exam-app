@@ -2580,7 +2580,7 @@ const App = (() => {
           <span class="q-edit-num">問${idx + 1}</span>
           <input class="q-edit-cat" type="text" value="${escapeHtml(q.category || '')}" placeholder="カテゴリ" data-field="category">
           <input class="q-edit-pt" type="number" value="${q.points}" min="1" placeholder="配点" data-field="points">
-          <button class="btn danger" data-act="del-academic">削除</button>
+          <button type="button" class="btn danger" data-act="del-academic">削除</button>
         </div>
         <textarea data-field="text" rows="2" placeholder="問題文">${escapeHtml(q.text)}</textarea>
         <div class="q-edit-choices">
@@ -2655,7 +2655,7 @@ const App = (() => {
         <div class="q-edit-card" data-idx="${idx}">
           <div class="q-edit-head">
             <span class="q-edit-num">項目${idx + 1}</span>
-            <button class="btn danger" data-act="del-survey">削除</button>
+            <button type="button" class="btn danger" data-act="del-survey">削除</button>
           </div>
           <textarea data-field="text" rows="2" placeholder="質問文">${escapeHtml(q.text)}</textarea>
         </div>
@@ -2696,7 +2696,7 @@ const App = (() => {
             <option value="text" ${f.type === 'text' ? 'selected' : ''}>1行テキスト</option>
             <option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>複数行テキスト</option>
           </select>
-          <button class="btn danger" data-act="del-extra">削除</button>
+          <button type="button" class="btn danger" data-act="del-extra">削除</button>
         </div>
         <input type="text" data-field="label" value="${escapeHtml(f.label)}" placeholder="質問ラベル">
       </div>
