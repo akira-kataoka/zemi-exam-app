@@ -49,8 +49,8 @@
 - 多様性確保のためにグループから何名採用すべきか目安を表示
 
 ### データ管理
-- JSONエクスポート/インポート
-- localStorage 永続化
+- localStorage 永続化（オプションで Supabase クラウド同期）
+- CSV 取込（履歴書・学力試験・アンケート テンプレート付き）
 - デモデータ20名（カスタマイズ前提の試験回付き）即投入
 
 ## 技術
@@ -64,16 +64,21 @@
 ## ファイル構成
 
 ```
-ZemiSelectAnalyzer/
+zemi-exam-app/
 ├── index.html
 ├── css/style.css
+├── db/
+│   ├── schema.sql        # Supabase スキーマ定義
+│   └── rls.sql           # Row Level Security ポリシー
 └── js/
-    ├── storage.js   # sessions + candidates upsert
-    ├── stats.js     # default banks + auto-scoring
-    ├── cluster.js   # K-means + PCA(2D)
-    └── app.js       # controller
+    ├── storage.js         # sessions + candidates upsert
+    ├── stats.js           # default banks + auto-scoring
+    ├── cluster.js         # K-means + PCA(2D)
+    ├── supabase-client.js # Supabase 接続・認証
+    ├── data-sync.js       # localStorage ↔ Supabase 双方向同期
+    └── app.js             # controller
 ```
 
 ## 公開URL
 
-🌐 https://akira-kataoka.github.io/ZemiSelectAnalyzer/
+🌐 https://akira-kataoka.github.io/zemi-exam-app/
