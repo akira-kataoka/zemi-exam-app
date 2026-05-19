@@ -43,7 +43,7 @@
     <div class="session-picker-wrap">
       <button class="btn icon-btn" id="session-picker-btn" title="試験回を検索・切り替え">🔍 切替</button>
       <div class="session-popover" id="session-popover" style="display:none">
-        <input type="search" id="session-popover-search" placeholder="試験回を検索（名前で絞り込み）">
+        <input type="search" id="session-popover-search" placeholder="試験回を検索（名前で絞り込み）" aria-label="試験回検索">
         <div class="session-popover-list" id="session-popover-list"></div>
         <div class="session-popover-foot">
           <button class="btn primary" id="session-popover-add">＋ 新規試験回</button>
@@ -234,7 +234,7 @@
           <span class="caret">▼</span>
         </button>
         <div class="profile-picker-popover" id="profile-picker-popover" style="display:none">
-          <input type="search" id="profile-picker-search" placeholder="名前・受験番号・学部で検索...">
+          <input type="search" id="profile-picker-search" placeholder="名前・受験番号・学部で検索..." aria-label="受験者検索">
           <div class="profile-picker-list" id="profile-picker-list"></div>
         </div>
       </div>
