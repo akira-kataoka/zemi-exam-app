@@ -2588,7 +2588,7 @@ const App = (() => {
             <div class="q-choice">
               <input type="radio" name="correct_${idx}" ${q.correctIndex === j ? 'checked' : ''} data-correct="${j}">
               <input type="text" value="${escapeHtml(c)}" data-choice="${j}" placeholder="選択肢">
-              <button class="btn" data-act="del-choice-academic" data-choice-idx="${j}">×</button>
+              <button class="btn" data-act="del-choice-academic" data-choice-idx="${j}" aria-label="選択肢${j + 1}を削除" title="削除">×</button>
             </div>
           `).join('')}
         </div>
@@ -3156,7 +3156,7 @@ const App = (() => {
           ${(f.departments || []).map((d, j) => `
             <div class="dept-row">
               <input type="text" data-dept="${j}" value="${escapeHtml(d)}" placeholder="学科名">
-              <button class="btn" data-act="del-dept" data-dept-idx="${j}">×</button>
+              <button class="btn" data-act="del-dept" data-dept-idx="${j}" aria-label="学科を削除" title="削除">×</button>
             </div>
           `).join('')}
           <button class="btn" data-act="add-dept">＋ 学科を追加</button>
