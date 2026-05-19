@@ -100,13 +100,16 @@ const DataSync = (() => {
       phases: s.phases || {},
       phase_schedule: s.phaseSchedule || {},
       pin: s.pin || null,
-      passcode: s.passcode || null,
+      // 旧 'passcode' フィールドは applicationPasscode (受験申込合言葉) を指す
+      passcode: s.applicationPasscode || s.passcode || null,
       academic_test: s.academicTest || null,
       survey_test: s.surveyTest || null,
       interview_ratings: s.interviewRatings || null,
       faculty_dept: s.facultyDept || null,
-      resume_fields: s.resumeFields || null,
-      msg_template: s.msgTemplate || null,
+      // resume_fields に { extra: resumeExtraFields, schedule: interviewSchedule } を入れる
+      // (DB スキーマを増やさず追加項目を同期するための JSON 集約)
+      resume_fields: { extra: s.resumeExtraFields || [], schedule: s.interviewSchedule || null },
+      msg_template: s.messageTemplate || s.msgTemplate || null,
       // 基本情報 (2026-05-18 追加)
       exam_date: s.examDate || null,
       exam_location: s.examLocation || null,
@@ -115,6 +118,16 @@ const DataSync = (() => {
     };
   }
   function rowToSess(r) {
+    // resume_fields から {extra, schedule} を取り出す (新形式)
+    // 旧形式 (配列) は extra として復元
+    let resumeExtra = [], interviewSch = null;
+    const rf = r.resume_fields;
+    if (Array.isArray(rf)) {
+      resumeExtra = rf;
+    } else if (rf && typeof rf === 'object') {
+      resumeExtra = Array.isArray(rf.extra) ? rf.extra : [];
+      interviewSch = rf.schedule || null;
+    }
     return {
       id: r.id,
       name: r.name,
@@ -122,13 +135,14 @@ const DataSync = (() => {
       phases: r.phases || {},
       phaseSchedule: r.phase_schedule || {},
       pin: r.pin,
-      passcode: r.passcode,
+      applicationPasscode: r.passcode || '',
       academicTest: r.academic_test,
       surveyTest: r.survey_test,
       interviewRatings: r.interview_ratings,
       facultyDept: r.faculty_dept,
-      resumeFields: r.resume_fields,
-      msgTemplate: r.msg_template,
+      resumeExtraFields: resumeExtra,
+      interviewSchedule: interviewSch,
+      messageTemplate: r.msg_template,
       examDate: r.exam_date || '',
       examLocation: r.exam_location || '',
       targetPassCount: r.target_pass_count,
