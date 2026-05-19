@@ -4083,7 +4083,16 @@ const App = (() => {
     });
     // Dashboard stat card → open submission modal
     document.querySelectorAll('[data-quick-filter]').forEach(el => {
+      // a11y: クリック可能な div を keyboard でも操作可能に
+      if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
       el.addEventListener('click', () => openSubmissionModal(el.dataset.quickFilter));
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openSubmissionModal(el.dataset.quickFilter);
+        }
+      });
     });
     $('#form-academic').addEventListener('submit', submitAcademic);
     $('#form-survey').addEventListener('submit', submitSurvey);
