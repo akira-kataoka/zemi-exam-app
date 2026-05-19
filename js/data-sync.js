@@ -12,6 +12,13 @@ const DataSync = (() => {
 
   // ===== カラム変換 (キャメル → スネーク) =====
   function candToRow(c) {
+    // custom_resume に追加標準フィールドも入れる
+    // (DB スキーマを最小限に保つため、専用カラム化していない項目はここに格納)
+    const extra = Object.assign({}, c.extra || {});
+    ['birthdate', 'gpa', 'grade', 'club', 'selfPr', 'researchTopic',
+     'freeAchievement', 'freeAspiration'].forEach(k => {
+      if (c[k] !== undefined && c[k] !== null) extra['__' + k] = c[k];
+    });
     return {
       id: c.id,
       session_id: c.sessionId,
@@ -24,7 +31,7 @@ const DataSync = (() => {
       gender: c.gender,
       faculty: c.faculty,
       department: c.department,
-      year: c.year,
+      year: c.grade || c.year || null,
       email: c.email,
       phone: c.phone,
       address: c.address,
@@ -32,7 +39,7 @@ const DataSync = (() => {
       photo: c.photo || null,
       history: c.history || [],
       motivation: c.motivation,
-      custom_resume: c.customResume || {},
+      custom_resume: extra,
       application_submitted_at: c.applicationSubmittedAt || null,
       resume_submitted_at: c.resumeSubmittedAt || null,
       academic_submitted_at: c.academicSubmittedAt || null,
@@ -45,7 +52,15 @@ const DataSync = (() => {
     };
   }
   function rowToCand(r) {
-    return {
+    // custom_resume から __付きの追加標準フィールドを取り出す
+    const raw = r.custom_resume || {};
+    const extra = {};
+    const std = {};
+    Object.keys(raw).forEach(k => {
+      if (k.startsWith('__')) std[k.slice(2)] = raw[k];
+      else extra[k] = raw[k];
+    });
+    return Object.assign({
       id: r.id,
       sessionId: r.session_id,
       examineeId: r.examinee_id,
@@ -57,7 +72,7 @@ const DataSync = (() => {
       gender: r.gender,
       faculty: r.faculty,
       department: r.department,
-      year: r.year,
+      grade: r.year || null,
       email: r.email,
       phone: r.phone,
       address: r.address,
@@ -65,7 +80,7 @@ const DataSync = (() => {
       photo: r.photo,
       history: r.history || [],
       motivation: r.motivation,
-      customResume: r.custom_resume || {},
+      extra,
       applicationSubmittedAt: r.application_submitted_at,
       resumeSubmittedAt: r.resume_submitted_at,
       academicSubmittedAt: r.academic_submitted_at,
@@ -76,7 +91,7 @@ const DataSync = (() => {
       passed: !!r.passed,
       passReason: r.pass_reason,
       createdAt: r.created_at
-    };
+    }, std);
   }
   function sessToRow(s) {
     return {
