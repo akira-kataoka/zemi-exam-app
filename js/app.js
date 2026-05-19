@@ -2588,12 +2588,12 @@ const App = (() => {
             <div class="q-choice">
               <input type="radio" name="correct_${idx}" ${q.correctIndex === j ? 'checked' : ''} data-correct="${j}">
               <input type="text" value="${escapeHtml(c)}" data-choice="${j}" placeholder="選択肢">
-              <button class="btn" data-act="del-choice-academic" data-choice-idx="${j}" aria-label="選択肢${j + 1}を削除" title="削除">×</button>
+              <button type="button" class="btn" data-act="del-choice-academic" data-choice-idx="${j}" aria-label="選択肢${j + 1}を削除" title="削除">×</button>
             </div>
           `).join('')}
         </div>
         <div class="q-edit-actions">
-          <button class="btn" data-act="add-choice-academic">＋選択肢を追加</button>
+          <button type="button" class="btn" data-act="add-choice-academic">＋選択肢を追加</button>
         </div>
       </div>
     `).join('') || '<p class="muted">問題がありません。「問題を追加」ボタンから作成してください。</p>';
@@ -3156,10 +3156,10 @@ const App = (() => {
           ${(f.departments || []).map((d, j) => `
             <div class="dept-row">
               <input type="text" data-dept="${j}" value="${escapeHtml(d)}" placeholder="学科名">
-              <button class="btn" data-act="del-dept" data-dept-idx="${j}" aria-label="学科を削除" title="削除">×</button>
+              <button type="button" class="btn" data-act="del-dept" data-dept-idx="${j}" aria-label="学科を削除" title="削除">×</button>
             </div>
           `).join('')}
-          <button class="btn" data-act="add-dept">＋ 学科を追加</button>
+          <button type="button" class="btn" data-act="add-dept">＋ 学科を追加</button>
         </div>
       </details>
     `).join('') || '<p class="muted">学部が登録されていません。</p>';
