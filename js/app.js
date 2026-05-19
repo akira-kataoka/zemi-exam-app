@@ -2783,7 +2783,7 @@ const App = (() => {
           <div class="q-edit-head">
             <span class="q-edit-num">項目${idx + 1}</span>
             <input type="text" data-iv-rate-label value="${escapeHtml(r.label)}" placeholder="評価項目名（例: 学業への取り組み）">
-            <button class="btn danger" data-act="del-iv-rate">削除</button>
+            <button type="button" class="btn danger" data-act="del-iv-rate">削除</button>
           </div>
           <div class="muted" style="font-size:11px;padding:0 4px">識別子: <code>${escapeHtml(r.key)}</code>（変更不可）</div>
         </div>
@@ -3224,7 +3224,7 @@ const App = (() => {
             <div class="share-url">${escapeHtml(url)}</div>
             ${hasPass ? `<div class="muted" style="font-size:12px;margin-bottom:6px">合言葉: <code>${escapeHtml(sess.applicationPasscode)}</code></div>` : ''}
             <div class="share-actions">
-              <button class="btn" data-copy-app>URLをコピー</button>
+              <button type="button" class="btn" data-copy-app>URLをコピー</button>
               <a class="btn" href="${escapeHtml(url)}" target="_blank">プレビュー</a>
             </div>
             <div class="qr-area" id="qr-application"></div>
