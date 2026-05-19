@@ -404,7 +404,7 @@ const App = (() => {
       e.stopPropagation();
       const id = b.dataset.rename;
       const s = Storage.loadSessions().find(x => x.id === id);
-      const v = prompt('試験回の名前', s.name);
+      const v = (prompt('試験回の名前', s.name) || '').trim();
       if (!v || v === s.name) return;
       Storage.renameSession(id, v);
       renderSessionBar();
@@ -4140,7 +4140,7 @@ const App = (() => {
 
     $('#add-faculty').addEventListener('click', () => {
       const sess = getSession();
-      const name = prompt('追加する学部名を入力してください', '新学部');
+      const name = (prompt('追加する学部名を入力してください', '新学部') || '').trim();
       if (!name) return;
       sess.facultyDept.push({ name, departments: ['新学科'] });
       saveSession(sess); renderFacultyDeptEditor(sess);
@@ -4153,7 +4153,7 @@ const App = (() => {
     });
     $('#add-resume-field').addEventListener('click', () => {
       const sess = getSession();
-      const label = prompt('追加質問のラベルを入力してください', '追加質問');
+      const label = (prompt('追加質問のラベルを入力してください', '追加質問') || '').trim();
       if (!label) return;
       sess.resumeExtraFields.push({ id: 'rx_' + Date.now().toString(36), label, type: 'textarea' });
       saveSession(sess); renderResumeMgr();
