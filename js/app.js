@@ -3060,7 +3060,7 @@ const App = (() => {
     area.innerHTML = `
       <div class="msg-result-head">
         <strong>${list.length}名のメッセージを生成しました</strong>
-        <button class="btn" id="msg-copy-all">📋 全員分をまとめてコピー</button>
+        <button type="button" class="btn" id="msg-copy-all">📋 全員分をまとめてコピー</button>
       </div>
       <div class="msg-list">
         ${list.map(c => {
@@ -3068,7 +3068,7 @@ const App = (() => {
           return `<div class="msg-item">
             <div class="msg-item-head">
               <strong>${escapeHtml(fullName(c))}</strong> <span class="muted">(${escapeHtml(c.examineeId || '')}) ・ パスワード: <code>${escapeHtml(c.password || '')}</code></span>
-              <button class="btn btn-sm" data-msg-id="${c.id}">📋 コピー</button>
+              <button type="button" class="btn btn-sm" data-msg-id="${c.id}">📋 コピー</button>
             </div>
             <pre class="msg-body" data-msg-body="${c.id}">${escapeHtml(text)}</pre>
           </div>`;
