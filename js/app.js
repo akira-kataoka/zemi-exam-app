@@ -419,7 +419,8 @@ const App = (() => {
     refreshAllViews();
   }
   function onAddSession() {
-    const name = prompt('新しい試験回の名前を入力してください', `${new Date().getFullYear()}年度入試`);
+    const input = prompt('新しい試験回の名前を入力してください', `${new Date().getFullYear()}年度入試`);
+    const name = (input || '').trim();
     if (!name) return;
     const s = Storage.addSession(name);
     Storage.setCurrentSessionId(s.id);
@@ -429,7 +430,8 @@ const App = (() => {
   }
   function onRenameSession() {
     const cur = getSession();
-    const name = prompt('試験回の名前', cur.name);
+    const input = prompt('試験回の名前', cur.name);
+    const name = (input || '').trim();
     if (!name || name === cur.name) return;
     Storage.renameSession(cur.id, name);
     renderSessionBar();
