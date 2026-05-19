@@ -23,6 +23,8 @@ const App = (() => {
       el = document.createElement('div');
       el.id = 'autosave-indicator';
       el.className = 'autosave-indicator';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
       document.body.appendChild(el);
     }
     if (state === 'saving') { el.textContent = '💾 保存中...'; el.className = 'autosave-indicator saving'; }
