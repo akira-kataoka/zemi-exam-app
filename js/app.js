@@ -2333,7 +2333,9 @@ const App = (() => {
         alert('保存容量を超えました。顔写真を削除するか、不要な試験回を削除してください。');
         return;
       }
-      throw err;
+      console.error('submitResume error:', err);
+      alert('履歴書の保存に失敗しました: ' + (err?.message || err));
+      return;
     }
     toast('履歴書を提出しました', 'success');
     $('#portal-resume').style.display = 'none';
