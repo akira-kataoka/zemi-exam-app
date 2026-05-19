@@ -886,8 +886,8 @@ const App = (() => {
         <td class="num">${iv ? `<div class="cell-status"><strong>${ivAvg.toFixed(2)}/5.00</strong><span class="cell-time">実施${Stats.interviewCount(c)}件</span></div>` : missBadge}</td>
         <td>${formatDate(lastUpdate)}</td>
         <td class="row-actions">
-          <button class="btn btn-icon" data-act="view" title="詳細を見る" aria-label="詳細を見る">👁</button>
-          <button class="btn btn-icon danger" data-act="del" title="削除" aria-label="削除">🗑</button>
+          <button type="button" class="btn btn-icon" data-act="view" title="詳細を見る" aria-label="詳細を見る">👁</button>
+          <button type="button" class="btn btn-icon danger" data-act="del" title="削除" aria-label="削除">🗑</button>
         </td>
       </tr>`;
     }).join('') || (list.length === 0
@@ -1811,8 +1811,8 @@ const App = (() => {
                     <span class="muted" style="font-size:12px"> ・ ${formatDate(r.heldAt)}</span>
                   </div>
                   <div style="display:flex;gap:6px">
-                    <button class="btn btn-icon" data-edit-rec="${r.id}" title="編集" aria-label="${escapeHtml(r.interviewer || '面接')}記録を編集">✏</button>
-                    <button class="btn btn-icon danger" data-del-rec="${r.id}" title="削除" aria-label="${escapeHtml(r.interviewer || '面接')}記録を削除">🗑</button>
+                    <button type="button" class="btn btn-icon" data-edit-rec="${r.id}" title="編集" aria-label="${escapeHtml(r.interviewer || '面接')}記録を編集">✏</button>
+                    <button type="button" class="btn btn-icon danger" data-del-rec="${r.id}" title="削除" aria-label="${escapeHtml(r.interviewer || '面接')}記録を削除">🗑</button>
                   </div>
                 </div>
               `).join('')}
