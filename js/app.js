@@ -2818,12 +2818,14 @@ const App = (() => {
   }
 
   function getScheduleConfig() {
+    const days = Math.max(1, Math.min(14, Number($('#iv-sch-days').value) || 1));
+    const slotMinutes = Math.max(5, Math.min(120, Number($('#iv-sch-slotMinutes').value) || 30));
     return {
       startDate: $('#iv-sch-startDate').value,
-      days: Number($('#iv-sch-days').value) || 1,
+      days,
       dailyStart: $('#iv-sch-dailyStart').value,
       dailyEnd: $('#iv-sch-dailyEnd').value,
-      slotMinutes: Number($('#iv-sch-slotMinutes').value) || 30,
+      slotMinutes,
       breakStart: $('#iv-sch-breakStart').value || '',
       breakEnd: $('#iv-sch-breakEnd').value || ''
     };
