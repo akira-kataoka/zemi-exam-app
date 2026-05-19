@@ -957,6 +957,7 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 :root[data-theme="dark"] .iv-status-pill.done,
 :root[data-theme="dark"] .ill-box.success,
 :root[data-theme="dark"] .cluster-member-row:has(input:checked){background:rgba(5,150,105,.18) !important;color:#a7f3d0 !important;border-color:rgba(16,185,129,.4) !important}
+:root[data-theme="dark"] .cluster-member-row input:checked ~ .cluster-member-name{color:#a7f3d0}
 :root[data-theme="dark"] .pp-dot.done{background:rgba(5,150,105,.4) !important}
 :root[data-theme="dark"] .ac-timer.expired{background:#1f2937;color:#cbd5e1;border-color:#475569}
 :root[data-theme="dark"] .iv-card.status-done{background:rgba(16,185,129,.12);color:var(--ink)}
