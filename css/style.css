@@ -888,6 +888,8 @@ dd a[href^="tel:"]::before{content:"📞 ";font-size:.9em}
 :root[data-theme="dark"] .pp-pass{background:linear-gradient(135deg,#064e3b,#065f46);color:#a7f3d0;border-color:#10b981}
 :root[data-theme="dark"] .qual-chip{background:#1e1b4b;border-color:#4338ca;color:#c7d2fe}
 :root[data-theme="dark"] .qual-chip:hover{background:#312e81}
+:root[data-theme="dark"] .qual-tag{background:rgba(99,102,241,.18);color:#c7d2fe}
+:root[data-theme="dark"] .qual-tag button{background:rgba(255,255,255,.1);color:#e0e7ff}
 :root[data-theme="dark"] .topbar{background:rgba(15,23,42,.85)}
 :root[data-theme="dark"] .avatar-blank{background:linear-gradient(135deg,#1e293b,#0f172a);color:#475569}
 /* ダーク時のアバター白枠を surface 色に置換 (ハロー対策) */
